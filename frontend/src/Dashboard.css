@@ -1,0 +1,1169 @@
+/* ============================================================
+   GLOBAL RESET
+============================================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", Arial, sans-serif;
+}
+
+body {
+    background: #020617;
+    color: white;
+}
+
+
+/* ============================================================
+   DASHBOARD LAYOUT
+============================================================ */
+
+.dashboard {
+    display: flex;
+    min-height: 100vh;
+    background: #020617;
+    color: white;
+}
+
+
+/* ============================================================
+   SIDEBAR
+============================================================ */
+
+.sidebar {
+    width: 260px;
+    background: linear-gradient(
+        180deg,
+        #071a2b,
+        #062b33
+    );
+
+    padding: 30px 25px;
+
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+
+    position: fixed;
+    left: 0;
+    top: 0;
+
+    height: 100vh;
+
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    margin-bottom: 45px;
+}
+
+.logo-icon {
+    font-size: 32px;
+    color: #00ffd5;
+}
+
+.logo-text {
+    font-size: 23px;
+    font-weight: 700;
+    color: white;
+}
+
+.sidebar ul {
+    list-style: none;
+}
+
+.sidebar li {
+    padding: 15px;
+
+    margin-bottom: 10px;
+
+    border-radius: 12px;
+
+    color: #cbd5e1;
+
+    cursor: pointer;
+
+    transition: 0.3s;
+
+    font-size: 15px;
+}
+
+.sidebar li:hover {
+    background: #0f766e;
+    color: white;
+
+    transform: translateX(5px);
+}
+
+.sidebar li.active {
+    background: #0f766e;
+    color: white;
+
+    transform: translateX(5px);
+
+    box-shadow: 0 5px 18px rgba(20, 184, 166, 0.15);
+}
+
+
+/* ============================================================
+   MAIN CONTENT
+============================================================ */
+
+.main {
+    flex: 1;
+
+    margin-left: 260px;
+
+    padding: 35px;
+
+    min-height: 100vh;
+
+    overflow-y: auto;
+}
+
+.main h1 {
+    font-size: 34px;
+    margin-bottom: 30px;
+}
+
+
+/* ============================================================
+   BUTTONS
+============================================================ */
+
+button {
+    padding: 10px 18px;
+
+    border: none;
+
+    border-radius: 10px;
+
+    background: #14b8a6;
+
+    color: white;
+
+    cursor: pointer;
+
+    transition: 0.3s;
+
+    font-size: 14px;
+}
+
+button:hover {
+    background: #0d9488;
+
+    transform: translateY(-2px);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.buttons {
+    margin-bottom: 25px;
+}
+
+.buttons button {
+    padding: 13px 22px;
+
+    margin-right: 15px;
+
+    background: #0f766e;
+
+    font-size: 15px;
+}
+
+.buttons button:hover {
+    background: #14b8a6;
+}
+
+
+/* ============================================================
+   DASHBOARD CARDS
+============================================================ */
+
+.cards {
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+
+    gap: 20px;
+
+    margin-bottom: 30px;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.06);
+
+    backdrop-filter: blur(15px);
+
+    padding: 25px;
+
+    border-radius: 18px;
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    text-align: center;
+
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+
+    border-color: #14b8a6;
+
+    box-shadow: 0 10px 30px rgba(20, 184, 166, 0.08);
+}
+
+.card h2 {
+    color: #00ffd5;
+
+    font-size: 32px;
+
+    margin-bottom: 10px;
+}
+
+.card p {
+    color: #cbd5e1;
+
+    font-size: 15px;
+}
+
+.card small {
+    display: block;
+
+    margin-top: 8px;
+
+    color: #94a3b8;
+}
+
+
+/* ============================================================
+   RESULT / CONTENT BOX
+============================================================ */
+
+.prediction-box,
+.result-box {
+    background: linear-gradient(
+        135deg,
+        #062b33,
+        #0f172a
+    );
+
+    backdrop-filter: blur(15px);
+
+    padding: 30px;
+
+    margin-top: 25px;
+
+    border-radius: 18px;
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.prediction-box h2,
+.result-box h2 {
+    margin-bottom: 20px;
+}
+
+.result-box h3 {
+    margin-top: 22px;
+    margin-bottom: 12px;
+    color: #dbeafe;
+}
+
+.result-box p {
+    margin: 15px 0;
+
+    font-size: 16px;
+
+    color: #cbd5e1;
+}
+
+.result-box b {
+    color: #00ffd5;
+}
+
+
+/* ============================================================
+   CHART CARDS
+============================================================ */
+
+.chart-card {
+    background: rgba(255, 255, 255, 0.06);
+
+    backdrop-filter: blur(15px);
+
+    padding: 25px;
+
+    border-radius: 18px;
+
+    margin-top: 25px;
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chart-card h2 {
+    margin-bottom: 20px;
+}
+
+
+/* ============================================================
+   TABLE CONTAINERS
+============================================================ */
+
+.table-container {
+    background: rgba(255, 255, 255, 0.06);
+
+    padding: 25px;
+
+    border-radius: 18px;
+
+    margin-top: 20px;
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    overflow-x: auto;
+}
+
+
+/* ============================================================
+   TABLE
+============================================================ */
+
+table {
+    width: 100%;
+
+    margin-top: 20px;
+
+    border-collapse: collapse;
+
+    background: rgba(255, 255, 255, 0.04);
+
+    border-radius: 15px;
+
+    overflow: hidden;
+
+    min-width: 850px;
+}
+
+th {
+    background: #0f766e;
+
+    color: white;
+
+    padding: 15px 12px;
+
+    text-align: center;
+
+    font-size: 14px;
+
+    white-space: nowrap;
+}
+
+td {
+    padding: 14px 12px;
+
+    text-align: center;
+
+    color: #cbd5e1;
+
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    font-size: 14px;
+}
+
+tbody tr {
+    transition: 0.2s;
+}
+
+tbody tr:hover {
+    background: rgba(20, 184, 166, 0.08);
+}
+
+
+/* ============================================================
+   STATUS BADGES
+============================================================ */
+
+.status {
+    display: inline-block;
+
+    padding: 7px 13px;
+
+    border-radius: 20px;
+
+    font-weight: 700;
+
+    font-size: 12px;
+
+    white-space: nowrap;
+}
+
+.status.attack {
+    background: #7f1d1d;
+
+    color: #fecaca;
+}
+
+.status.normal {
+    background: #064e3b;
+
+    color: #bbf7d0;
+}
+
+.status.waiting {
+    background: #334155;
+
+    color: #cbd5e1;
+}
+
+
+/* ============================================================
+   SEVERITY BADGES
+============================================================ */
+
+.severity-badge {
+    display: inline-block;
+
+    padding: 7px 13px;
+
+    border-radius: 20px;
+
+    font-weight: 700;
+
+    font-size: 12px;
+
+    white-space: nowrap;
+}
+
+.severity-critical {
+    background: #7f1d1d;
+
+    color: #fecaca;
+
+    border: 1px solid #ef4444;
+}
+
+.severity-high {
+    background: #78350f;
+
+    color: #fed7aa;
+
+    border: 1px solid #f97316;
+}
+
+.severity-medium {
+    background: #713f12;
+
+    color: #fef08a;
+
+    border: 1px solid #eab308;
+}
+
+.severity-low {
+    background: #064e3b;
+
+    color: #bbf7d0;
+
+    border: 1px solid #22c55e;
+}
+
+
+/* ============================================================
+   INCIDENT STATUS BADGES
+============================================================ */
+
+.incident-status {
+    display: inline-block;
+
+    padding: 7px 13px;
+
+    border-radius: 20px;
+
+    font-weight: 700;
+
+    font-size: 12px;
+
+    white-space: nowrap;
+}
+
+.incident-open {
+    background: #7f1d1d;
+
+    color: #fecaca;
+}
+
+.incident-progress {
+    background: #78350f;
+
+    color: #fed7aa;
+}
+
+.incident-resolved {
+    background: #064e3b;
+
+    color: #bbf7d0;
+}
+
+
+/* ============================================================
+   DATASET BADGES
+============================================================ */
+
+.dataset-badge {
+    display: inline-block;
+
+    padding: 7px 12px;
+
+    border-radius: 15px;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+}
+
+.dataset-cicids {
+    background: #172554;
+
+    color: #bfdbfe;
+
+    border: 1px solid #3b82f6;
+}
+
+.dataset-unsw {
+    background: #3b0764;
+
+    color: #e9d5ff;
+
+    border: 1px solid #a855f7;
+}
+
+.dataset-combined {
+    background: #134e4a;
+
+    color: #99f6e4;
+
+    border: 1px solid #14b8a6;
+}
+
+
+/* ============================================================
+   RISK SCORE
+============================================================ */
+
+.risk-score {
+    font-weight: 700;
+
+    color: #00ffd5;
+}
+
+.risk-critical {
+    color: #ef4444;
+}
+
+.risk-high {
+    color: #fb923c;
+}
+
+.risk-medium {
+    color: #facc15;
+}
+
+.risk-low {
+    color: #4ade80;
+}
+
+
+/* ============================================================
+   ALERT SECTION
+============================================================ */
+
+.alert-box {
+    background: rgba(255, 255, 255, 0.06);
+
+    padding: 25px;
+
+    border-radius: 18px;
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.alert-item {
+    background: #450a0a;
+
+    border-left: 5px solid #ef4444;
+
+    padding: 18px;
+
+    margin: 15px 0;
+
+    border-radius: 12px;
+
+    animation: alertAnimation 0.5s ease;
+}
+
+.alert-item p {
+    color: #fecaca;
+
+    margin: 8px 0;
+}
+
+.alert-item hr {
+    border: none;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+
+    margin-top: 14px;
+}
+
+
+/* ============================================================
+   LEGACY ALERT CARD SUPPORT
+============================================================ */
+
+.alert-card {
+    padding: 18px;
+
+    margin: 15px 0;
+
+    border-radius: 12px;
+
+    background: #450a0a;
+
+    border-left: 5px solid #ef4444;
+
+    animation: alertAnimation 0.5s ease;
+}
+
+.alert-card h3 {
+    color: #f87171;
+
+    margin-bottom: 10px;
+}
+
+.alert-card p {
+    color: #fecaca;
+
+    margin: 8px 0;
+}
+
+.alert-card.high {
+    border-left-color: #dc2626;
+}
+
+.alert-card.medium {
+    border-left-color: #f59e0b;
+}
+
+.alert-card.low {
+    border-left-color: #22c55e;
+}
+
+
+/* ============================================================
+   ALERT PAGE
+============================================================ */
+
+.alerts-section {
+    margin-top: 25px;
+
+    padding: 20px;
+
+    background: rgba(255, 255, 255, 0.06);
+
+    border-radius: 18px;
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.alerts-section h2 {
+    margin-bottom: 15px;
+}
+
+.alerts-list {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+}
+
+.no-alerts {
+    padding: 20px;
+
+    text-align: center;
+
+    color: #94a3b8;
+}
+
+
+/* ============================================================
+   INCIDENT SECTION
+============================================================ */
+
+.incident-section {
+    margin-top: 25px;
+
+    padding: 25px;
+
+    background: rgba(255, 255, 255, 0.06);
+
+    border-radius: 18px;
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.incident-section h2 {
+    margin-bottom: 20px;
+}
+
+
+/* ============================================================
+   RESPONSE ACTIONS
+============================================================ */
+
+.response-actions {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 12px;
+
+    margin-top: 20px;
+}
+
+.response-actions button {
+    margin-right: 0;
+}
+
+
+/* ============================================================
+   PROFILE
+============================================================ */
+
+.profile-container {
+    max-width: 1100px;
+}
+
+.profile-header {
+    display: flex;
+
+    align-items: center;
+
+    gap: 20px;
+
+    padding: 25px;
+
+    background: rgba(255, 255, 255, 0.06);
+
+    border-radius: 18px;
+
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-avatar {
+    width: 70px;
+
+    height: 70px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: #0f766e;
+
+    font-size: 32px;
+}
+
+.profile-header h2 {
+    margin-bottom: 6px;
+}
+
+.profile-header p {
+    color: #94a3b8;
+}
+
+.profile-details {
+    display: grid;
+
+    grid-template-columns: repeat(2, 1fr);
+
+    gap: 15px;
+
+    margin-top: 25px;
+}
+
+.profile-item {
+    background: rgba(255, 255, 255, 0.05);
+
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    padding: 18px;
+
+    border-radius: 14px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    gap: 20px;
+}
+
+.profile-item span {
+    color: #94a3b8;
+}
+
+.profile-item strong {
+    color: #e2e8f0;
+}
+
+
+/* ============================================================
+   REPORTS
+============================================================ */
+
+.reports-container {
+    width: 100%;
+}
+
+.reports-container .buttons {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 10px;
+
+    margin-top: 20px;
+}
+
+
+/* ============================================================
+   MODEL TESTING
+============================================================ */
+
+.reports-container,
+.profile-container {
+    padding-bottom: 30px;
+}
+
+
+/* ============================================================
+   TRAFFIC INVESTIGATION
+============================================================ */
+
+.prediction-box input {
+    width: 200px;
+
+    padding: 13px;
+
+    margin: 8px;
+
+    border-radius: 10px;
+
+    border: none;
+
+    background: #0f172a;
+
+    color: white;
+
+    outline: none;
+}
+
+.prediction-box button {
+    width: 250px;
+
+    margin-top: 20px;
+
+    padding: 14px;
+
+    border: none;
+
+    border-radius: 12px;
+
+    background: #14b8a6;
+
+    color: white;
+
+    font-size: 16px;
+
+    cursor: pointer;
+}
+
+
+/* ============================================================
+   TRAFFIC STATUS
+============================================================ */
+
+.attack-text {
+    color: #f87171;
+}
+
+.normal-text {
+    color: #4ade80;
+}
+
+
+/* ============================================================
+   CHART / RECHARTS
+============================================================ */
+
+.recharts-wrapper {
+    margin: auto;
+}
+
+.recharts-default-tooltip {
+    background: #0f172a !important;
+
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+
+    border-radius: 10px !important;
+}
+
+.recharts-tooltip-label {
+    color: #e2e8f0 !important;
+}
+
+
+/* ============================================================
+   TRAFFIC TREND
+============================================================ */
+
+.traffic-trend {
+    margin-top: 25px;
+}
+
+
+/* ============================================================
+   SCROLLBAR
+============================================================ */
+
+.main::-webkit-scrollbar {
+    width: 8px;
+}
+
+.main::-webkit-scrollbar-track {
+    background: #020617;
+}
+
+.main::-webkit-scrollbar-thumb {
+    background: #0f766e;
+
+    border-radius: 10px;
+}
+
+.main::-webkit-scrollbar-thumb:hover {
+    background: #14b8a6;
+}
+
+
+/* ============================================================
+   ANIMATIONS
+============================================================ */
+
+@keyframes alertAnimation {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* ============================================================
+   MOBILE SIDEBAR
+============================================================ */
+
+@media (max-width: 1100px) {
+
+    .cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .profile-details {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+@media (max-width: 800px) {
+
+    .sidebar {
+        width: 220px;
+    }
+
+    .main {
+        margin-left: 220px;
+
+        padding: 25px;
+    }
+
+    .cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+@media (max-width: 700px) {
+
+    .dashboard {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        position: relative;
+
+        width: 100%;
+
+        height: auto;
+
+        padding: 20px;
+    }
+
+    .sidebar ul {
+        display: flex;
+
+        flex-wrap: wrap;
+
+        gap: 8px;
+    }
+
+    .sidebar li {
+        margin-bottom: 0;
+
+        flex: 1 1 150px;
+
+        text-align: center;
+    }
+
+    .main {
+        margin-left: 0;
+
+        padding: 20px;
+    }
+
+    .main h1 {
+        font-size: 26px;
+    }
+
+    .cards {
+        grid-template-columns: 1fr;
+
+        gap: 15px;
+    }
+
+    .card {
+        padding: 20px;
+    }
+
+    .profile-item {
+        flex-direction: column;
+
+        gap: 8px;
+    }
+
+    table {
+        min-width: 800px;
+    }
+
+    .response-actions {
+        flex-direction: column;
+    }
+
+    .response-actions button {
+        width: 100%;
+    }
+}
+
+
+/* ============================================================
+   VERY SMALL SCREENS
+============================================================ */
+
+@media (max-width: 450px) {
+
+    .main {
+        padding: 15px;
+    }
+
+    .main h1 {
+        font-size: 23px;
+    }
+
+    .result-box,
+    .chart-card,
+    .profile-header,
+    .profile-details {
+        padding: 18px;
+    }
+
+    .sidebar li {
+        flex-basis: 100%;
+    }
+
+    /* ============================================================
+   INCIDENT MANAGEMENT
+============================================================ */
+
+.incident-management {
+    width: 100%;
+}
+
+.incident-management > h2 {
+    margin-bottom: 8px;
+}
+
+
+/* Incident detail inputs */
+
+.incident-management input:focus {
+    outline: none;
+    border-color: #14b8a6 !important;
+}
+
+
+/* Incident table */
+
+.incident-management table {
+    min-width: 1100px;
+}
+
+
+/* Detail section */
+
+.incident-management .result-box h3 {
+    color: #00ffd5;
+    margin-top: 24px;
+}
+
+
+/* Timeline */
+
+.incident-timeline {
+    border-left: 2px solid #0f766e;
+    padding-left: 20px;
+}
+
+
+/* Incident buttons */
+
+.incident-management button {
+    white-space: nowrap;
+}
+}

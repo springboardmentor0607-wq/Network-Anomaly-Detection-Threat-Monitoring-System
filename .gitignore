@@ -216,3 +216,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# NetShield AI large files
+backend/datasets/
+*.csv
+*.parquet
+*.pkl
+
+# Frontend dependencies
+frontend/node_modules/
+
+# Local environment files
+frontend/.env
+backend/.env
