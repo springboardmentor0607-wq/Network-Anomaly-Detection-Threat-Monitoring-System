@@ -1,0 +1,15 @@
+{
+    "total_predictions": 80000,
+    "most_frequent_attack": "None",
+    "risk_score_distribution": {
+        "Low": 0,
+        "Medium": 0,
+        "High": 8349,
+        "Critical": 71651
+    },
+    "attack_distribution": {
+        "BENIGN": 80000
+    },
+    "anomalies_detected": 0,
+    "system_status": "Under Attack"
+}

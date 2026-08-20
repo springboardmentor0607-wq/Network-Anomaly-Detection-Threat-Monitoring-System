@@ -1,0 +1,23 @@
+{
+    "total_predictions": 928581,
+    "most_frequent_attack": "Generic",
+    "risk_score_distribution": {
+        "Low": 55,
+        "Medium": 4382,
+        "High": 4300,
+        "Critical": 919844
+    },
+    "attack_distribution": {
+        "BENIGN": 906329,
+        "Generic": 7193,
+        "Exploits": 6895,
+        "Fuzzers": 5341,
+        "DoS": 299,
+        "Reconnaissance": 1721,
+        "Shellcode": 85,
+        "Backdoors": 350,
+        "Analysis": 368
+    },
+    "anomalies_detected": 80881,
+    "system_status": "Under Attack"
+}
