@@ -1,0 +1,4 @@
+backend/datasets/**/*.csv filter=lfs diff=lfs merge=lfs -text
+backend/datasets/**/*.parquet filter=lfs diff=lfs merge=lfs -text
+backend/ml/saved_models/*.pkl filter=lfs diff=lfs merge=lfs -text
+backend/datasets/*.csv filter=lfs diff=lfs merge=lfs -text
