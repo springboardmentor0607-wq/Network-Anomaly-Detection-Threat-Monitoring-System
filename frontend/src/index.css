@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #0F172A;
+  color: white;
+}
+
+.card {
+  @apply bg-slate-800 rounded-2xl p-6 shadow-lg border border-slate-700;
+}
+
+.metric-value {
+  @apply text-3xl font-bold mt-2;
+}
+
+.metric-label {
+  @apply text-slate-400 text-sm;
+}

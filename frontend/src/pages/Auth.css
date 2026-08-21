@@ -1,0 +1,178 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #020617;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Main authentication page */
+.auth-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background:
+    radial-gradient(
+      circle at top,
+      #1e40af 0%,
+      #020617 50%,
+      #020617 100%
+    );
+}
+
+/* Authentication card */
+.auth-box {
+  width: 420px;
+  padding: 40px;
+
+  background: rgba(15, 23, 42, 0.92);
+
+  border-radius: 20px;
+
+  border: 1px solid #334155;
+
+  box-shadow:
+    0 0 40px rgba(37, 99, 235, 0.35);
+
+  text-align: center;
+}
+
+/* Heading */
+.auth-box h1 {
+  font-size: 36px;
+  color: white;
+  margin: 0 0 10px;
+}
+
+/* Subtitle */
+.subtitle {
+  color: #94a3b8;
+  font-size: 14px;
+  margin-bottom: 30px;
+  line-height: 1.5;
+}
+
+/* Form */
+.auth-box form {
+  width: 100%;
+}
+
+/* Inputs */
+.auth-box input {
+  width: 100%;
+  padding: 14px;
+
+  margin: 10px 0;
+
+  background: #020617;
+
+  border: 1px solid #334155;
+
+  border-radius: 10px;
+
+  color: white;
+
+  font-size: 15px;
+
+  outline: none;
+}
+
+/* Placeholder */
+.auth-box input::placeholder {
+  color: #64748b;
+}
+
+/* Input focus */
+.auth-box input:focus {
+  border-color: #2563eb;
+
+  box-shadow:
+    0 0 10px rgba(37, 99, 235, 0.5);
+}
+
+/* Register button */
+.auth-box button {
+  width: 100%;
+
+  padding: 14px;
+
+  margin-top: 20px;
+
+  background: #2563eb;
+
+  color: white;
+
+  border: none;
+
+  border-radius: 10px;
+
+  font-size: 16px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.3s;
+}
+
+/* Button hover */
+.auth-box button:hover {
+  background: #1d4ed8;
+
+  box-shadow:
+    0 0 20px rgba(37, 99, 235, 0.7);
+
+  transform: translateY(-1px);
+}
+
+/* Bottom link */
+.register-link {
+  margin-top: 25px;
+
+  color: #94a3b8;
+
+  font-size: 14px;
+}
+
+/* Login/Register link */
+.register-link a {
+  color: #3b82f6;
+
+  text-decoration: none;
+
+  font-weight: 600;
+
+  margin-left: 5px;
+}
+
+.register-link a:hover {
+  color: #60a5fa;
+
+  text-decoration: underline;
+}
+
+/* Error message */
+.error {
+  color: #ef4444;
+
+  margin-top: 15px;
+
+  font-size: 14px;
+}
+
+/* Mobile */
+@media (max-width: 500px) {
+  .auth-box {
+    width: 90%;
+    padding: 30px 25px;
+  }
+
+  .auth-box h1 {
+    font-size: 30px;
+  }
+}
