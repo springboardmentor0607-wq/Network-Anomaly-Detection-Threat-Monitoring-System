@@ -1,0 +1,52 @@
+{
+  "dataset_name": "CICIDS2017",
+  "feature_names": [
+    "Flow Duration",
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Total Length of Fwd Packets",
+    "Total Length of Bwd Packets",
+    "Fwd Packet Length Max",
+    "Fwd Packet Length Min",
+    "Fwd Packet Length Mean",
+    "Fwd Packet Length Std",
+    "Bwd Packet Length Max",
+    "Bwd Packet Length Min",
+    "Bwd Packet Length Mean",
+    "Bwd Packet Length Std",
+    "Flow Bytes/s",
+    "Flow Packets/s",
+    "Flow IAT Mean",
+    "Flow IAT Std",
+    "Flow IAT Max",
+    "Flow IAT Min",
+    "Fwd IAT Total",
+    "Protocol",
+    "Service"
+  ],
+  "target_column": "Label",
+  "categorical_columns": [
+    "Protocol",
+    "Service"
+  ],
+  "numerical_columns": [
+    "Flow Duration",
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Total Length of Fwd Packets",
+    "Flow Bytes/s",
+    "Flow Packets/s"
+  ],
+  "label_mapping": {
+    "BENIGN": 0,
+    "DoS Hulk": 1,
+    "PortScan": 2,
+    "DDoS": 3,
+    "DoS GoldenEye": 4,
+    "FTP-Patator": 5,
+    "SSH-Patator": 6,
+    "DoS slowloris": 7,
+    "Bot": 8,
+    "Web Attack": 9
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "netshield-ai-backend",
+  "version": "1.0.0",
+  "description": "NetShield AI - Network Anomaly Detection & Threat Monitoring System Backend",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "lint": "eslint src/**/*.js",
+    "preprocess:cicids": "python datasets/preprocessing/cicids2017_processor.py",
+    "preprocess:unsw": "python datasets/preprocessing/unsw_nb15_processor.py",
+    "seed:milestone3": "node src/seeds/seedMilestone3.js",
+    "test": "node src/tests/e2eTest.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "winston": "^3.17.0",
+    "csv-parser": "^3.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "nodemon": "^3.1.9",
+    "prettier": "^3.4.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

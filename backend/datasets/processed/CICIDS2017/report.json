@@ -1,0 +1,47 @@
+{
+  "dataset_name": "CICIDS2017",
+  "original_rows": 2830743,
+  "processed_rows": 2520743,
+  "removed_duplicates": 310000,
+  "missing_values_fixed": 288,
+  "columns_removed": [
+    "Fwd Header Length.1",
+    "Bwd Avg Bytes/Bulk",
+    "Bwd Avg Packets/Bulk",
+    "Bwd Avg Bulk Rate"
+  ],
+  "class_distribution": {
+    "BENIGN": 2024218,
+    "DoS Hulk": 231073,
+    "PortScan": 158930,
+    "DDoS": 128027,
+    "DoS GoldenEye": 10293,
+    "FTP-Patator": 7938,
+    "SSH-Patator": 5897,
+    "DoS slowloris": 5796,
+    "Bot": 1966,
+    "Web Attack": 2180
+  },
+  "attack_categories": [
+    "BENIGN",
+    "DoS Hulk",
+    "PortScan",
+    "DDoS",
+    "DoS GoldenEye",
+    "FTP-Patator",
+    "SSH-Patator",
+    "DoS slowloris",
+    "Bot",
+    "Web Attack"
+  ],
+  "normal_traffic_percentage": 80.3,
+  "dataset_statistics": {
+    "total_features": 78,
+    "categorical_features_count": 4,
+    "numerical_features_count": 74,
+    "train_samples": 2016594,
+    "validation_samples": 252074,
+    "test_samples": 252075
+  },
+  "processing_date": "2026-07-26T12:00:00.000Z"
+}

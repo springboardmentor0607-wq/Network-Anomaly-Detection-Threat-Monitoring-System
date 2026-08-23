@@ -1,0 +1,63 @@
+{
+  "dataset_name": "UNSW-NB15",
+  "feature_names": [
+    "dur",
+    "proto",
+    "service",
+    "state",
+    "spkts",
+    "dpkts",
+    "sbytes",
+    "dbytes",
+    "rate",
+    "sttl",
+    "dttl",
+    "sload",
+    "dload",
+    "sloss",
+    "dloss",
+    "sinpkt",
+    "dinpkt",
+    "sjit",
+    "djit",
+    "swin",
+    "stcpb",
+    "dtcpb",
+    "dwin",
+    "tcprtt",
+    "synack",
+    "ackdat",
+    "smean",
+    "dmean",
+    "trans_depth",
+    "response_body_len"
+  ],
+  "target_column": "attack_cat",
+  "categorical_columns": [
+    "proto",
+    "service",
+    "state"
+  ],
+  "numerical_columns": [
+    "dur",
+    "spkts",
+    "dpkts",
+    "sbytes",
+    "dbytes",
+    "rate",
+    "sload",
+    "dload"
+  ],
+  "label_mapping": {
+    "Normal": 0,
+    "Generic": 1,
+    "Exploits": 2,
+    "Fuzzers": 3,
+    "DoS": 4,
+    "Reconnaissance": 5,
+    "Analysis": 6,
+    "Backdoor": 7,
+    "Shellcode": 8,
+    "Worms": 9
+  }
+}

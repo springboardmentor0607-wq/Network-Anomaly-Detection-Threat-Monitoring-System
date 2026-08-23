@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # MongoDB Database Container
+  mongo:
+    image: mongo:7.0
+    container_name: netshield-mongo
+    restart: always
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_DATABASE: netshield_ai
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - netshield-network
+
+  # Node.js Express Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: netshield-backend
+    restart: always
+    ports:
+      - "5001:5000"
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongo:27017/netshield_ai
+      JWT_SECRET: super_secret_enterprise_netshield_jwt_key_2026
+      JWT_EXPIRES_IN: 24h
+      CORS_ORIGIN: "*"
+    depends_on:
+      - mongo
+    volumes:
+      - ./backend/datasets:/app/backend/datasets
+      - ./backend/logs:/app/logs
+      - ./backend/ai/reports:/app/backend/ai/reports   # <-- persistent reports volume
+    networks:
+      - netshield-network
+
+  # React Frontend Nginx Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: netshield-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - netshield-network
+
+volumes:
+  mongo_data:
+
+networks:
+  netshield-network:
+    driver: bridge

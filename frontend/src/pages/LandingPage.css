@@ -1,0 +1,257 @@
+/* -- Reset & Root ------------------------------------------- */
+html, body, #root { height: 100%; margin: 0; padding: 0; background: #04091d; }
+
+.lp-root {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 20% 50%, #0d1f5c 0%, #04091d 60%),
+              radial-gradient(ellipse at 80% 50%, #071a3e 0%, #04091d 60%);
+  background-blend-mode: screen;
+}
+
+/* -- Particle Canvas --------------------------------------- */
+.lp-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* -- Hexagon Grid ------------------------------------------- */
+.lp-hexgrid {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.lp-hex {
+  position: absolute;
+  width: 80px; height: 92px;
+  background: transparent;
+  border: 1px solid rgba(0, 160, 255, 0.12);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  animation: hexPulse 4s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.3s);
+}
+.lp-hex-0 { top: 5%;  left: 3%; }
+.lp-hex-1 { top: 20%; left: 8%; }
+.lp-hex-2 { top: 40%; left: 2%; }
+.lp-hex-3 { top: 60%; left: 10%; }
+.lp-hex-4 { top: 10%; left: 18%; }
+.lp-hex-5 { top: 30%; left: 22%; }
+@keyframes hexPulse {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50%       { opacity: 0.35; transform: scale(1.05); }
+}
+
+/* -- Binary Rain ------------------------------------------- */
+.lp-binary { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.lp-binary-strip {
+  position: absolute;
+  left: var(--left);
+  top: 0;
+  color: rgba(0, 255, 120, 0.18);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  writing-mode: vertical-rl;
+  animation: binaryFall 8s linear infinite;
+  animation-delay: var(--delay);
+}
+@keyframes binaryFall {
+  0%   { transform: translateY(-100%); opacity: 0.4; }
+  80%  { opacity: 0.2; }
+  100% { transform: translateY(110vh); opacity: 0; }
+}
+
+/* -- World Map ---------------------------------------------- */
+.lp-worldmap {
+  position: absolute;
+  right: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 55%; height: 60%;
+  z-index: 2;
+  pointer-events: none;
+}
+.lp-worldmap svg { width: 100%; height: 100%; }
+
+/* -- AI Shield ---------------------------------------------- */
+.lp-shield-wrap {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lp-shield-glow {
+  position: absolute;
+  width: 220px; height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 150, 255, 0.22) 0%, transparent 70%);
+  animation: shieldPulse 3s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes shieldPulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50%       { transform: scale(1.12); opacity: 1; }
+}
+.lp-shield-svg {
+  width: 200px; height: 240px;
+  filter: drop-shadow(0 0 18px rgba(0, 180, 255, 0.6))
+          drop-shadow(0 0 40px rgba(100, 60, 255, 0.25));
+  animation: shieldFloat 5s ease-in-out infinite;
+}
+@keyframes shieldFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+/* Circuit arms extending from shield */
+.lp-circuit-left,
+.lp-circuit-right {
+  position: absolute;
+  top: 50%;
+  width: 120px; height: 2px;
+  background: linear-gradient(to left, #00c8ff, transparent);
+  opacity: 0.5;
+  animation: circuitBlink 2s ease-in-out infinite;
+}
+.lp-circuit-left  { right: calc(100% + 0px); transform: translateY(-50%); }
+.lp-circuit-right { left:  calc(100% + 0px); transform: translateY(-50%) scaleX(-1); }
+@keyframes circuitBlink {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
+}
+
+/* -- Lock Chip ---------------------------------------------- */
+.lp-lockchip {
+  position: absolute;
+  bottom: 12%;
+  left: 8%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.lp-lockchip svg {
+  width: 70px; height: 70px;
+  filter: drop-shadow(0 0 8px rgba(0, 200, 255, 0.5));
+  animation: chipGlow 3s ease-in-out infinite;
+}
+@keyframes chipGlow {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(0,200,255,0.4)); }
+  50%       { filter: drop-shadow(0 0 16px rgba(0,200,255,0.8)); }
+}
+.lp-lockchip-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: rgba(0, 200, 255, 0.7);
+  margin: 0;
+  text-shadow: 0 0 6px rgba(0, 200, 255, 0.5);
+}
+
+/* -- Floating Labels --------------------------------------- */
+.lp-label {
+  position: absolute;
+  z-index: 5;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: rgba(0, 200, 255, 0.75);
+  text-shadow: 0 0 8px rgba(0, 200, 255, 0.5);
+  animation: labelFlicker 5s ease-in-out infinite;
+}
+.lp-label::before {
+  content: '? ';
+  font-size: 7px;
+  opacity: 0.6;
+}
+@keyframes labelFlicker {
+  0%, 90%, 100% { opacity: 0.75; }
+  95%            { opacity: 0.2; }
+}
+
+.lp-label-threat-top  { top: 25%;  left: 60%;  }
+.lp-label-threat-right{ top: 55%;  right: 5%;  }
+.lp-label-realtime    { top: 65%;  right: 8%;  }
+.lp-label-network     { top: 45%;  left: 10%;  color: rgba(100, 160, 255, 0.6); }
+.lp-label-threatred   {
+  bottom: 20%; right: 10%;
+  color: rgba(255, 60, 60, 0.8);
+  text-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
+  font-size: 11px;
+}
+.lp-label-threatred::before { content: '? '; color: #ff3b3b; }
+
+/* -- Header / Navbar --------------------------------------- */
+.lp-header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 32px;
+  background: rgba(4, 9, 29, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 160, 255, 0.12);
+}
+
+/* Logo */
+.lp-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.lp-logo-icon { width: 34px; height: 38px; }
+.lp-logo-text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 1px;
+  text-shadow: 0 0 12px rgba(0, 200, 255, 0.5);
+}
+
+/* Nav Buttons – NO background, NO border */
+.lp-nav { display: flex; align-items: center; gap: 8px; }
+
+.lp-btn-login,
+.lp-btn-signup {
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 8px 20px;
+  border-radius: 4px;
+  transition: color 0.25s, text-shadow 0.25s, background 0.25s;
+}
+
+.lp-btn-login {
+  color: #7dd3fc;
+}
+.lp-btn-login:hover {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(0, 180, 255, 0.8);
+  background: rgba(0, 120, 255, 0.1);
+}
+
+.lp-btn-signup {
+  color: #86efac;
+}
+.lp-btn-signup:hover {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(0, 255, 120, 0.8);
+  background: rgba(0, 200, 100, 0.1);
+}

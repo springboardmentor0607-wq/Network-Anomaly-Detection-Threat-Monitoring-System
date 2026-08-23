@@ -1,0 +1,618 @@
+{
+  "datasetName": "CICIDS2017",
+  "bestModel": null,
+  "totalModelsTrained": 5,
+  "totalDurationSeconds": 616.31,
+  "featureNames": [
+    "Flow Duration",
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Flow Bytes/s",
+    "Flow Packets/s",
+    "Fwd Packet Length Max",
+    "Fwd Packet Length Min",
+    "Bwd Packet Length Max",
+    "Bwd Packet Length Min",
+    "Flow IAT Mean",
+    "Flow IAT Std",
+    "Fwd IAT Total",
+    "Bwd IAT Total",
+    "Fwd PSH Flags",
+    "Bwd PSH Flags",
+    "Fwd Header Length",
+    "Bwd Header Length",
+    "Fwd Packets/s",
+    "Bwd Packets/s",
+    "Min Packet Length"
+  ],
+  "classNames": [
+    "BENIGN",
+    "DoS Hulk",
+    "PortScan",
+    "DDoS",
+    "Bot",
+    "SSH-Patator",
+    "Web Attack"
+  ],
+  "models": {
+    "Random Forest": {
+      "modelName": "Random Forest",
+      "datasetName": "CICIDS2017",
+      "accuracy": 0.706,
+      "precision": 0.4984,
+      "recall": 0.706,
+      "f1Score": 0.5843,
+      "rocAuc": 0.536,
+      "trainingTimeMs": 1324,
+      "inferenceTimeMs": 144,
+      "memoryUsageMb": 18.85,
+      "confusionMatrix": [
+        [
+          353,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          49,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          27,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          33,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          15,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          13,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "classificationReport": {
+        "BENIGN": {
+          "precision": 0.706,
+          "recall": 1.0,
+          "f1-score": 0.8276670574443142,
+          "support": 353.0
+        },
+        "DoS Hulk": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 49.0
+        },
+        "PortScan": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 27.0
+        },
+        "DDoS": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 33.0
+        },
+        "Bot": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 15.0
+        },
+        "SSH-Patator": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 10.0
+        },
+        "Web Attack": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 13.0
+        },
+        "accuracy": 0.706,
+        "macro avg": {
+          "precision": 0.10085714285714285,
+          "recall": 0.14285714285714285,
+          "f1-score": 0.11823815106347346,
+          "support": 500.0
+        },
+        "weighted avg": {
+          "precision": 0.498436,
+          "recall": 0.706,
+          "f1-score": 0.5843329425556858,
+          "support": 500.0
+        }
+      },
+      "featureImportance": {
+        "Flow Duration": 0.0537,
+        "Total Fwd Packets": 0.048,
+        "Total Backward Packets": 0.0525,
+        "Flow Bytes/s": 0.0464,
+        "Flow Packets/s": 0.0497,
+        "Fwd Packet Length Max": 0.0465,
+        "Fwd Packet Length Min": 0.0515,
+        "Bwd Packet Length Max": 0.0505,
+        "Bwd Packet Length Min": 0.0476,
+        "Flow IAT Mean": 0.0485,
+        "Flow IAT Std": 0.0525,
+        "Fwd IAT Total": 0.0522,
+        "Bwd IAT Total": 0.0532,
+        "Fwd PSH Flags": 0.0501,
+        "Bwd PSH Flags": 0.0552,
+        "Fwd Header Length": 0.0513,
+        "Bwd Header Length": 0.0479,
+        "Fwd Packets/s": 0.0469,
+        "Bwd Packets/s": 0.047,
+        "Min Packet Length": 0.0489
+      },
+      "savedPath": "C:\\Users\\HP\\OneDrive\\Desktop\\NetShield AI\\backend\\ai\\saved_models\\RandomForest.pkl",
+      "timestamp": "2026-08-06 22:20:29"
+    },
+    "XGBoost": {
+      "modelName": "XGBoost",
+      "datasetName": "CICIDS2017",
+      "accuracy": 0.69,
+      "precision": 0.5461,
+      "recall": 0.69,
+      "f1Score": 0.5902,
+      "rocAuc": 0.5247,
+      "trainingTimeMs": 56538,
+      "inferenceTimeMs": 28,
+      "memoryUsageMb": 42.7,
+      "confusionMatrix": [
+        [
+          342,
+          3,
+          3,
+          0,
+          2,
+          3,
+          0
+        ],
+        [
+          45,
+          1,
+          0,
+          1,
+          0,
+          2,
+          0
+        ],
+        [
+          24,
+          0,
+          1,
+          1,
+          0,
+          1,
+          0
+        ],
+        [
+          32,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          14,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          13,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "classificationReport": {
+        "BENIGN": {
+          "precision": 0.7125,
+          "recall": 0.9688385269121813,
+          "f1-score": 0.8211284513805522,
+          "support": 353.0
+        },
+        "DoS Hulk": {
+          "precision": 0.2,
+          "recall": 0.02040816326530612,
+          "f1-score": 0.037037037037037035,
+          "support": 49.0
+        },
+        "PortScan": {
+          "precision": 0.25,
+          "recall": 0.037037037037037035,
+          "f1-score": 0.06451612903225806,
+          "support": 27.0
+        },
+        "DDoS": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 33.0
+        },
+        "Bot": {
+          "precision": 0.3333333333333333,
+          "recall": 0.06666666666666667,
+          "f1-score": 0.1111111111111111,
+          "support": 15.0
+        },
+        "SSH-Patator": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 10.0
+        },
+        "Web Attack": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 13.0
+        },
+        "accuracy": 0.69,
+        "macro avg": {
+          "precision": 0.21369047619047618,
+          "recall": 0.15613577055445588,
+          "f1-score": 0.14768467550870837,
+          "support": 500.0
+        },
+        "weighted avg": {
+          "precision": 0.546125,
+          "recall": 0.69,
+          "f1-score": 0.5901635206053748,
+          "support": 500.0
+        }
+      },
+      "featureImportance": {
+        "Flow Duration": 0.049,
+        "Total Fwd Packets": 0.0586,
+        "Total Backward Packets": 0.0588,
+        "Flow Bytes/s": 0.0533,
+        "Flow Packets/s": 0.0605,
+        "Fwd Packet Length Max": 0.0448,
+        "Fwd Packet Length Min": 0.0347,
+        "Bwd Packet Length Max": 0.0462,
+        "Bwd Packet Length Min": 0.047,
+        "Flow IAT Mean": 0.0449,
+        "Flow IAT Std": 0.0478,
+        "Fwd IAT Total": 0.0414,
+        "Bwd IAT Total": 0.0539,
+        "Fwd PSH Flags": 0.0502,
+        "Bwd PSH Flags": 0.0608,
+        "Fwd Header Length": 0.0582,
+        "Bwd Header Length": 0.0504,
+        "Fwd Packets/s": 0.0463,
+        "Bwd Packets/s": 0.0466,
+        "Min Packet Length": 0.0465
+      },
+      "savedPath": "C:\\Users\\HP\\OneDrive\\Desktop\\NetShield AI\\backend\\ai\\saved_models\\XGBoost.pkl",
+      "timestamp": "2026-08-06 22:30:08"
+    },
+    "Decision Tree": {
+      "modelName": "Decision Tree",
+      "datasetName": "CICIDS2017",
+      "accuracy": 0.566,
+      "precision": 0.5254,
+      "recall": 0.566,
+      "f1Score": 0.5444,
+      "rocAuc": 0.5231,
+      "trainingTimeMs": 152,
+      "inferenceTimeMs": 0,
+      "memoryUsageMb": 26.76,
+      "confusionMatrix": [
+        [
+          274,
+          27,
+          14,
+          19,
+          14,
+          5,
+          0
+        ],
+        [
+          31,
+          6,
+          5,
+          2,
+          1,
+          0,
+          4
+        ],
+        [
+          23,
+          2,
+          1,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          26,
+          2,
+          2,
+          2,
+          1,
+          0,
+          0
+        ],
+        [
+          12,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0
+        ],
+        [
+          8,
+          0,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          11,
+          0,
+          2,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "classificationReport": {
+        "BENIGN": {
+          "precision": 0.7116883116883117,
+          "recall": 0.7762039660056658,
+          "f1-score": 0.7425474254742548,
+          "support": 353.0
+        },
+        "DoS Hulk": {
+          "precision": 0.15789473684210525,
+          "recall": 0.12244897959183673,
+          "f1-score": 0.13793103448275862,
+          "support": 49.0
+        },
+        "PortScan": {
+          "precision": 0.04,
+          "recall": 0.037037037037037035,
+          "f1-score": 0.038461538461538464,
+          "support": 27.0
+        },
+        "DDoS": {
+          "precision": 0.08,
+          "recall": 0.06060606060606061,
+          "f1-score": 0.06896551724137931,
+          "support": 33.0
+        },
+        "Bot": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 15.0
+        },
+        "SSH-Patator": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 10.0
+        },
+        "Web Attack": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 13.0
+        },
+        "accuracy": 0.566,
+        "macro avg": {
+          "precision": 0.1413690069329167,
+          "recall": 0.14232800617722857,
+          "f1-score": 0.1411293593799902,
+          "support": 500.0
+        },
+        "weighted avg": {
+          "precision": 0.5253656322624743,
+          "recall": 0.566,
+          "f1-score": 0.5443843709789884,
+          "support": 500.0
+        }
+      },
+      "featureImportance": {
+        "Flow Duration": 0.0781,
+        "Total Fwd Packets": 0.0439,
+        "Total Backward Packets": 0.0512,
+        "Flow Bytes/s": 0.0453,
+        "Flow Packets/s": 0.0316,
+        "Fwd Packet Length Max": 0.0552,
+        "Fwd Packet Length Min": 0.0382,
+        "Bwd Packet Length Max": 0.0454,
+        "Bwd Packet Length Min": 0.04,
+        "Flow IAT Mean": 0.0546,
+        "Flow IAT Std": 0.0588,
+        "Fwd IAT Total": 0.0553,
+        "Bwd IAT Total": 0.0578,
+        "Fwd PSH Flags": 0.0561,
+        "Bwd PSH Flags": 0.0559,
+        "Fwd Header Length": 0.041,
+        "Bwd Header Length": 0.054,
+        "Fwd Packets/s": 0.0451,
+        "Bwd Packets/s": 0.0241,
+        "Min Packet Length": 0.0684
+      },
+      "savedPath": "C:\\Users\\HP\\OneDrive\\Desktop\\NetShield AI\\backend\\ai\\saved_models\\DecisionTree.pkl",
+      "timestamp": "2026-08-06 22:30:09"
+    },
+    "Isolation Forest": {
+      "modelName": "Isolation Forest",
+      "datasetName": "CICIDS2017",
+      "accuracy": 0.658,
+      "precision": 0.5722,
+      "recall": 0.658,
+      "f1Score": 0.5945,
+      "rocAuc": 0.5033,
+      "trainingTimeMs": 635,
+      "inferenceTimeMs": 47,
+      "memoryUsageMb": 20.34,
+      "confusionMatrix": [
+        [
+          316,
+          37
+        ],
+        [
+          134,
+          13
+        ]
+      ],
+      "classificationReport": {
+        "BENIGN": {
+          "precision": 0.7022222222222222,
+          "recall": 0.8951841359773371,
+          "f1-score": 0.7870485678704857,
+          "support": 353.0
+        },
+        "DoS Hulk": {
+          "precision": 0.26,
+          "recall": 0.08843537414965986,
+          "f1-score": 0.1319796954314721,
+          "support": 147.0
+        },
+        "accuracy": 0.658,
+        "macro avg": {
+          "precision": 0.4811111111111111,
+          "recall": 0.4918097550634985,
+          "f1-score": 0.4595141316509789,
+          "support": 500.0
+        },
+        "weighted avg": {
+          "precision": 0.5722088888888889,
+          "recall": 0.658,
+          "f1-score": 0.5944583193734158,
+          "support": 500.0
+        }
+      },
+      "featureImportance": {},
+      "savedPath": "C:\\Users\\HP\\OneDrive\\Desktop\\NetShield AI\\backend\\ai\\saved_models\\IsolationForest.pkl",
+      "timestamp": "2026-08-06 22:30:10"
+    },
+    "One-Class SVM": {
+      "modelName": "One-Class SVM",
+      "datasetName": "CICIDS2017",
+      "accuracy": 0.668,
+      "precision": 0.5894,
+      "recall": 0.668,
+      "f1Score": 0.6052,
+      "rocAuc": 0.5232,
+      "trainingTimeMs": 87,
+      "inferenceTimeMs": 28,
+      "memoryUsageMb": 46.38,
+      "confusionMatrix": [
+        [
+          319,
+          34
+        ],
+        [
+          132,
+          15
+        ]
+      ],
+      "classificationReport": {
+        "BENIGN": {
+          "precision": 0.7073170731707317,
+          "recall": 0.9036827195467422,
+          "f1-score": 0.7935323383084577,
+          "support": 353.0
+        },
+        "DoS Hulk": {
+          "precision": 0.30612244897959184,
+          "recall": 0.10204081632653061,
+          "f1-score": 0.15306122448979592,
+          "support": 147.0
+        },
+        "accuracy": 0.668,
+        "macro avg": {
+          "precision": 0.5067197610751617,
+          "recall": 0.5028617679366364,
+          "f1-score": 0.4732967813991268,
+          "support": 500.0
+        },
+        "weighted avg": {
+          "precision": 0.5893658536585364,
+          "recall": 0.668,
+          "f1-score": 0.6052338308457712,
+          "support": 500.0
+        }
+      },
+      "featureImportance": {},
+      "savedPath": "C:\\Users\\HP\\OneDrive\\Desktop\\NetShield AI\\backend\\ai\\saved_models\\One-ClassSVM.pkl",
+      "timestamp": "2026-08-06 22:30:10"
+    }
+  },
+  "lastTrainedAt": "2026-08-06 22:30:10"
+}

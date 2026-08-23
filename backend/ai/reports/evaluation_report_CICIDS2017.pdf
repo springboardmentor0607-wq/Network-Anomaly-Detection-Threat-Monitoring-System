@@ -1,0 +1,75 @@
+NetShield AI Evaluation Report - CICIDS2017
+============================================================
+{
+  "datasetName": "CICIDS2017",
+  "recommendedModel": "One-Class SVM",
+  "recommendationReason": "Highest composite score (0.6564) balancing accuracy, recall, and real-time inference latency.",
+  "comparison": [
+    {
+      "modelName": "Random Forest",
+      "accuracy": 0.706,
+      "precision": 0.4984,
+      "recall": 0.706,
+      "f1Score": 0.5843,
+      "rocAuc": 0.5247,
+      "trainingTimeMs": 2460,
+      "inferenceTimeMs": 26,
+      "memoryUsageMb": 18.85,
+      "compositeScore": 0.6365,
+      "isRecommended": false
+    },
+    {
+      "modelName": "XGBoost",
+      "accuracy": 0.69,
+      "precision": 0.532,
+      "recall": 0.69,
+      "f1Score": 0.5886,
+      "rocAuc": 0.5317,
+      "trainingTimeMs": 8003,
+      "inferenceTimeMs": 4,
+      "memoryUsageMb": 42.7,
+      "compositeScore": 0.6434,
+      "isRecommended": false
+    },
+    {
+      "modelName": "Decision Tree",
+      "accuracy": 0.566,
+      "precision": 0.5254,
+      "recall": 0.566,
+      "f1Score": 0.5444,
+      "rocAuc": 0.5231,
+      "trainingTimeMs": 55,
+      "inferenceTimeMs": 0,
+      "memoryUsageMb": 26.76,
+      "compositeScore": 0.5916,
+      "isRecommended": false
+    },
+    {
+      "modelName": "Isolation Forest",
+      "accuracy": 0.658,
+      "precision": 0.5722,
+      "recall": 0.658,
+      "f1Score": 0.5945,
+      "rocAuc": 0.5033,
+      "trainingTimeMs": 234,
+      "inferenceTimeMs": 12,
+      "memoryUsageMb": 20.34,
+      "compositeScore": 0.6453,
+      "isRecommended": false
+    },
+    {
+      "modelName": "One-Class SVM",
+      "accuracy": 0.668,
+      "precision": 0.5894,
+      "recall": 0.668,
+      "f1Score": 0.6052,
+      "rocAuc": 0.5232,
+      "trainingTimeMs": 26,
+      "inferenceTimeMs": 8,
+      "memoryUsageMb": 46.38,
+      "compositeScore": 0.6564,
+      "isRecommended": true
+    }
+  ],
+  "lastEvaluatedAt": "2026-08-06 20:51:06"
+}

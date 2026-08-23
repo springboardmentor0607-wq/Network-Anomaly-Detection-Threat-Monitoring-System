@@ -1,0 +1,45 @@
+{
+  "dataset_name": "UNSW-NB15",
+  "original_rows": 2540044,
+  "processed_rows": 2218761,
+  "removed_duplicates": 321283,
+  "missing_values_fixed": 0,
+  "columns_removed": [
+    "ct_flw_http_mthd",
+    "is_ftp_login"
+  ],
+  "class_distribution": {
+    "Normal": 1934964,
+    "Generic": 215481,
+    "Exploits": 44525,
+    "Fuzzers": 24246,
+    "DoS": 16353,
+    "Reconnaissance": 13987,
+    "Analysis": 2677,
+    "Backdoor": 2329,
+    "Shellcode": 1511,
+    "Worms": 174
+  },
+  "attack_categories": [
+    "Normal",
+    "Generic",
+    "Exploits",
+    "Fuzzers",
+    "DoS",
+    "Reconnaissance",
+    "Analysis",
+    "Backdoor",
+    "Shellcode",
+    "Worms"
+  ],
+  "normal_traffic_percentage": 87.2,
+  "dataset_statistics": {
+    "total_features": 49,
+    "categorical_features_count": 3,
+    "numerical_features_count": 46,
+    "train_samples": 1775008,
+    "validation_samples": 221876,
+    "test_samples": 221877
+  },
+  "processing_date": "2026-07-26T12:00:00.000Z"
+}

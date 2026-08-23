@@ -1,0 +1,6 @@
+modelName,accuracy,precision,recall,f1Score,rocAuc,trainingTimeMs,inferenceTimeMs,memoryUsageMb,isRecommended
+Random Forest,0.706,0.4984,0.706,0.5843,0.5247,2460,26,18.85,False
+XGBoost,0.69,0.532,0.69,0.5886,0.5317,8003,4,42.7,False
+Decision Tree,0.566,0.5254,0.566,0.5444,0.5231,55,0,26.76,False
+Isolation Forest,0.658,0.5722,0.658,0.5945,0.5033,234,12,20.34,False
+One-Class SVM,0.668,0.5894,0.668,0.6052,0.5232,26,8,46.38,True

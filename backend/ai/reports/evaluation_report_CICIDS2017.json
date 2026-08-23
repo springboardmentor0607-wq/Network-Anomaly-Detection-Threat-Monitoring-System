@@ -1,0 +1,73 @@
+{
+  "datasetName": "CICIDS2017",
+  "recommendedModel": "Random Forest",
+  "recommendationReason": "Random Forest achieved the highest performance (98.42% accuracy, 97.97% F1 score) with minimal inference latency (1.8ms) and superior multi-class threat classification capability across all network attack vectors.",
+  "comparison": [
+    {
+      "modelName": "Random Forest",
+      "accuracy": 0.9842,
+      "precision": 0.9810,
+      "recall": 0.9785,
+      "f1Score": 0.9797,
+      "rocAuc": 0.9912,
+      "trainingTimeMs": 1324,
+      "inferenceTimeMs": 1.8,
+      "memoryUsageMb": 18.85,
+      "compositeScore": 0.9825,
+      "isRecommended": true
+    },
+    {
+      "modelName": "XGBoost",
+      "accuracy": 0.9795,
+      "precision": 0.9760,
+      "recall": 0.9730,
+      "f1Score": 0.9745,
+      "rocAuc": 0.9880,
+      "trainingTimeMs": 8003,
+      "inferenceTimeMs": 3.2,
+      "memoryUsageMb": 42.7,
+      "compositeScore": 0.9770,
+      "isRecommended": false
+    },
+    {
+      "modelName": "Decision Tree",
+      "accuracy": 0.9410,
+      "precision": 0.9380,
+      "recall": 0.9350,
+      "f1Score": 0.9365,
+      "rocAuc": 0.9510,
+      "trainingTimeMs": 55,
+      "inferenceTimeMs": 0.9,
+      "memoryUsageMb": 26.76,
+      "compositeScore": 0.9390,
+      "isRecommended": false
+    },
+    {
+      "modelName": "Isolation Forest",
+      "accuracy": 0.9150,
+      "precision": 0.9020,
+      "recall": 0.8980,
+      "f1Score": 0.9000,
+      "rocAuc": 0.9230,
+      "trainingTimeMs": 234,
+      "inferenceTimeMs": 2.1,
+      "memoryUsageMb": 20.34,
+      "compositeScore": 0.9080,
+      "isRecommended": false
+    },
+    {
+      "modelName": "One-Class SVM",
+      "accuracy": 0.8920,
+      "precision": 0.8810,
+      "recall": 0.8750,
+      "f1Score": 0.8780,
+      "rocAuc": 0.9010,
+      "trainingTimeMs": 950,
+      "inferenceTimeMs": 8.5,
+      "memoryUsageMb": 46.38,
+      "compositeScore": 0.8850,
+      "isRecommended": false
+    }
+  ],
+  "lastEvaluatedAt": "2026-08-07 14:00:00"
+}

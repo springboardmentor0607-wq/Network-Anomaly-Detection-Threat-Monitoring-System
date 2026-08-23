@@ -1,0 +1,5 @@
+Flow Duration,Total Fwd Packets,Total Backward Packets,Flow Bytes/s,Flow Packets/s,label
+4500,28,22,18500,120,BENIGN
+12000,50,45,2500000,800,DDoS
+3000,10,8,65000,300,DoS Hulk
+1500,5,5,18000,150,PortScan
