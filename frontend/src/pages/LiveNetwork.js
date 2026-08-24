@@ -1,74 +1,90 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  XAxis,
-  YAxis,
-  Tooltip,
+  BarChart,
+  Bar,
   PieChart,
   Pie,
   Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
 } from "recharts";
+import { useNavigate } from "react-router-dom";
 import "./LiveNetwork.css";
 
 const API_URL = "http://127.0.0.1:8000";
+
+const CHART_COLORS = [
+  "#3b82f6",
+  "#8b5cf6",
+  "#06b6d4",
+  "#f97316",
+  "#ef4444",
+  "#22c55e",
+  "#eab308",
+];
 
 function LiveNetwork() {
   const navigate = useNavigate();
 
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const [monitorOnline, setMonitorOnline] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
 
   // ============================================================
-  // FETCH ALERTS
+  // FETCH LIVE DATA
   // ============================================================
 
-  const refreshData = useCallback(async () => {
+  const fetchLiveData = useCallback(async (initial = false) => {
     try {
-      const response = await fetch(`${API_URL}/alerts/`);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch alerts");
+      if (initial) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
       }
 
-      const data = await response.json();
+      let response;
 
-      const alertList = Array.isArray(data)
-        ? data
-        : Array.isArray(data.alerts)
-        ? data.alerts
-        : [];
+      try {
+        response = await axios.get(`${API_URL}/predictions/`);
+      } catch (predictionError) {
+        console.warn("Predictions API unavailable. Trying alerts API...");
+        response = await axios.get(`${API_URL}/alerts/`);
+      }
 
-      const normalized = alertList.map((item) => ({
-        ...item,
-        id: item.id || item._id,
-        severity: item.severity || "Low",
-        threat_type: item.threat_type || "Unknown Threat",
-        status: item.status || "Unknown",
-        workflow_status: item.workflow_status || "New",
-        risk_score: Number(item.risk_score || 0),
-        confidence: item.confidence || "0%",
-      }));
+      const result = response.data;
 
-      normalized.sort((a, b) => {
-        const dateA = new Date(a.timestamp || 0).getTime();
-        const dateB = new Date(b.timestamp || 0).getTime();
+      let records = [];
 
-        return dateB - dateA;
-      });
+      if (Array.isArray(result)) {
+        records = result;
+      } else if (Array.isArray(result?.predictions)) {
+        records = result.predictions;
+      } else if (Array.isArray(result?.alerts)) {
+        records = result.alerts;
+      } else if (Array.isArray(result?.data)) {
+        records = result.data;
+      }
 
-      setAlerts(normalized);
-      setLastUpdated(new Date());
-      setMonitorOnline(true);
+      setAlerts(records);
+      setError("");
+    } catch (err) {
+      console.error("Live Network API error:", err);
+
+      setError(
+        err.response?.data?.detail ||
+          "Unable to connect to live monitoring service."
+      );
+    } finally {
       setLoading(false);
-    } catch (error) {
-      console.error("Live Network error:", error);
-      setMonitorOnline(false);
-      setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -77,173 +93,358 @@ function LiveNetwork() {
   // ============================================================
 
   useEffect(() => {
-    refreshData();
+    fetchLiveData(true);
 
     const interval = setInterval(() => {
-      refreshData();
+      fetchLiveData(false);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [refreshData]);
+  }, [fetchLiveData]);
 
   // ============================================================
-  // STATISTICS
+  // HELPERS
   // ============================================================
 
-  const statistics = useMemo(() => {
+  const getStatus = (item) => {
+    const status = String(item?.status || "").toLowerCase();
+
+    if (
+      status.includes("threat") ||
+      status.includes("attack")
+    ) {
+      return "Threat Detected";
+    }
+
+    if (
+      item?.threat_type &&
+      item.threat_type !== "Normal Traffic"
+    ) {
+      return "Threat Detected";
+    }
+
+    return "Normal";
+  };
+
+  const getSeverity = (item) => {
+    return item?.severity || "Low";
+  };
+
+  const getRisk = (item) => {
+    return Number(
+      item?.risk_score ??
+        item?.risk ??
+        0
+    );
+  };
+
+  const getThreatType = (item) => {
+    return (
+      item?.threat_type ||
+      item?.attack_type ||
+      item?.prediction ||
+      "Normal Traffic"
+    );
+  };
+
+  const getAlertId = (item) => {
+    return (
+      item?.id ||
+      item?._id ||
+      item?.alert_id ||
+      item?.alertId ||
+      null
+    );
+  };
+
+  const formatTime = (timestamp) => {
+    if (!timestamp) {
+      return "-";
+    }
+
+    try {
+      return new Date(timestamp).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    } catch {
+      return "-";
+    }
+  };
+
+  // ============================================================
+  // SORT EVENTS
+  // ============================================================
+
+  const recentAlerts = useMemo(() => {
+    return [...alerts]
+      .sort((a, b) => {
+        return (
+          new Date(
+            b.timestamp ||
+              b.created_at ||
+              b.detection_time ||
+              0
+          ) -
+          new Date(
+            a.timestamp ||
+              a.created_at ||
+              a.detection_time ||
+              0
+          )
+        );
+      })
+      .slice(0, 20);
+  }, [alerts]);
+
+  // ============================================================
+  // SUMMARY
+  // ============================================================
+
+  const summary = useMemo(() => {
     const total = alerts.length;
 
     const threats = alerts.filter(
-      (alert) =>
-        alert.status === "Threat Detected" ||
-        alert.threat_type !== "Normal Traffic"
-    ).length;
-
-    const normal = alerts.filter(
-      (alert) =>
-        alert.status === "Normal" ||
-        alert.threat_type === "Normal Traffic"
+      (item) => getStatus(item) === "Threat Detected"
     ).length;
 
     const critical = alerts.filter(
-      (alert) =>
-        String(alert.severity).toLowerCase() === "critical"
+      (item) =>
+        String(getSeverity(item)).toLowerCase() === "critical"
     ).length;
 
     const high = alerts.filter(
-      (alert) =>
-        String(alert.severity).toLowerCase() === "high"
+      (item) =>
+        String(getSeverity(item)).toLowerCase() === "high"
     ).length;
 
     const medium = alerts.filter(
-      (alert) =>
-        String(alert.severity).toLowerCase() === "medium"
+      (item) =>
+        String(getSeverity(item)).toLowerCase() === "medium"
     ).length;
 
-    const low = alerts.filter(
-      (alert) =>
-        String(alert.severity).toLowerCase() === "low"
-    ).length;
+    const normal = total - threats;
 
     const averageRisk =
       total > 0
         ? Math.round(
             alerts.reduce(
-              (sum, alert) =>
-                sum + Number(alert.risk_score || 0),
+              (sum, item) => sum + getRisk(item),
               0
             ) / total
           )
         : 0;
 
-    const threatRate =
-      total > 0
-        ? Math.round((threats / total) * 100)
-        : 0;
-
     return {
       total,
       threats,
-      normal,
       critical,
       high,
       medium,
-      low,
+      normal,
       averageRisk,
-      threatRate,
     };
   }, [alerts]);
 
   // ============================================================
-  // ACTIVITY DATA
+  // THREAT DISTRIBUTION
   // ============================================================
 
-  const activityData = useMemo(() => {
-    return [...alerts]
-      .reverse()
-      .slice(-20)
-      .map((alert, index) => ({
-        name: index + 1,
-        risk: Number(alert.risk_score || 0),
+  const threatDistribution = useMemo(() => {
+    const map = {};
+
+    alerts.forEach((item) => {
+      const type = getThreatType(item);
+      map[type] = (map[type] || 0) + 1;
+    });
+
+    return Object.entries(map)
+      .map(([name, value]) => ({
+        name,
+        value,
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 7);
+  }, [alerts]);
+
+  // ============================================================
+  // SEVERITY DISTRIBUTION
+  // ============================================================
+
+  const severityDistribution = useMemo(() => {
+    const levels = ["Critical", "High", "Medium", "Low"];
+
+    return levels.map((level) => ({
+      name: level,
+      value: alerts.filter(
+        (item) =>
+          String(getSeverity(item)).toLowerCase() ===
+          level.toLowerCase()
+      ).length,
+    }));
+  }, [alerts]);
+
+  // ============================================================
+  // PROTOCOL DISTRIBUTION
+  // ============================================================
+
+  const protocolDistribution = useMemo(() => {
+    const map = {};
+
+    alerts.forEach((item) => {
+      const protocol =
+        item?.protocol ||
+        item?.protocol_type ||
+        "Unknown";
+
+      map[protocol] = (map[protocol] || 0) + 1;
+    });
+
+    return Object.entries(map)
+      .map(([name, value]) => ({
+        name: name.toUpperCase(),
+        value,
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+  }, [alerts]);
+
+  // ============================================================
+  // SERVICE DISTRIBUTION
+  // ============================================================
+
+  const serviceDistribution = useMemo(() => {
+    const map = {};
+
+    alerts.forEach((item) => {
+      const service =
+        item?.service ||
+        item?.service_name ||
+        "Unknown";
+
+      map[service] = (map[service] || 0) + 1;
+    });
+
+    return Object.entries(map)
+      .map(([name, value]) => ({
+        name,
+        value,
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }, [alerts]);
+
+  // ============================================================
+  // TRAFFIC TREND
+  // ============================================================
+
+  const trafficTrend = useMemo(() => {
+    const groups = {};
+
+    alerts.forEach((item) => {
+      const timestamp =
+        item?.timestamp ||
+        item?.created_at ||
+        item?.detection_time;
+
+      if (!timestamp) return;
+
+      const date = new Date(timestamp);
+
+      const time = date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      if (!groups[time]) {
+        groups[time] = {
+          time,
+          events: 0,
+          threats: 0,
+          risk: 0,
+        };
+      }
+
+      groups[time].events += 1;
+
+      if (getStatus(item) === "Threat Detected") {
+        groups[time].threats += 1;
+      }
+
+      groups[time].risk += getRisk(item);
+    });
+
+    return Object.values(groups)
+      .slice(-10)
+      .map((item) => ({
+        ...item,
+        risk:
+          item.events > 0
+            ? Math.round(item.risk / item.events)
+            : 0,
       }));
   }, [alerts]);
 
   // ============================================================
-  // DISTRIBUTION
+  // INVESTIGATE
   // ============================================================
 
-  const distributionData = [
-    {
-      name: "Threats",
-      value: statistics.threats,
-    },
-    {
-      name: "Normal",
-      value: statistics.normal,
-    },
-  ];
+  const investigateAlert = (item) => {
+    const alertId = getAlertId(item);
 
-  // ============================================================
-  // TIME FORMAT
-  // ============================================================
-
-  const formatTime = (timestamp) => {
-    if (!timestamp) {
-      return "--";
-    }
-
-    const date = new Date(timestamp);
-
-    if (Number.isNaN(date.getTime())) {
-      return "--";
-    }
-
-    return date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  };
-
-  // ============================================================
-  // SEVERITY
-  // ============================================================
-
-  const severityClass = (severity) => {
-    return String(severity || "low").toLowerCase();
-  };
-
-  // ============================================================
-  // INVESTIGATION
-  // IMPORTANT:
-  // App.js uses /alert-investigation/:alertId
-  // ============================================================
-
-  const openInvestigation = (alert) => {
-    const alertId = alert.id || alert._id;
+    console.log("Clicked Investigate");
+    console.log("Alert:", item);
+    console.log("Alert ID:", alertId);
 
     if (!alertId) {
-      console.error("No alert ID found:", alert);
+      setError(
+        "This alert does not have a valid ID. Please check the backend alert data."
+      );
       return;
     }
 
-    navigate(`/alert-investigation/${alertId}`);
+    const selectedAlert = {
+      ...item,
+      id: String(alertId),
+    };
+
+    localStorage.setItem(
+      "netshield_selected_alert",
+      JSON.stringify(selectedAlert)
+    );
+
+    navigate(`/investigate/${encodeURIComponent(String(alertId))}`);
   };
 
   // ============================================================
-  // REPORT
+  // CUSTOM TOOLTIP
   // ============================================================
 
-  const openReport = (alert) => {
-    const alertId = alert.id || alert._id;
-
-    if (!alertId) {
-      return;
+  const CustomTooltip = ({
+    active,
+    payload,
+    label,
+  }) => {
+    if (
+      !active ||
+      !payload ||
+      !payload.length
+    ) {
+      return null;
     }
 
-    window.open(
-      `${API_URL}/monitoring/report/${alertId}`,
-      "_blank"
+    return (
+      <div className="live-tooltip">
+        {label && <strong>{label}</strong>}
+
+        {payload.map((item, index) => (
+          <div key={index}>
+            <span>{item.name}</span>
+            <b>{item.value}</b>
+          </div>
+        ))}
+      </div>
     );
   };
 
@@ -254,18 +455,16 @@ function LiveNetwork() {
   if (loading) {
     return (
       <div className="live-loading">
-        <div className="loading-orbit">
-          <div className="loading-shield">🛡️</div>
-        </div>
+        <div className="live-loading-icon">🛡️</div>
 
-        <h2>NETSHIELD AI</h2>
+        <h2>NetShield AI</h2>
 
         <p>
-          Initializing Security Operations Center...
+          Initializing live network monitoring...
         </p>
 
-        <div className="loading-progress">
-          <span></span>
+        <div className="live-loading-bar">
+          <div></div>
         </div>
       </div>
     );
@@ -278,870 +477,975 @@ function LiveNetwork() {
   return (
     <div className="live-page">
 
-      {/* ========================================================
-          HEADER
-      ======================================================== */}
+      {/* SIDEBAR */}
 
-      <header className="live-header">
+      <aside className="live-sidebar">
 
-        <div className="brand-section">
-
-          <div className="brand-shield">
+        <div className="live-brand">
+          <div className="live-brand-icon">
             🛡️
           </div>
 
           <div>
-            <div className="brand-name">
-              NETSHIELD AI
+            <h2>NetShield</h2>
+            <span>AI SECURITY</span>
+          </div>
+        </div>
+
+        <div className="live-nav-section">
+
+          <p>MONITORING</p>
+
+          <button
+            type="button"
+            className="live-nav-item"
+            onClick={() => navigate("/dashboard")}
+          >
+            <span>▦</span>
+            Dashboard
+          </button>
+
+          <button
+            type="button"
+            className="live-nav-item active"
+          >
+            <span>◉</span>
+            Live Network
+          </button>
+
+          <button
+            type="button"
+            className="live-nav-item"
+            onClick={() => navigate("/threat-alerts")}
+          >
+            <span>⚠</span>
+            Threat Alerts
+          </button>
+
+          <button
+            type="button"
+            className="live-nav-item"
+            onClick={() => navigate("/analytics")}
+          >
+            <span>⌁</span>
+            Threat Analysis
+          </button>
+
+        </div>
+
+        <div className="live-nav-section">
+
+          <p>INTELLIGENCE</p>
+
+          <button
+            type="button"
+            className="live-nav-item"
+            onClick={() => navigate("/predictions")}
+          >
+            <span>✦</span>
+            AI Predictions
+          </button>
+
+          <button
+            type="button"
+            className="live-nav-item"
+            onClick={() => navigate("/analytics")}
+          >
+            <span>◷</span>
+            Threat Timeline
+          </button>
+
+        </div>
+
+        <div className="live-sidebar-bottom">
+
+          <div className="live-system-card">
+
+            <span className="live-system-dot"></span>
+
+            <div>
+              <strong>Operational</strong>
+
+              <span>
+                Live monitoring active
+              </span>
             </div>
 
-            <div className="brand-subtitle">
-              SECURITY OPERATIONS CENTER
-            </div>
+          </div>
+
+          <div className="live-version">
+            NETSHIELD AI • MILESTONE 3
           </div>
 
         </div>
 
-        <div className="header-center">
-          <span className="header-pulse"></span>
-          LIVE SECURITY TELEMETRY
-        </div>
+      </aside>
 
-        <div className="header-status">
+      {/* MAIN */}
 
-          <span
-            className={
-              monitorOnline
-                ? "status-dot online"
-                : "status-dot offline"
-            }
-          ></span>
+      <main className="live-main">
 
-          {monitorOnline
-            ? "AI ENGINE ONLINE"
-            : "ENGINE OFFLINE"}
+        {/* HEADER */}
 
-        </div>
+        <header className="live-topbar">
 
-      </header>
+          <div>
 
-
-      {/* ========================================================
-          BREADCRUMB
-      ======================================================== */}
-
-      <div className="breadcrumb">
-
-        <span>SOC</span>
-
-        <span>/</span>
-
-        <span>MONITORING</span>
-
-        <span>/</span>
-
-        <strong>LIVE NETWORK</strong>
-
-      </div>
-
-
-      {/* ========================================================
-          HERO
-      ======================================================== */}
-
-      <section className="live-hero">
-
-        <div className="hero-grid">
-
-          <div className="hero-content">
-
-            <div className="live-indicator">
-              <span></span>
-              SYSTEM LIVE
+            <div className="live-top-label">
+              SECURITY / LIVE MONITORING
             </div>
 
             <h1>
-              Network Threat
-              <br />
-              <span>Intelligence Center</span>
+              Live Network Monitoring
             </h1>
 
             <p>
-              Real-time AI-powered network monitoring,
-              anomaly detection and security event analysis.
+              Real-time AI analysis of network
+              traffic, threats and security events.
             </p>
 
-            <div className="hero-tags">
+          </div>
 
-              <span>AI MONITORING</span>
-              <span>RANDOM FOREST</span>
-              <span>REAL-TIME</span>
+          <div className="live-header-actions">
 
+            <div className="live-status">
+              <span></span>
+              LIVE MONITORING
             </div>
 
-            <div className="hero-meta">
-
-              <div>
-                <span>STATUS</span>
-                <strong>ACTIVE</strong>
-              </div>
-
-              <div>
-                <span>SCAN RATE</span>
-                <strong>5 SEC</strong>
-              </div>
-
-              <div>
-                <span>DATABASE</span>
-                <strong>MONGODB</strong>
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* RADAR */}
-
-          <div className="hero-visual">
-
-            <div className="radar">
-
-              <div className="radar-grid-line horizontal"></div>
-              <div className="radar-grid-line vertical"></div>
-
-              <div className="radar-ring ring-one"></div>
-              <div className="radar-ring ring-two"></div>
-              <div className="radar-ring ring-three"></div>
-
-              <div className="radar-sweep"></div>
-
-              <div className="radar-center">
-                🛡️
-              </div>
-
-              <span className="radar-point point-one"></span>
-              <span className="radar-point point-two"></span>
-              <span className="radar-point point-three"></span>
-              <span className="radar-point point-four"></span>
-
-            </div>
-
-            <div className="radar-label">
-              THREAT RADAR
-              <span>SCANNING NETWORK</span>
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      {/* ========================================================
-          STATISTICS
-      ======================================================== */}
-
-      <section className="stats-grid">
-
-        <div className="stat-card blue">
-
-          <div className="stat-icon">◉</div>
-
-          <div className="stat-content">
-
-            <span>TOTAL EVENTS</span>
-
-            <strong>{statistics.total}</strong>
-
-            <small>
-              Live network events
-            </small>
-
-          </div>
-
-          <div className="stat-line"></div>
-
-        </div>
-
-
-        <div className="stat-card red">
-
-          <div className="stat-icon">⚠</div>
-
-          <div className="stat-content">
-
-            <span>THREATS DETECTED</span>
-
-            <strong>{statistics.threats}</strong>
-
-            <small>
-              {statistics.threatRate}% of events
-            </small>
-
-          </div>
-
-          <div className="stat-line"></div>
-
-        </div>
-
-
-        <div className="stat-card orange">
-
-          <div className="stat-icon">!</div>
-
-          <div className="stat-content">
-
-            <span>CRITICAL ALERTS</span>
-
-            <strong>{statistics.critical}</strong>
-
-            <small>
-              Immediate attention
-            </small>
-
-          </div>
-
-          <div className="stat-line"></div>
-
-        </div>
-
-
-        <div className="stat-card purple">
-
-          <div className="stat-icon">◈</div>
-
-          <div className="stat-content">
-
-            <span>AVERAGE RISK</span>
-
-            <strong>
-              {statistics.averageRisk}
-              <small>/100</small>
-            </strong>
-
-            <small>
-              AI risk calculation
-            </small>
-
-          </div>
-
-          <div className="stat-line"></div>
-
-        </div>
-
-      </section>
-
-
-      {/* ========================================================
-          ANALYTICS
-      ======================================================== */}
-
-      <section className="analytics-grid">
-
-        {/* THREAT ACTIVITY */}
-
-        <div className="panel activity-panel">
-
-          <div className="panel-header">
-
-            <div>
-
-              <span className="panel-kicker">
-                LIVE TELEMETRY
+            <button
+              type="button"
+              className="live-refresh-button"
+              onClick={() => fetchLiveData(false)}
+              disabled={refreshing}
+            >
+              <span
+                className={
+                  refreshing ? "live-spin" : ""
+                }
+              >
+                ↻
               </span>
 
-              <h2>
-                Threat Activity
-              </h2>
-
-            </div>
-
-            <div className="chart-live">
-              <span></span>
-              LIVE
-            </div>
+              {refreshing
+                ? "Refreshing..."
+                : "Refresh"}
+            </button>
 
           </div>
 
-          <div className="chart-container">
+        </header>
 
-            {activityData.length > 0 ? (
+        {/* ERROR */}
+
+        {error && (
+          <div className="live-error">
+            ⚠️ {error}
+          </div>
+        )}
+
+        {/* SUMMARY */}
+
+        <section className="live-summary">
+
+          <div className="live-summary-card blue">
+            <div className="live-card-icon">◈</div>
+
+            <div>
+              <span>TOTAL EVENTS</span>
+              <strong>{summary.total}</strong>
+              <small>Live network events</small>
+            </div>
+          </div>
+
+          <div className="live-summary-card red">
+            <div className="live-card-icon">⚠</div>
+
+            <div>
+              <span>THREATS DETECTED</span>
+              <strong>{summary.threats}</strong>
+              <small>AI detected threats</small>
+            </div>
+          </div>
+
+          <div className="live-summary-card critical">
+            <div className="live-card-icon">!</div>
+
+            <div>
+              <span>CRITICAL THREATS</span>
+              <strong>{summary.critical}</strong>
+              <small>Immediate attention</small>
+            </div>
+          </div>
+
+          <div className="live-summary-card purple">
+            <div className="live-card-icon">◉</div>
+
+            <div>
+              <span>AVERAGE RISK</span>
+
+              <strong>
+                {summary.averageRisk}
+                <small>/100</small>
+              </strong>
+
+              <small>Current AI risk score</small>
+            </div>
+          </div>
+
+        </section>
+
+        {/* CHART ROW 1 */}
+
+        <section className="live-chart-grid">
+
+          <div className="live-panel live-large-panel">
+
+            <div className="live-panel-header">
+
+              <div>
+                <span>NETWORK TELEMETRY</span>
+                <h2>Traffic Overview</h2>
+              </div>
+
+              <div className="panel-live-dot">
+                <span></span>
+                LIVE
+              </div>
+
+            </div>
+
+            <div className="live-chart">
 
               <ResponsiveContainer
                 width="100%"
                 height="100%"
               >
 
-                <AreaChart data={activityData}>
+                <AreaChart
+                  data={trafficTrend}
+                  margin={{
+                    top: 10,
+                    right: 15,
+                    left: -15,
+                    bottom: 0,
+                  }}
+                >
 
                   <defs>
 
                     <linearGradient
-                      id="riskGradient"
+                      id="eventsGradient"
                       x1="0"
                       y1="0"
                       x2="0"
                       y2="1"
                     >
-
                       <stop
                         offset="0%"
-                        stopColor="#36a3ff"
-                        stopOpacity={0.5}
+                        stopColor="#3b82f6"
+                        stopOpacity={0.4}
                       />
 
                       <stop
                         offset="100%"
-                        stopColor="#36a3ff"
+                        stopColor="#3b82f6"
                         stopOpacity={0}
                       />
+                    </linearGradient>
 
+                    <linearGradient
+                      id="threatGradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="0%"
+                        stopColor="#ef4444"
+                        stopOpacity={0.35}
+                      />
+
+                      <stop
+                        offset="100%"
+                        stopColor="#ef4444"
+                        stopOpacity={0}
+                      />
                     </linearGradient>
 
                   </defs>
 
+                  <CartesianGrid
+                    stroke="#17263a"
+                    strokeDasharray="3 3"
+                    vertical={false}
+                  />
+
                   <XAxis
-                    dataKey="name"
-                    stroke="#536b82"
-                    tick={{ fontSize: 10 }}
+                    dataKey="time"
+                    tick={{
+                      fill: "#64748b",
+                      fontSize: 10,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
                   />
 
                   <YAxis
-                    domain={[0, 100]}
-                    stroke="#536b82"
-                    tick={{ fontSize: 10 }}
+                    tick={{
+                      fill: "#64748b",
+                      fontSize: 10,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
                   />
 
                   <Tooltip
-                    contentStyle={{
-                      background: "#07111f",
-                      border: "1px solid #25445f",
-                      borderRadius: "12px",
-                      color: "#ffffff",
+                    content={<CustomTooltip />}
+                  />
+
+                  <Legend
+                    wrapperStyle={{
+                      fontSize: "10px",
+                      paddingTop: "8px",
                     }}
                   />
 
                   <Area
                     type="monotone"
-                    dataKey="risk"
-                    stroke="#36a3ff"
-                    strokeWidth={3}
-                    fill="url(#riskGradient)"
+                    dataKey="events"
+                    name="Events"
+                    stroke="#3b82f6"
+                    fill="url(#eventsGradient)"
+                    strokeWidth={2}
+                  />
+
+                  <Area
+                    type="monotone"
+                    dataKey="threats"
+                    name="Threats"
+                    stroke="#ef4444"
+                    fill="url(#threatGradient)"
+                    strokeWidth={2}
                   />
 
                 </AreaChart>
 
               </ResponsiveContainer>
 
-            ) : (
-
-              <div className="empty-chart">
-                <span>📡</span>
-                Waiting for network telemetry...
-              </div>
-
-            )}
+            </div>
 
           </div>
 
-        </div>
+          <div className="live-panel">
 
+            <div className="live-panel-header">
 
-        {/* TRAFFIC DISTRIBUTION */}
+              <div>
+                <span>THREAT INTELLIGENCE</span>
+                <h2>Threat Distribution</h2>
+              </div>
 
-        <div className="panel distribution-panel">
+            </div>
 
-          <div className="panel-header">
+            <div className="live-pie-chart">
 
-            <div>
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+              >
 
-              <span className="panel-kicker">
-                AI CLASSIFICATION
-              </span>
+                <PieChart>
 
-              <h2>
-                Traffic Distribution
-              </h2>
+                  <Pie
+                    data={threatDistribution}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="43%"
+                    innerRadius={52}
+                    outerRadius={78}
+                    paddingAngle={3}
+                  >
+
+                    {threatDistribution.map(
+                      (entry, index) => (
+                        <Cell
+                          key={`threat-${index}`}
+                          fill={
+                            CHART_COLORS[
+                              index %
+                                CHART_COLORS.length
+                            ]
+                          }
+                        />
+                      )
+                    )}
+
+                  </Pie>
+
+                  <Tooltip
+                    content={<CustomTooltip />}
+                  />
+
+                  <Legend
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    wrapperStyle={{
+                      fontSize: "9px",
+                    }}
+                  />
+
+                </PieChart>
+
+              </ResponsiveContainer>
 
             </div>
 
           </div>
 
-          <div className="pie-area">
+        </section>
+
+        {/* CHART ROW 2 */}
+
+        <section className="live-chart-grid">
+
+          <div className="live-panel">
+
+            <div className="live-panel-header">
+
+              <div>
+                <span>SECURITY POSTURE</span>
+                <h2>Severity Distribution</h2>
+              </div>
+
+            </div>
+
+            <div className="live-chart medium-chart">
+
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+              >
+
+                <BarChart
+                  data={severityDistribution}
+                  margin={{
+                    top: 10,
+                    right: 15,
+                    left: -20,
+                    bottom: 5,
+                  }}
+                >
+
+                  <CartesianGrid
+                    stroke="#17263a"
+                    strokeDasharray="3 3"
+                    vertical={false}
+                  />
+
+                  <XAxis
+                    dataKey="name"
+                    tick={{
+                      fill: "#64748b",
+                      fontSize: 10,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+
+                  <YAxis
+                    tick={{
+                      fill: "#64748b",
+                      fontSize: 10,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+
+                  <Tooltip
+                    content={<CustomTooltip />}
+                  />
+
+                  <Bar
+                    dataKey="value"
+                    name="Events"
+                    radius={[5, 5, 0, 0]}
+                  >
+
+                    {severityDistribution.map(
+                      (entry, index) => {
+
+                        const colors = {
+                          Critical: "#ef4444",
+                          High: "#f97316",
+                          Medium: "#eab308",
+                          Low: "#22c55e",
+                        };
+
+                        return (
+                          <Cell
+                            key={`severity-${index}`}
+                            fill={
+                              colors[entry.name]
+                            }
+                          />
+                        );
+                      }
+                    )}
+
+                  </Bar>
+
+                </BarChart>
+
+              </ResponsiveContainer>
+
+            </div>
+
+          </div>
+
+          <div className="live-panel">
+
+            <div className="live-panel-header">
+
+              <div>
+                <span>NETWORK TELEMETRY</span>
+                <h2>Protocol Distribution</h2>
+              </div>
+
+            </div>
+
+            <div className="live-chart medium-chart">
+
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+              >
+
+                <BarChart
+                  data={protocolDistribution}
+                  layout="vertical"
+                  margin={{
+                    top: 5,
+                    right: 15,
+                    left: 10,
+                    bottom: 5,
+                  }}
+                >
+
+                  <CartesianGrid
+                    stroke="#17263a"
+                    strokeDasharray="3 3"
+                    horizontal={false}
+                  />
+
+                  <XAxis
+                    type="number"
+                    tick={{
+                      fill: "#64748b",
+                      fontSize: 10,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={50}
+                    tick={{
+                      fill: "#94a3b8",
+                      fontSize: 10,
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+
+                  <Tooltip
+                    content={<CustomTooltip />}
+                  />
+
+                  <Bar
+                    dataKey="value"
+                    name="Connections"
+                    fill="#8b5cf6"
+                    radius={[0, 5, 5, 0]}
+                  />
+
+                </BarChart>
+
+              </ResponsiveContainer>
+
+            </div>
+
+          </div>
+
+        </section>
+
+        {/* SERVICES */}
+
+        <section className="live-panel service-panel">
+
+          <div className="live-panel-header">
+
+            <div>
+              <span>NETWORK TELEMETRY</span>
+              <h2>Top Network Services</h2>
+            </div>
+
+            <span className="result-label">
+              TOP SERVICES
+            </span>
+
+          </div>
+
+          <div className="service-chart">
 
             <ResponsiveContainer
               width="100%"
               height="100%"
             >
 
-              <PieChart>
+              <BarChart
+                data={serviceDistribution}
+                margin={{
+                  top: 5,
+                  right: 20,
+                  left: 0,
+                  bottom: 5,
+                }}
+              >
 
-                <Pie
-                  data={distributionData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={65}
-                  outerRadius={95}
-                  paddingAngle={5}
-                >
-
-                  <Cell fill="#ff5260" />
-                  <Cell fill="#32d583" />
-
-                </Pie>
-
-                <Tooltip
-                  contentStyle={{
-                    background: "#07111f",
-                    border: "1px solid #25445f",
-                    borderRadius: "10px",
-                  }}
+                <CartesianGrid
+                  stroke="#17263a"
+                  strokeDasharray="3 3"
+                  vertical={false}
                 />
 
-              </PieChart>
+                <XAxis
+                  dataKey="name"
+                  tick={{
+                    fill: "#64748b",
+                    fontSize: 10,
+                  }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+
+                <YAxis
+                  tick={{
+                    fill: "#64748b",
+                    fontSize: 10,
+                  }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+
+                <Tooltip
+                  content={<CustomTooltip />}
+                />
+
+                <Bar
+                  dataKey="value"
+                  name="Connections"
+                  fill="#06b6d4"
+                  radius={[5, 5, 0, 0]}
+                />
+
+              </BarChart>
 
             </ResponsiveContainer>
 
-            <div className="pie-center">
-
-              <strong>
-                {statistics.total}
-              </strong>
-
-              <span>
-                EVENTS
-              </span>
-
-            </div>
-
           </div>
 
-          <div className="distribution-legend">
+        </section>
+
+        {/* LIVE EVENTS */}
+
+        <section className="live-panel live-events-panel">
+
+          <div className="live-panel-header">
 
             <div>
-              <span className="legend-dot threat"></span>
-              <span>Threats</span>
-              <strong>
-                {statistics.threats}
-              </strong>
+              <span>LIVE SECURITY FEED</span>
+              <h2>Recent Network Events</h2>
             </div>
 
-            <div>
-              <span className="legend-dot normal"></span>
-              <span>Normal</span>
-              <strong>
-                {statistics.normal}
-              </strong>
+            <div className="live-feed-info">
+              <span></span>
+              AUTO REFRESH: 5s
             </div>
 
           </div>
 
-        </div>
+          {recentAlerts.length === 0 ? (
 
-      </section>
+            <div className="live-empty">
 
+              <div>📡</div>
 
-      {/* ========================================================
-          SECURITY POSTURE
-      ======================================================== */}
-
-      <section className="severity-overview panel">
-
-        <div className="panel-header">
-
-          <div>
-
-            <span className="panel-kicker">
-              SECURITY POSTURE
-            </span>
-
-            <h2>
-              Threat Severity Overview
-            </h2>
-
-          </div>
-
-          <div className="updated-time">
-
-            ● UPDATED{" "}
-
-            {lastUpdated
-              ? lastUpdated.toLocaleTimeString()
-              : "--"}
-
-          </div>
-
-        </div>
-
-        <div className="severity-bars">
-
-          <div className="severity-row">
-
-            <span>Critical</span>
-
-            <div className="severity-track">
-
-              <div
-                className="severity-fill critical"
-                style={{
-                  width: `${Math.min(
-                    statistics.critical * 5,
-                    100
-                  )}%`,
-                }}
-              ></div>
-
-            </div>
-
-            <strong>
-              {statistics.critical}
-            </strong>
-
-          </div>
-
-
-          <div className="severity-row">
-
-            <span>High</span>
-
-            <div className="severity-track">
-
-              <div
-                className="severity-fill high"
-                style={{
-                  width: `${Math.min(
-                    statistics.high * 5,
-                    100
-                  )}%`,
-                }}
-              ></div>
-
-            </div>
-
-            <strong>
-              {statistics.high}
-            </strong>
-
-          </div>
-
-
-          <div className="severity-row">
-
-            <span>Medium</span>
-
-            <div className="severity-track">
-
-              <div
-                className="severity-fill medium"
-                style={{
-                  width: `${Math.min(
-                    statistics.medium * 5,
-                    100
-                  )}%`,
-                }}
-              ></div>
-
-            </div>
-
-            <strong>
-              {statistics.medium}
-            </strong>
-
-          </div>
-
-
-          <div className="severity-row">
-
-            <span>Low</span>
-
-            <div className="severity-track">
-
-              <div
-                className="severity-fill low"
-                style={{
-                  width: `${Math.min(
-                    statistics.low * 5,
-                    100
-                  )}%`,
-                }}
-              ></div>
-
-            </div>
-
-            <strong>
-              {statistics.low}
-            </strong>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-      {/* ========================================================
-          LIVE ALERT FEED
-      ======================================================== */}
-
-      <section className="panel alerts-panel">
-
-        <div className="panel-header">
-
-          <div>
-
-            <span className="panel-kicker">
-              SECURITY EVENT STREAM
-            </span>
-
-            <h2>
-              Live Alert Feed
-            </h2>
-
-          </div>
-
-          <button
-            className="refresh-button"
-            onClick={refreshData}
-          >
-            ↻ Refresh
-          </button>
-
-        </div>
-
-
-        <div className="alert-list">
-
-          {alerts.length === 0 ? (
-
-            <div className="empty-alerts">
-
-              <div className="empty-alert-icon">
-                📡
-              </div>
-
-              <h3>
-                No network events yet
-              </h3>
+              <h3>No network events</h3>
 
               <p>
-                Waiting for the monitoring engine...
+                Waiting for live network activity...
               </p>
 
             </div>
 
           ) : (
 
-            alerts.slice(0, 12).map((alert, index) => {
+            <div className="live-table-wrapper">
 
-              const isNormal =
-                alert.threat_type === "Normal Traffic";
+              <table className="live-table">
 
-              return (
+                <thead>
 
-                <div
-                  className={`alert-row ${severityClass(
-                    alert.severity
-                  )}`}
-                  key={alert.id || index}
-                >
+                  <tr>
+                    <th>TIME</th>
+                    <th>THREAT</th>
+                    <th>SERVICE</th>
+                    <th>PROTOCOL</th>
+                    <th>SEVERITY</th>
+                    <th>RISK</th>
+                    <th>CONFIDENCE</th>
+                    <th>STATUS</th>
+                    <th>ACTION</th>
+                  </tr>
 
-                  <div
-                    className={`alert-severity-icon ${
-                      isNormal ? "normal-icon" : ""
-                    }`}
-                  >
-                    {isNormal ? "✓" : "!"}
-                  </div>
+                </thead>
 
+                <tbody>
 
-                  <div className="alert-main">
+                  {recentAlerts.map((item, index) => {
 
-                    <div className="alert-title">
+                    const status = getStatus(item);
+                    const severity = getSeverity(item);
+                    const risk = getRisk(item);
 
-                      <strong>
-                        {alert.threat_type}
-                      </strong>
+                    const alertId = getAlertId(item);
 
-                      <span
-                        className={`severity-pill ${severityClass(
-                          alert.severity
-                        )}`}
+                    return (
+                      <tr
+                        key={
+                          alertId ||
+                          `${item.timestamp || ""}-${index}`
+                        }
                       >
-                        {alert.severity}
-                      </span>
 
-                    </div>
+                        <td>
+                          {formatTime(
+                            item.timestamp ||
+                              item.created_at ||
+                              item.detection_time
+                          )}
+                        </td>
 
-                    <div className="alert-details">
+                        <td>
+                          <strong>
+                            {getThreatType(item)}
+                          </strong>
+                        </td>
 
-                      <span>
-                        {alert.protocol_type || "--"}
-                      </span>
+                        <td>
+                          {item.service ||
+                            item.service_name ||
+                            "-"}
+                        </td>
 
-                      <span>•</span>
+                        <td>
+                          {item.protocol ||
+                            item.protocol_type ||
+                            "-"}
+                        </td>
 
-                      <span>
-                        {alert.service || "--"}
-                      </span>
+                        {/* FIXED SEVERITY COLUMN */}
 
-                      <span>•</span>
+                        <td>
+                          <span
+                            className={`status-badge severity-${String(
+                              severity
+                            ).toLowerCase()}`}
+                          >
+                            {severity}
+                          </span>
+                        </td>
 
-                      <span>
-                        Risk {alert.risk_score}/100
-                      </span>
+                        {/* RISK */}
 
-                    </div>
+                        <td>
+                          <strong
+                            className={`risk-number ${
+                              risk >= 80
+                                ? "risk-critical"
+                                : risk >= 60
+                                ? "risk-high"
+                                : "risk-normal"
+                            }`}
+                          >
+                            {risk}/100
+                          </strong>
+                        </td>
 
-                  </div>
+                        {/* CONFIDENCE */}
 
+                        <td>
+                          <div className="confidence">
 
-                  <div className="alert-time">
+                            <strong>
+                              {item.confidence ?? 0}%
+                            </strong>
 
-                    <span>
-                      {formatTime(alert.timestamp)}
-                    </span>
+                            <div className="confidence-track">
 
-                    <small>
-                      {alert.source || "Live Monitor"}
-                    </small>
+                              <div
+                                style={{
+                                  width: `${Math.min(
+                                    Number(
+                                      item.confidence
+                                    ) || 0,
+                                    100
+                                  )}%`,
+                                }}
+                              ></div>
 
-                  </div>
+                            </div>
 
+                          </div>
+                        </td>
 
-                  {/* IMPORTANT INVESTIGATE BUTTON */}
+                        {/* STATUS */}
 
-                  <button
-                    className="investigate-button"
-                    onClick={() =>
-                      openInvestigation(alert)
-                    }
-                  >
-                    <span>⌕</span>
-                    Investigate
-                    <b>→</b>
-                  </button>
+                        <td>
 
+                          <span
+                            className={`event-status ${
+                              status === "Threat Detected"
+                                ? "event-threat"
+                                : "event-normal"
+                            }`}
+                          >
+                            <span></span>
+                            {status}
+                          </span>
 
-                  <button
-                    className="report-icon-button"
-                    onClick={() =>
-                      openReport(alert)
-                    }
-                    title="Security Report"
-                  >
-                    ▣
-                  </button>
+                        </td>
 
-                </div>
+                        {/* INVESTIGATE */}
 
-              );
-            })
+                        <td className="live-action-cell">
+
+                          <button
+                            type="button"
+                            className="live-investigate-button"
+                            disabled={!alertId}
+                            onClick={() =>
+                              investigateAlert(item)
+                            }
+                          >
+                            <span className="investigate-icon">
+                              ⌕
+                            </span>
+
+                            <span>
+                              Investigate
+                            </span>
+
+                            <span className="investigate-arrow">
+                              →
+                            </span>
+                          </button>
+
+                        </td>
+
+                      </tr>
+                    );
+                  })}
+
+                </tbody>
+
+              </table>
+
+            </div>
 
           )}
 
-        </div>
+        </section>
 
-      </section>
+        {/* SYSTEM STATUS */}
 
+        <section className="live-system-grid">
 
-      {/* ========================================================
-          SYSTEM STATUS
-      ======================================================== */}
+          <div className="system-status-card">
 
-      <section className="system-status">
+            <div className="system-icon">🧠</div>
 
-        <div className="system-card">
+            <div>
+              <span>AI DETECTION ENGINE</span>
+              <strong>Random Forest</strong>
+            </div>
 
-          <div className="system-icon">
-            🧠
+            <b className="system-online">
+              ONLINE
+            </b>
+
+          </div>
+
+          <div className="system-status-card">
+
+            <div className="system-icon">🗄️</div>
+
+            <div>
+              <span>ALERT DATABASE</span>
+              <strong>MongoDB</strong>
+            </div>
+
+            <b className="system-online">
+              CONNECTED
+            </b>
+
+          </div>
+
+          <div className="system-status-card">
+
+            <div className="system-icon">📡</div>
+
+            <div>
+              <span>LIVE MONITOR</span>
+              <strong>
+                Continuous Monitoring
+              </strong>
+            </div>
+
+            <b className="system-online">
+              ACTIVE
+            </b>
+
+          </div>
+
+        </section>
+
+        {/* FOOTER */}
+
+        <footer className="live-footer">
+
+          <div>
+            🛡️ <strong>NetShield AI</strong>{" "}
+            • AI-Powered Network Anomaly Detection
+          </div>
+
+          <div className="footer-online">
+            <span></span>
+            All systems operational
           </div>
 
           <div>
-            <span>AI DETECTION ENGINE</span>
-
-            <strong>
-              Random Forest
-            </strong>
+            Milestone 3 • Live Network
           </div>
 
-          <div className="system-online">
-            <span></span>
-            ONLINE
-          </div>
+        </footer>
 
-        </div>
-
-
-        <div className="system-card">
-
-          <div className="system-icon">
-            🗄️
-          </div>
-
-          <div>
-            <span>ALERT DATABASE</span>
-
-            <strong>
-              MongoDB
-            </strong>
-          </div>
-
-          <div className="system-online">
-            <span></span>
-            CONNECTED
-          </div>
-
-        </div>
-
-
-        <div className="system-card">
-
-          <div className="system-icon">
-            📡
-          </div>
-
-          <div>
-            <span>LIVE MONITOR</span>
-
-            <strong>
-              5 Second Interval
-            </strong>
-          </div>
-
-          <div className="system-online">
-            <span></span>
-            ACTIVE
-          </div>
-
-        </div>
-
-      </section>
-
-
-      {/* ========================================================
-          FOOTER
-      ======================================================== */}
-
-      <footer className="live-footer">
-
-        <div>
-          🛡️ <strong>NETSHIELD AI</strong>
-        </div>
-
-        <span>
-          AI-POWERED NETWORK SECURITY
-        </span>
-
-        <span>
-          INVESTIGATION ENGINE:
-          <strong> ONLINE</strong>
-        </span>
-
-      </footer>
+      </main>
 
     </div>
   );

@@ -1,82 +1,141 @@
 import React from "react";
-import AlertInvestigation from "./pages/AlertInvestigation";
 import {
   BrowserRouter,
   Routes,
   Route,
+  Navigate,
 } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import Analytics from "./pages/Analytics";
+import Predictions from "./pages/Predictions";
 import LiveNetwork from "./pages/LiveNetwork";
 import ThreatAlerts from "./pages/ThreatAlerts";
 import Investigation from "./pages/Investigation";
-import ThreatTimeline from "./pages/ThreatTimeline";
-import AIPredictions from "./pages/AIPredictions";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
 
-        {/* LOGIN */}
+        {/* =====================================================
+            AUTHENTICATION
+        ====================================================== */}
+
         <Route
           path="/login"
           element={<Login />}
         />
 
-        {/* REGISTER */}
         <Route
           path="/register"
           element={<Register />}
         />
 
-        {/* DASHBOARD */}
+
+        {/* =====================================================
+            MAIN DASHBOARD
+        ====================================================== */}
+
         <Route
           path="/dashboard"
           element={<Dashboard />}
         />
-       
 
-        {/* LIVE NETWORK */}
+
+        {/* =====================================================
+            ANALYTICS
+        ====================================================== */}
+
+        <Route
+          path="/analytics"
+          element={<Analytics />}
+        />
+
+
+        {/* =====================================================
+            PREDICTIONS
+        ====================================================== */}
+
+        <Route
+          path="/predictions"
+          element={<Predictions />}
+        />
+
+
+        {/* =====================================================
+            LIVE NETWORK MONITOR
+        ====================================================== */}
+
         <Route
           path="/live-network"
           element={<LiveNetwork />}
         />
-        <Route
-          path="/alert-investigation/:alertId"
-          element={<AlertInvestigation />}
-        />
 
-        {/* THREAT ALERTS */}
+
+        {/* =====================================================
+            THREAT ALERTS
+        ====================================================== */}
+
         <Route
           path="/threat-alerts"
           element={<ThreatAlerts />}
         />
 
-        {/* INVESTIGATION */}
+
+        {/* =====================================================
+            INCIDENT INVESTIGATION
+            IMPORTANT:
+            This must match ThreatAlerts.js:
+            navigate(`/investigation/${id}`)
+        ====================================================== */}
+
         <Route
-          path="/investigation"
+          path="/investigation/:alertId"
           element={<Investigation />}
         />
 
-        {/* THREAT TIMELINE */}
+
+        {/* =====================================================
+            OPTIONAL OLD INVESTIGATION URL
+            Keeps old links working if you have any.
+        ====================================================== */}
+
         <Route
-          path="/threat-timeline"
-          element={<ThreatTimeline />}
+          path="/investigate/:id"
+          element={<Investigation />}
         />
 
-        {/* AI PREDICTIONS */}
-        <Route
-          path="/ai-predictions"
-          element={<AIPredictions />}
-        />
 
-        {/* DEFAULT */}
+        {/* =====================================================
+            DEFAULT ROUTE
+        ====================================================== */}
+
         <Route
           path="/"
-          element={<Login />}
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
+        />
+
+
+        {/* =====================================================
+            UNKNOWN URL
+        ====================================================== */}
+
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
         />
 
       </Routes>

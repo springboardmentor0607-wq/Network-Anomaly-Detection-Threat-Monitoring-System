@@ -1,21 +1,34 @@
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle
+)
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
 import os
 
 
 def generate_pdf_report(alert):
     """
-    Generate a PDF security incident report
+    Generate a professional PDF security incident report
     from a MongoDB alert.
     """
 
-    reports_folder = "reports"
+    # --------------------------------------------------
+    # Reports folder
+    # --------------------------------------------------
 
-    # Create reports folder if it doesn't exist
+    reports_folder = "reports"
     os.makedirs(reports_folder, exist_ok=True)
+
+    # --------------------------------------------------
+    # Alert ID
+    # --------------------------------------------------
 
     alert_id = str(alert.get("_id", "unknown"))
 
@@ -24,7 +37,10 @@ def generate_pdf_report(alert):
         f"security_report_{alert_id}.pdf"
     )
 
-    # Create PDF
+    # --------------------------------------------------
+    # Create PDF document
+    # --------------------------------------------------
+
     document = SimpleDocTemplate(
         file_path,
         pagesize=A4,
@@ -34,43 +50,116 @@ def generate_pdf_report(alert):
         bottomMargin=40
     )
 
+    # --------------------------------------------------
+    # Styles
+    # --------------------------------------------------
+
     styles = getSampleStyleSheet()
 
-    title_style = styles["Title"]
-    heading_style = styles["Heading2"]
-    normal_style = styles["BodyText"]
+    title_style = ParagraphStyle(
+        "ReportTitle",
+        parent=styles["Title"],
+        alignment=TA_CENTER,
+        fontSize=20,
+        spaceAfter=10
+    )
+
+    subtitle_style = ParagraphStyle(
+        "Subtitle",
+        parent=styles["Normal"],
+        alignment=TA_CENTER,
+        fontSize=10,
+        spaceAfter=20
+    )
+
+    heading_style = ParagraphStyle(
+        "SectionHeading",
+        parent=styles["Heading2"],
+        fontSize=14,
+        spaceBefore=10,
+        spaceAfter=8
+    )
+
+    normal_style = ParagraphStyle(
+        "NormalText",
+        parent=styles["BodyText"],
+        fontSize=10,
+        leading=15
+    )
+
+    # --------------------------------------------------
+    # Content
+    # --------------------------------------------------
 
     content = []
 
-    # Title
+    # --------------------------------------------------
+    # TITLE
+    # --------------------------------------------------
+
     content.append(
         Paragraph(
-            "NetShield AI - Security Incident Report",
+            "NetShield AI",
             title_style
         )
     )
 
-    content.append(Spacer(1, 20))
-
-    # Report information
     content.append(
         Paragraph(
-            f"<b>Alert ID:</b> {alert_id}",
-            normal_style
+            "Security Incident Report",
+            subtitle_style
         )
     )
 
+    # --------------------------------------------------
+    # REPORT INFORMATION
+    # --------------------------------------------------
+
     content.append(
         Paragraph(
-            f"<b>Generated:</b> "
-            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            normal_style
+            "Report Information",
+            heading_style
         )
     )
 
-    content.append(Spacer(1, 15))
+    report_info = [
+        ["Alert ID", alert_id],
+        [
+            "Generated",
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ],
+        [
+            "Source",
+            alert.get("source", "Live Network Monitor")
+        ],
+        [
+            "Detection Time",
+            str(alert.get("timestamp", "Unknown"))
+        ]
+    ]
 
-    # Threat Summary
+    report_table = Table(
+        report_info,
+        colWidths=[130, 350]
+    )
+
+    report_table.setStyle(
+        TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
+            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+            ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("PADDING", (0, 0), (-1, -1), 7)
+        ])
+    )
+
+    content.append(report_table)
+
+    # --------------------------------------------------
+    # THREAT SUMMARY
+    # --------------------------------------------------
+
     content.append(
         Paragraph(
             "Threat Summary",
@@ -78,159 +167,268 @@ def generate_pdf_report(alert):
         )
     )
 
-    content.append(
-        Paragraph(
-            f"<b>Threat Type:</b> "
-            f"{alert.get('threat_type', 'Unknown')}",
-            normal_style
-        )
+    threat_summary = [
+        ["Threat Type", str(alert.get("threat_type", "Unknown"))],
+        ["Severity", str(alert.get("severity", "Unknown"))],
+        ["Confidence", str(alert.get("confidence", "0%"))],
+        [
+            "Risk Score",
+            f"{alert.get('risk_score', 0)}/100"
+        ],
+        ["Status", str(alert.get("status", "Unknown"))],
+        [
+            "Workflow Status",
+            str(alert.get("workflow_status", "New"))
+        ]
+    ]
+
+    threat_table = Table(
+        threat_summary,
+        colWidths=[150, 330]
     )
 
-    content.append(
-        Paragraph(
-            f"<b>Severity:</b> "
-            f"{alert.get('severity', 'Unknown')}",
-            normal_style
-        )
+    threat_table.setStyle(
+        TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
+            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+            ("PADDING", (0, 0), (-1, -1), 7),
+            ("VALIGN", (0, 0), (-1, -1), "TOP")
+        ])
     )
 
-    content.append(
-        Paragraph(
-            f"<b>Confidence:</b> "
-            f"{alert.get('confidence', '0%')}",
-            normal_style
-        )
-    )
+    content.append(threat_table)
+
+    # --------------------------------------------------
+    # NETWORK TELEMETRY
+    # --------------------------------------------------
 
     content.append(
         Paragraph(
-            f"<b>Risk Score:</b> "
-            f"{alert.get('risk_score', 0)}/100",
-            normal_style
-        )
-    )
-
-    content.append(
-        Paragraph(
-            f"<b>Status:</b> "
-            f"{alert.get('status', 'Unknown')}",
-            normal_style
-        )
-    )
-
-    content.append(Spacer(1, 15))
-
-    # Network Details
-    content.append(
-        Paragraph(
-            "Network Details",
+            "Network Telemetry",
             heading_style
         )
     )
 
-    content.append(
-        Paragraph(
-            f"<b>Packet Size:</b> "
-            f"{alert.get('packet_size', 0)}",
-            normal_style
-        )
+    network_details = [
+        [
+            "Packet Size",
+            f"{alert.get('packet_size', 0)} bytes"
+        ],
+        [
+            "Duration",
+            f"{alert.get('duration', 0)} sec"
+        ],
+        [
+            "Connection Count",
+            str(alert.get("connection_count", 0))
+        ],
+        [
+            "Source Port",
+            str(alert.get("source_port", "--"))
+        ],
+        [
+            "Destination Port",
+            str(alert.get("destination_port", "--"))
+        ],
+        [
+            "Protocol",
+            str(alert.get("protocol_type", "--"))
+        ],
+        [
+            "Service",
+            str(alert.get("service", "--"))
+        ],
+        [
+            "Connection Flag",
+            str(alert.get("flag", "--"))
+        ]
+    ]
+
+    network_table = Table(
+        network_details,
+        colWidths=[150, 330]
     )
 
-    content.append(
-        Paragraph(
-            f"<b>Duration:</b> "
-            f"{alert.get('duration', 0)}",
-            normal_style
-        )
+    network_table.setStyle(
+        TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
+            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+            ("PADDING", (0, 0), (-1, -1), 7),
+            ("VALIGN", (0, 0), (-1, -1), "TOP")
+        ])
     )
 
-    content.append(
-        Paragraph(
-            f"<b>Connection Count:</b> "
-            f"{alert.get('connection_count', 0)}",
-            normal_style
+    content.append(network_table)
+
+    # --------------------------------------------------
+    # IP INFORMATION
+    # --------------------------------------------------
+
+    source_ip = alert.get("source_ip")
+    destination_ip = alert.get("destination_ip")
+
+    if source_ip or destination_ip:
+
+        content.append(
+            Paragraph(
+                "Network Addresses",
+                heading_style
+            )
         )
-    )
 
-    content.append(
-        Paragraph(
-            f"<b>Source Port:</b> "
-            f"{alert.get('source_port', '--')}",
-            normal_style
+        ip_details = [
+            [
+                "Source IP",
+                str(source_ip or "--")
+            ],
+            [
+                "Destination IP",
+                str(destination_ip or "--")
+            ]
+        ]
+
+        ip_table = Table(
+            ip_details,
+            colWidths=[150, 330]
         )
-    )
 
-    content.append(
-        Paragraph(
-            f"<b>Destination Port:</b> "
-            f"{alert.get('destination_port', '--')}",
-            normal_style
+        ip_table.setStyle(
+            TableStyle([
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
+                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("PADDING", (0, 0), (-1, -1), 7)
+            ])
         )
-    )
+
+        content.append(ip_table)
+
+    # --------------------------------------------------
+    # AI ASSESSMENT
+    # --------------------------------------------------
 
     content.append(
         Paragraph(
-            f"<b>Protocol:</b> "
-            f"{alert.get('protocol_type', '--')}",
-            normal_style
-        )
-    )
-
-    content.append(
-        Paragraph(
-            f"<b>Service:</b> "
-            f"{alert.get('service', '--')}",
-            normal_style
-        )
-    )
-
-    content.append(
-        Paragraph(
-            f"<b>Flag:</b> "
-            f"{alert.get('flag', '--')}",
-            normal_style
-        )
-    )
-
-    content.append(Spacer(1, 15))
-
-    # AI Recommendation
-    content.append(
-        Paragraph(
-            "AI Security Recommendation",
+            "AI Security Assessment",
             heading_style
         )
     )
 
     investigation = alert.get(
         "investigation",
-        {}
+            {}
+        )
+
+    priority = investigation.get(
+        "priority",
+        "Critical" if alert.get("severity") == "Critical" else "Normal"
     )
+
+    recommendation = investigation.get(
+        "recommendation",
+        "Investigate the detected network activity and monitor "
+        "related connections for further suspicious behavior."
+    )
+
+    ai_details = [
+        ["Detection Model", "Random Forest"],
+        [
+            "Threat Type",
+            str(alert.get("threat_type", "Unknown"))
+        ],
+        [
+            "Severity",
+            str(alert.get("severity", "Unknown"))
+        ],
+        [
+            "AI Confidence",
+            str(alert.get("confidence", "0%"))
+        ],
+        [
+            "Risk Score",
+            f"{alert.get('risk_score', 0)}/100"
+        ],
+        [
+            "Priority",
+            str(priority)
+        ]
+    ]
+
+    ai_table = Table(
+        ai_details,
+        colWidths=[150, 330]
+    )
+
+    ai_table.setStyle(
+        TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
+            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+            ("PADDING", (0, 0), (-1, -1), 7)
+        ])
+    )
+
+    content.append(ai_table)
+
+    content.append(Spacer(1, 10))
 
     content.append(
         Paragraph(
-            f"<b>Priority:</b> "
-            f"{investigation.get('priority', 'Normal')}",
+            f"<b>Security Recommendation:</b> {recommendation}",
             normal_style
         )
     )
 
+    # --------------------------------------------------
+    # INCIDENT MANAGEMENT
+    # --------------------------------------------------
+
     content.append(
         Paragraph(
-            f"<b>Recommendation:</b> "
-            f"{investigation.get('recommendation', 'No immediate action required.')}",
+            "Incident Management",
+            heading_style
+        )
+    )
+
+    workflow_status = alert.get(
+        "workflow_status",
+        "New"
+    )
+
+    incident_text = (
+        f"<b>Current Workflow Status:</b> {workflow_status}<br/>"
+        f"<b>Incident Source:</b> "
+        f"{alert.get('source', 'Live Network Monitor')}<br/>"
+        f"<b>Incident Status:</b> "
+        f"{alert.get('status', 'Unknown')}"
+    )
+
+    content.append(
+        Paragraph(
+            incident_text,
             normal_style
         )
     )
 
-    content.append(Spacer(1, 20))
+    # --------------------------------------------------
+    # FOOTER
+    # --------------------------------------------------
+
+    content.append(Spacer(1, 25))
 
     content.append(
         Paragraph(
-            "Generated automatically by NetShield AI.",
+            "This report was generated automatically by "
+            "NetShield AI - AI-Powered Network Anomaly Detection.",
             normal_style
         )
     )
+
+    # --------------------------------------------------
+    # BUILD PDF
+    # --------------------------------------------------
 
     document.build(content)
 

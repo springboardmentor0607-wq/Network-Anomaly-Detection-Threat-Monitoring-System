@@ -17,15 +17,27 @@ function Login() {
         "http://127.0.0.1:8000/login",
         {
           email: email.trim(),
-          password: password
+          password: password,
         }
       );
 
       console.log("Login response:", response.data);
 
+      // Save logged-in user if backend returns user information
+      if (response.data?.user) {
+        localStorage.setItem(
+          "netshield_user",
+          JSON.stringify(response.data.user)
+        );
+      }
+
+      // Save login status
+      localStorage.setItem("netshield_logged_in", "true");
+
       alert("Login successful!");
 
-      navigate("/dashboard");
+      // Open Dashboard
+      navigate("/dashboard", { replace: true });
 
     } catch (error) {
       console.error("Login error:", error);
@@ -145,7 +157,9 @@ function Login() {
                 type="email"
                 placeholder="Enter your email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) =>
+                  setEmail(e.target.value)
+                }
                 required
               />
 
@@ -161,7 +175,9 @@ function Login() {
                 type="password"
                 placeholder="Enter your password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
                 required
               />
 
@@ -180,7 +196,10 @@ function Login() {
 
             </div>
 
-            <button className="login-button" type="submit">
+            <button
+              className="login-button"
+              type="submit"
+            >
               <span>Login to NetShield AI</span>
               <span>→</span>
             </button>

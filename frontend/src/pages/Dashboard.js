@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +12,9 @@ function Dashboard() {
   const [alerts, setAlerts] = useState([]);
 
   const [networkStatus, setNetworkStatus] = useState({
+    total_alerts: 0,
+    active_threats: 0,
+    critical_threats: 0,
     incoming_packets: 0,
     outgoing_packets: 0,
     suspicious_connections: 0,
@@ -20,9 +24,9 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [backendError, setBackendError] = useState("");
 
-  // =====================================================
+  // ============================================================
   // FETCH LIVE ALERTS
-  // =====================================================
+  // ============================================================
 
   const fetchAlerts = async () => {
     try {
@@ -43,16 +47,15 @@ function Dashboard() {
       setBackendError("");
     } catch (error) {
       console.error("Live alerts error:", error);
-
       setBackendError(
         "Unable to connect to live monitoring API."
       );
     }
   };
 
-  // =====================================================
+  // ============================================================
   // FETCH NETWORK STATUS
-  // =====================================================
+  // ============================================================
 
   const fetchNetworkStatus = async () => {
     try {
@@ -60,30 +63,40 @@ function Dashboard() {
         `${API_URL}/monitoring/status`
       );
 
+      const data = response.data || {};
+
       setNetworkStatus({
+        total_alerts: Number(data.total_alerts) || 0,
+        active_threats: Number(data.active_threats) || 0,
+        critical_threats: Number(data.critical_threats) || 0,
+
         incoming_packets:
-          response.data?.incoming_packets || 0,
+          Number(data.incoming_packets) || 0,
 
         outgoing_packets:
-          response.data?.outgoing_packets || 0,
+          Number(data.outgoing_packets) || 0,
 
         suspicious_connections:
-          response.data?.suspicious_connections || 0,
+          Number(data.suspicious_connections) || 0,
 
         bandwidth_usage:
-          response.data?.bandwidth_usage || 0,
+          Number(data.bandwidth_usage) || 0,
       });
     } catch (error) {
       console.error("Network status error:", error);
     }
   };
 
-  // =====================================================
+  // ============================================================
   // INITIAL LOAD + AUTO REFRESH
-  // =====================================================
+  // ============================================================
 
   useEffect(() => {
+    let mounted = true;
+
     const loadDashboard = async () => {
+      if (!mounted) return;
+
       setLoading(true);
 
       await Promise.all([
@@ -91,7 +104,9 @@ function Dashboard() {
         fetchNetworkStatus(),
       ]);
 
-      setLoading(false);
+      if (mounted) {
+        setLoading(false);
+      }
     };
 
     loadDashboard();
@@ -101,29 +116,54 @@ function Dashboard() {
       fetchNetworkStatus();
     }, 5000);
 
-    return () => clearInterval(interval);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
-  // =====================================================
+  // ============================================================
   // STATISTICS
-  // =====================================================
+  // ============================================================
 
-  const totalAlerts = alerts.length;
+  const totalAlerts =
+    networkStatus.total_alerts || alerts.length;
 
-  const threatAlerts = alerts.filter(
-    (alert) =>
-      alert?.status === "Threat Detected"
-  ).length;
+  const threatAlerts =
+    networkStatus.active_threats ||
+    alerts.filter((alert) => {
+      const status = String(
+        alert?.status || ""
+      ).toLowerCase();
 
-  const criticalAlerts = alerts.filter(
-    (alert) =>
-      alert?.severity?.toLowerCase() === "critical"
-  ).length;
+      const threatType = String(
+        alert?.threat_type ||
+          alert?.prediction ||
+          ""
+      ).toLowerCase();
+
+      return (
+        status.includes("threat") ||
+        (threatType &&
+          !threatType.includes("normal"))
+      );
+    }).length;
+
+  const criticalAlerts =
+    networkStatus.critical_threats ||
+    alerts.filter(
+      (alert) =>
+        String(
+          alert?.severity || ""
+        ).toLowerCase() === "critical"
+    ).length;
+
+  // ============================================================
+  // AVERAGE RISK
+  // ============================================================
 
   const averageRisk = useMemo(() => {
-    if (alerts.length === 0) {
-      return 0;
-    }
+    if (alerts.length === 0) return 0;
 
     const totalRisk = alerts.reduce(
       (sum, alert) =>
@@ -138,12 +178,27 @@ function Dashboard() {
 
   const securityScore = Math.max(
     0,
-    100 - averageRisk
+    Math.min(
+      100,
+      100 - averageRisk
+    )
   );
 
-  // =====================================================
+  // ============================================================
+  // SECURITY SCORE LABEL
+  // ============================================================
+
+  const securityScoreLabel = useMemo(() => {
+    if (securityScore >= 80) return "Excellent";
+    if (securityScore >= 60) return "Good";
+    if (securityScore >= 40) return "Moderate";
+    if (securityScore >= 20) return "At Risk";
+    return "Critical";
+  }, [securityScore]);
+
+  // ============================================================
   // THREAT DISTRIBUTION
-  // =====================================================
+  // ============================================================
 
   const threatDistribution = useMemo(() => {
     const distribution = {};
@@ -159,51 +214,79 @@ function Dashboard() {
     });
 
     return Object.entries(distribution)
-      .sort((a, b) => b[1] - a[1]);
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
   }, [alerts]);
 
-  // =====================================================
+  // ============================================================
   // RECENT ALERTS
-  // =====================================================
+  // ============================================================
 
-  const recentAlerts = [...alerts]
-    .sort((a, b) => {
-      const dateA = new Date(
-        a?.timestamp || 0
-      );
+  const recentAlerts = useMemo(() => {
+    return [...alerts]
+      .sort((a, b) => {
+        const dateA = new Date(
+          a?.timestamp || 0
+        );
 
-      const dateB = new Date(
-        b?.timestamp || 0
-      );
+        const dateB = new Date(
+          b?.timestamp || 0
+        );
 
-      return dateB - dateA;
-    })
-    .slice(0, 20);
+        return dateB - dateA;
+      })
+      .slice(0, 20);
+  }, [alerts]);
 
-  // =====================================================
+  // ============================================================
   // OPEN INVESTIGATION
-  // =====================================================
+  // ============================================================
 
   const openInvestigation = (alert) => {
-    if (!alert?._id) {
+    const alertId =
+      alert?._id ||
+      alert?.id;
+
+    if (!alertId) {
+      console.error(
+        "Investigation failed: Alert ID missing",
+        alert
+      );
       return;
     }
 
     navigate(
       `/investigation?alertId=${encodeURIComponent(
-        alert._id
+        String(alertId)
       )}`
     );
   };
 
-  // =====================================================
+  // ============================================================
+  // OPEN THREAT ALERTS
+  // ============================================================
+
+  const openThreatAlerts = () => {
+    navigate("/threat-alerts");
+  };
+
+  // ============================================================
+  // FORMAT NUMBER
+  // ============================================================
+
+  const formatNumber = (value) => {
+    return Number(
+      value || 0
+    ).toLocaleString();
+  };
+
+  // ============================================================
   // LOADING SCREEN
-  // =====================================================
+  // ============================================================
 
   if (loading) {
     return (
       <div className="dashboard-loading">
-
         <div className="loading-shield">
           🛡️
         </div>
@@ -217,27 +300,24 @@ function Dashboard() {
         <div className="loading-bar">
           <div></div>
         </div>
-
       </div>
     );
   }
 
-  // =====================================================
+  // ============================================================
   // DASHBOARD
-  // =====================================================
+  // ============================================================
 
   return (
     <div className="dashboard">
 
-      {/* =================================================
-          SIDEBAR
-      ================================================= */}
+      {/* SIDEBAR */}
 
       <aside className="sidebar">
 
-        <div className="sidebar-logo">
+        <div className="sidebar-brand">
 
-          <div className="logo-icon">
+          <div className="brand-icon">
             🛡️
           </div>
 
@@ -252,37 +332,44 @@ function Dashboard() {
 
           <p>MONITORING</p>
 
-          <a
-            href="#dashboard"
+          <button
             className="nav-item active"
+            type="button"
+            onClick={() =>
+              navigate("/dashboard")
+            }
           >
             <span>▦</span>
             Dashboard
-          </a>
+          </button>
 
-          <a
-            href="/live-network"
+          <button
             className="nav-item"
+            type="button"
+            onClick={() =>
+              navigate("/live-network")
+            }
           >
             <span>◉</span>
             Live Network
-          </a>
+          </button>
 
-          <a
-            href="/threat-alerts"
+          <button
             className="nav-item"
+            type="button"
+            onClick={openThreatAlerts}
           >
             <span>⚠</span>
             Threat Alerts
-          </a>
+          </button>
 
-          <a
-            href="#analysis"
+          <button
             className="nav-item"
+            type="button"
           >
             <span>⌁</span>
             Threat Analysis
-          </a>
+          </button>
 
         </div>
 
@@ -290,21 +377,21 @@ function Dashboard() {
 
           <p>INTELLIGENCE</p>
 
-          <a
-            href="#predictions"
+          <button
             className="nav-item"
+            type="button"
           >
             <span>✦</span>
             AI Predictions
-          </a>
+          </button>
 
-          <a
-            href="#timeline"
+          <button
             className="nav-item"
+            type="button"
           >
             <span>◷</span>
             Threat Timeline
-          </a>
+          </button>
 
         </div>
 
@@ -315,19 +402,26 @@ function Dashboard() {
             <span className="system-dot"></span>
 
             <div>
-              <strong>Operational</strong>
-              <span>AI monitoring active</span>
+              <strong>
+                Operational
+              </strong>
+
+              <span>
+                AI monitoring active
+              </span>
             </div>
 
+          </div>
+
+          <div className="sidebar-version">
+            NETSHIELD AI • MILESTONE 3
           </div>
 
         </div>
 
       </aside>
 
-      {/* =================================================
-          MAIN CONTENT
-      ================================================= */}
+      {/* MAIN CONTENT */}
 
       <main className="main-content">
 
@@ -344,6 +438,11 @@ function Dashboard() {
             <h1>
               Security Operations Center
             </h1>
+
+            <p>
+              Real-time network security intelligence
+              and AI threat monitoring.
+            </p>
 
           </div>
 
@@ -366,17 +465,19 @@ function Dashboard() {
 
         {backendError && (
           <div className="dashboard-error">
-            ⚠️ {backendError}
+
+            <span>⚠️</span>
+
+            {backendError}
+
           </div>
         )}
 
-        {/* =================================================
-            HERO
-        ================================================= */}
+        {/* HERO */}
 
         <section className="hero-section">
 
-          <div>
+          <div className="hero-content">
 
             <div className="hero-label">
               LIVE SECURITY MONITORING
@@ -391,27 +492,43 @@ function Dashboard() {
               detection and threat monitoring.
             </p>
 
+            <div className="hero-meta">
+              <span>
+                ● AI ENGINE ONLINE
+              </span>
+
+              <span>
+                ● RANDOM FOREST
+              </span>
+
+              <span>
+                ● LIVE MONITORING
+              </span>
+            </div>
+
           </div>
 
           <div className="hero-security">
 
             <div className="security-ring">
-
               <span>
                 {securityScore}
               </span>
-
             </div>
 
-            <div>
+            <div className="security-score-info">
 
               <strong>
                 SECURITY SCORE
               </strong>
 
               <span>
-                / 100
+                {securityScoreLabel}
               </span>
+
+              <small>
+                / 100
+              </small>
 
             </div>
 
@@ -419,16 +536,16 @@ function Dashboard() {
 
         </section>
 
-        {/* =================================================
-            STATISTICS
-        ================================================= */}
+        {/* STATISTICS */}
 
         <section className="stats-grid">
 
-          <div className="stat-card blue">
+          <div
+            className="stat-card blue"
+            onClick={openThreatAlerts}
+          >
 
             <div className="stat-top">
-
               <span>
                 Total Alerts
               </span>
@@ -436,11 +553,10 @@ function Dashboard() {
               <span className="stat-symbol">
                 ◉
               </span>
-
             </div>
 
             <strong>
-              {totalAlerts}
+              {formatNumber(totalAlerts)}
             </strong>
 
             <small>
@@ -449,7 +565,10 @@ function Dashboard() {
 
           </div>
 
-          <div className="stat-card red">
+          <div
+            className="stat-card red"
+            onClick={openThreatAlerts}
+          >
 
             <div className="stat-top">
 
@@ -464,7 +583,7 @@ function Dashboard() {
             </div>
 
             <strong>
-              {threatAlerts}
+              {formatNumber(threatAlerts)}
             </strong>
 
             <small>
@@ -473,7 +592,10 @@ function Dashboard() {
 
           </div>
 
-          <div className="stat-card critical">
+          <div
+            className="stat-card critical"
+            onClick={openThreatAlerts}
+          >
 
             <div className="stat-top">
 
@@ -488,7 +610,7 @@ function Dashboard() {
             </div>
 
             <strong>
-              {criticalAlerts}
+              {formatNumber(criticalAlerts)}
             </strong>
 
             <small>
@@ -529,14 +651,9 @@ function Dashboard() {
 
         </section>
 
-        {/* =================================================
-            NETWORK + THREAT ANALYSIS
-        ================================================= */}
+        {/* NETWORK + THREAT ANALYSIS */}
 
-        <section
-          className="content-grid"
-          id="network"
-        >
+        <section className="content-grid">
 
           {/* NETWORK TELEMETRY */}
 
@@ -577,7 +694,9 @@ function Dashboard() {
                   </span>
 
                   <strong>
-                    {networkStatus.incoming_packets.toLocaleString()}
+                    {formatNumber(
+                      networkStatus.incoming_packets
+                    )}
                   </strong>
 
                 </div>
@@ -597,7 +716,9 @@ function Dashboard() {
                   </span>
 
                   <strong>
-                    {networkStatus.outgoing_packets.toLocaleString()}
+                    {formatNumber(
+                      networkStatus.outgoing_packets
+                    )}
                   </strong>
 
                 </div>
@@ -616,8 +737,16 @@ function Dashboard() {
                     Suspicious Connections
                   </span>
 
-                  <strong>
-                    {networkStatus.suspicious_connections.toLocaleString()}
+                  <strong
+                    className={
+                      networkStatus.suspicious_connections > 0
+                        ? "danger-number"
+                        : ""
+                    }
+                  >
+                    {formatNumber(
+                      networkStatus.suspicious_connections
+                    )}
                   </strong>
 
                 </div>
@@ -639,7 +768,9 @@ function Dashboard() {
                     </span>
 
                     <strong>
-                      {networkStatus.bandwidth_usage}%
+                      {
+                        networkStatus.bandwidth_usage
+                      }%
                     </strong>
 
                   </div>
@@ -650,7 +781,10 @@ function Dashboard() {
                       className="progress-fill"
                       style={{
                         width: `${Math.min(
-                          networkStatus.bandwidth_usage,
+                          Math.max(
+                            networkStatus.bandwidth_usage,
+                            0
+                          ),
                           100
                         )}%`,
                       }}
@@ -668,10 +802,7 @@ function Dashboard() {
 
           {/* THREAT DISTRIBUTION */}
 
-          <div
-            className="panel"
-            id="analysis"
-          >
+          <div className="panel">
 
             <div className="panel-header">
 
@@ -687,13 +818,17 @@ function Dashboard() {
 
               </div>
 
+              <span className="model-badge">
+                RANDOM FOREST
+              </span>
+
             </div>
 
             <div className="distribution">
 
               {threatDistribution.length === 0 ? (
 
-                <div className="no-events">
+                <div className="no-events compact">
                   No threat data available.
                 </div>
 
@@ -706,40 +841,59 @@ function Dashboard() {
                       totalAlerts > 0
                         ? Math.round(
                             (count /
-                              totalAlerts) *
+                              alerts.length) *
                               100
                           )
                         : 0;
 
                     return (
-
                       <div
-                        className="distribution-row"
+                        className="distribution-item"
                         key={name}
                       >
 
-                        <div>
+                        <div className="distribution-top">
 
-                          <span
-                            className={`legend ${
-                              index === 0
-                                ? "critical-dot"
-                                : "normal-dot"
-                            }`}
-                          ></span>
+                          <div className="distribution-name">
 
-                          <span>
-                            {name}
-                          </span>
+                            <span
+                              className={
+                                index === 0
+                                  ? "legend critical-dot"
+                                  : "legend normal-dot"
+                              }
+                            ></span>
+
+                            <span>
+                              {name}
+                            </span>
+
+                          </div>
+
+                          <strong>
+
+                            {count}
+
+                            <small>
+                              {" "}
+                              ({percentage}%)
+                            </small>
+
+                          </strong>
 
                         </div>
 
-                        <strong>
-                          {count} ({percentage}%)
-                        </strong>
+                        <div className="distribution-bar">
+
+                          <div
+                            style={{
+                              width: `${percentage}%`,
+                            }}
+                          ></div>
+
+                        </div>
 
                       </div>
-
                     );
                   }
                 )
@@ -752,14 +906,9 @@ function Dashboard() {
 
         </section>
 
-        {/* =================================================
-            LIVE THREAT ACTIVITY
-        ================================================= */}
+        {/* SECURITY EVENTS */}
 
-        <section
-          className="events-panel"
-          id="alerts"
-        >
+        <section className="events-panel">
 
           <div className="panel-header">
 
@@ -775,8 +924,20 @@ function Dashboard() {
 
             </div>
 
-            <div className="event-count">
-              {totalAlerts} EVENTS
+            <div className="event-header-actions">
+
+              <div className="event-count">
+                {formatNumber(totalAlerts)} EVENTS
+              </div>
+
+              <button
+                className="view-alerts-button"
+                type="button"
+                onClick={openThreatAlerts}
+              >
+                View All →
+              </button>
+
             </div>
 
           </div>
@@ -788,7 +949,7 @@ function Dashboard() {
               <span>TIME</span>
               <span>THREAT</span>
               <span>SEVERITY</span>
-              <span>RISK SCORE</span>
+              <span>RISK</span>
               <span>CONFIDENCE</span>
               <span>STATUS</span>
 
@@ -828,34 +989,51 @@ function Dashboard() {
                       alert?.risk_score || 0
                     );
 
+                  const threatName =
+                    alert?.threat_type ||
+                    alert?.prediction ||
+                    "Network Event";
+
                   const isThreat =
-                    status ===
-                    "Threat Detected";
+                    String(status)
+                      .toLowerCase()
+                      .includes("threat") ||
+                    !String(threatName)
+                      .toLowerCase()
+                      .includes("normal");
+
+                  const confidence =
+                    alert?.confidence ??
+                    alert?.confidence_value ??
+                    "0%";
+
+                  const alertId =
+                    alert?._id ||
+                    alert?.id;
 
                   return (
 
                     <div
                       className={`event-row ${
-                        isThreat
+                        alertId
                           ? "clickable-event"
                           : ""
                       }`}
                       key={
-                        alert?._id ||
+                        alertId ||
                         alert?.timestamp ||
                         index
                       }
                       onClick={() =>
+                        alertId &&
                         openInvestigation(alert)
                       }
                       title={
-                        alert?._id
+                        alertId
                           ? "Click to investigate this security event"
-                          : ""
+                          : "Investigation unavailable"
                       }
                     >
-
-                      {/* TIME */}
 
                       <span className="event-time">
 
@@ -867,8 +1045,6 @@ function Dashboard() {
 
                       </span>
 
-                      {/* THREAT */}
-
                       <span className="event-threat">
 
                         <span
@@ -879,41 +1055,41 @@ function Dashboard() {
                           }
                         ></span>
 
-                        {alert?.threat_type ||
-                          "Network Event"}
+                        <span className="threat-name">
+                          {threatName}
+                        </span>
 
                       </span>
-
-                      {/* SEVERITY */}
 
                       <span>
 
                         <span
-                          className={`severity ${severity.toLowerCase()}`}
+                          className={`severity ${String(
+                            severity
+                          ).toLowerCase()}`}
                         >
                           {severity}
                         </span>
 
                       </span>
 
-                      {/* RISK */}
-
                       <span className="risk-score">
 
-                        {risk}/100
+                        {risk}
+
+                        <small>
+                          /100
+                        </small>
 
                       </span>
-
-                      {/* CONFIDENCE */}
 
                       <span className="confidence">
 
-                        {alert?.confidence ||
-                          `${alert?.confidence_value || 0}%`}
+                        {typeof confidence === "number"
+                          ? `${confidence}%`
+                          : confidence}
 
                       </span>
-
-                      {/* STATUS */}
 
                       <span>
 
@@ -941,13 +1117,11 @@ function Dashboard() {
 
         </section>
 
-        {/* =================================================
-            FOOTER
-        ================================================= */}
+        {/* FOOTER */}
 
         <footer className="dashboard-footer">
 
-          <div>
+          <div className="footer-brand">
 
             <span className="footer-shield">
               🛡️
@@ -984,3 +1158,4 @@ function Dashboard() {
 }
 
 export default Dashboard;
+

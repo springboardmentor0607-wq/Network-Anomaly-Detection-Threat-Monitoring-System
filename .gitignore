@@ -245,3 +245,4 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 >>>>>>> a392d9a10115fe92fefecf48d691f128373f55be
+backend/app/ai/random_forest_model.pkl

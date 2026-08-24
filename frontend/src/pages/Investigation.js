@@ -1,273 +1,621 @@
-
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import {
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import "./Investigation.css";
 
 const API_URL = "http://127.0.0.1:8000";
 
 function Investigation() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { alertId: routeAlertId } = useParams();
 
-  const urlAlertId = searchParams.get("alertId") || "";
-
-  const [alertId, setAlertId] = useState(urlAlertId);
   const [investigation, setInvestigation] = useState(null);
-
-  const [loading, setLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
 
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [notes, setNotes] = useState("");
+  const [notesMessage, setNotesMessage] = useState("");
 
-  // =========================================================
-  // GET INVESTIGATION
-  // =========================================================
+  // ============================================================
+  // GET ALERT ID
+  // ============================================================
 
-  const investigateAlert = async (id) => {
-    const cleanId = id?.trim();
-
-    if (!cleanId) {
-      setError("Please enter an Alert ID.");
-      return;
+  const getAlertId = useCallback(() => {
+    if (routeAlertId) {
+      return routeAlertId;
     }
 
-    setLoading(true);
-    setError("");
+    const queryParams = new URLSearchParams(
+      window.location.search
+    );
+
+    const queryAlertId =
+      queryParams.get("alertId");
+
+    if (queryAlertId) {
+      return queryAlertId;
+    }
 
     try {
-      const response = await axios.get(
-        `${API_URL}/monitoring/investigate/${cleanId}`
+      const saved =
+        localStorage.getItem(
+          "netshield_selected_alert"
+        );
+
+      if (!saved) {
+        return null;
+      }
+
+      const parsed = JSON.parse(saved);
+
+      return (
+        parsed?.id ||
+        parsed?._id ||
+        parsed?.alert_id ||
+        parsed?.alertId ||
+        null
+      );
+    } catch (err) {
+      console.error(
+        "Unable to read selected alert:",
+        err
       );
 
-      console.log("Investigation:", response.data);
-
-      setInvestigation(response.data);
-    } catch (err) {
-      console.error("Investigation error:", err);
-
-      if (err.response?.status === 404) {
-        setError("Alert not found.");
-      } else if (err.response?.status === 400) {
-        setError("Invalid Alert ID.");
-      } else {
-        setError("Unable to connect to investigation API.");
-      }
-    } finally {
-      setLoading(false);
+      return null;
     }
-  };
+  }, [routeAlertId]);
 
-  // =========================================================
-  // AUTOMATIC INVESTIGATION
-  // =========================================================
+  const alertId = getAlertId();
+
+  // ============================================================
+  // LOAD SAVED ALERT
+  // ============================================================
+
+  const loadSavedAlert = useCallback(() => {
+    try {
+      const saved =
+        localStorage.getItem(
+          "netshield_selected_alert"
+        );
+
+      if (!saved) {
+        return null;
+      }
+
+      const parsed = JSON.parse(saved);
+
+      if (
+        !parsed ||
+        typeof parsed !== "object"
+      ) {
+        return null;
+      }
+
+      return parsed;
+    } catch (err) {
+      console.error(
+        "Saved alert parsing error:",
+        err
+      );
+
+      return null;
+    }
+  }, []);
+
+  // ============================================================
+  // FETCH INVESTIGATION
+  // ============================================================
+
+  const fetchInvestigation =
+    useCallback(async () => {
+
+      setLoading(true);
+      setError("");
+
+      const savedAlert =
+        loadSavedAlert();
+
+      // --------------------------------------------------------
+      // SHOW SAVED DATA FIRST
+      // --------------------------------------------------------
+
+      if (savedAlert) {
+        const savedId =
+          savedAlert.id ||
+          savedAlert._id ||
+          savedAlert.alert_id ||
+          savedAlert.alertId;
+
+        if (
+          !alertId ||
+          !savedId ||
+          String(savedId) ===
+            String(alertId)
+        ) {
+          setInvestigation(
+            savedAlert
+          );
+
+          setNotes(
+            savedAlert?.investigation_notes ||
+              ""
+          );
+        }
+      }
+
+      // --------------------------------------------------------
+      // NO ID
+      // --------------------------------------------------------
+
+      if (!alertId) {
+        setError(
+          "Alert ID is missing. Please select an alert from Live Network or Threat Alerts."
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      // --------------------------------------------------------
+      // FETCH FROM BACKEND
+      // --------------------------------------------------------
+
+      try {
+        const response =
+          await axios.get(
+            `${API_URL}/alerts/${encodeURIComponent(
+              String(alertId)
+            )}`
+          );
+
+        if (response.data) {
+          setInvestigation(
+            response.data
+          );
+
+          setNotes(
+            response.data
+              ?.investigation_notes || ""
+          );
+
+          localStorage.setItem(
+            "netshield_selected_alert",
+            JSON.stringify(
+              response.data
+            )
+          );
+        }
+      } catch (err) {
+        console.error(
+          "Investigation API error:",
+          err
+        );
+
+        if (!savedAlert) {
+          setError(
+            err.response?.data
+              ?.detail ||
+              "Unable to load investigation details."
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    }, [
+      alertId,
+      loadSavedAlert,
+    ]);
+
+  // ============================================================
+  // INITIAL LOAD
+  // ============================================================
 
   useEffect(() => {
-    if (urlAlertId) {
-      setAlertId(urlAlertId);
-      investigateAlert(urlAlertId);
-    }
-  }, [urlAlertId]);
+    fetchInvestigation();
+  }, [fetchInvestigation]);
 
-  // =========================================================
-  // SEARCH
-  // =========================================================
+  // ============================================================
+  // UPDATE WORKFLOW
+  // ============================================================
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  const updateWorkflow =
+    async (newStatus) => {
 
-    const cleanId = alertId.trim();
+      if (!alertId) {
+        setError(
+          "Alert ID not found."
+        );
+        return;
+      }
 
-    if (!cleanId) {
-      setError("Please enter an Alert ID.");
-      return;
-    }
+      try {
+        setUpdating(true);
+        setError("");
 
-    setError("");
-    setMessage("");
+        const response =
+          await axios.put(
+            `${API_URL}/alerts/${encodeURIComponent(
+              String(alertId)
+            )}/workflow`,
+            null,
+            {
+              params: {
+                workflow_status:
+                  newStatus.trim(),
+              },
+            }
+          );
 
-    navigate(
-      `/investigation?alertId=${encodeURIComponent(cleanId)}`
-    );
-  };
+        const updatedData =
+          response.data;
 
-  // =========================================================
-  // WORKFLOW
-  // =========================================================
+        setInvestigation(
+          (previous) => ({
+            ...(previous || {}),
+            ...(updatedData || {}),
+            workflow_status:
+              newStatus,
+          })
+        );
 
-  const updateWorkflow = async (action) => {
-    const cleanId = alertId?.trim();
+        const saved =
+          loadSavedAlert() || {};
 
-    if (!cleanId) {
-      setError("Alert ID is required.");
-      return;
-    }
+        localStorage.setItem(
+          "netshield_selected_alert",
+          JSON.stringify({
+            ...saved,
+            workflow_status:
+              newStatus,
+          })
+        );
+      } catch (err) {
+        console.error(
+          "Workflow update error:",
+          err
+        );
 
-    setActionLoading(true);
-    setError("");
+        setError(
+          err.response?.data
+            ?.detail ||
+            "Unable to update investigation status."
+        );
+      } finally {
+        setUpdating(false);
+      }
+    };
 
-    try {
-      const response = await axios.patch(
-        `${API_URL}/alerts/${cleanId}/${action}`
-      );
+  // ============================================================
+  // SAVE NOTES
+  // ============================================================
 
-      setMessage(
-        response.data?.message ||
-          "Alert workflow updated successfully."
-      );
+  const saveNotes = async () => {
 
-      await investigateAlert(cleanId);
-    } catch (err) {
-      console.error("Workflow error:", err);
-
+    if (!alertId) {
       setError(
-        err.response?.data?.detail ||
-          "Unable to update alert workflow."
+        "Alert ID not found."
       );
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // =========================================================
-  // GENERATE REPORT
-  // =========================================================
-
-  const generateSecurityReport = async () => {
-    const cleanId = alertId?.trim();
-
-    if (!cleanId) {
-      setError("Alert ID is required to generate the report.");
       return;
     }
 
-    setError("");
-    setMessage("Generating security report...");
-
     try {
-      const response = await axios.get(
-        `${API_URL}/monitoring/report/${cleanId}`,
+      setSavingNotes(true);
+      setNotesMessage("");
+      setError("");
+
+      await axios.put(
+        `${API_URL}/alerts/${encodeURIComponent(
+          String(alertId)
+        )}/notes`,
+        null,
         {
-          responseType: "blob"
+          params: {
+            notes,
+          },
         }
       );
 
-      const pdfBlob = new Blob([response.data], {
-        type: "application/pdf"
-      });
+      setInvestigation(
+        (previous) => ({
+          ...(previous || {}),
+          investigation_notes:
+            notes,
+        })
+      );
 
-      const url = window.URL.createObjectURL(pdfBlob);
+      const saved =
+        loadSavedAlert() || {};
 
-      const link = document.createElement("a");
+      localStorage.setItem(
+        "netshield_selected_alert",
+        JSON.stringify({
+          ...saved,
+          investigation_notes:
+            notes,
+        })
+      );
 
-      link.href = url;
-      link.download = `NetShield_Report_${cleanId}.pdf`;
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      window.URL.revokeObjectURL(url);
-
-      setMessage("Security report generated successfully.");
+      setNotesMessage(
+        "✓ Investigation notes saved successfully."
+      );
     } catch (err) {
-      console.error("Report generation error:", err);
+      console.error(
+        "Notes save error:",
+        err
+      );
+
+      setNotesMessage("");
 
       setError(
-        err.response?.data?.detail ||
-          "Unable to generate security report."
+        err.response?.data
+          ?.detail ||
+          "Unable to save investigation notes."
       );
+    } finally {
+      setSavingNotes(false);
     }
   };
 
-  // =========================================================
-  // DATE
-  // =========================================================
+  // ============================================================
+  // SECURITY REPORT
+  // ============================================================
 
-  const formatDate = (timestamp) => {
-    if (!timestamp) return "--";
+  const downloadReport = () => {
 
-    try {
-      return new Date(timestamp).toLocaleString();
-    } catch {
-      return "--";
+    if (!alertId) {
+      setError(
+        "Alert ID not found."
+      );
+      return;
     }
-  };
 
-  // =========================================================
-  // WORKFLOW HELPERS
-  // =========================================================
-
-  const workflowStatus =
-    investigation?.workflow_status || "New";
-
-  const workflowOrder = [
-    "New",
-    "Acknowledged",
-    "Investigating",
-    "Resolved"
-  ];
-
-  const workflowIndex = workflowOrder.indexOf(
-    workflowStatus
-  );
-
-  const isCompleted = (status) => {
-    return (
-      workflowOrder.indexOf(status) <= workflowIndex
+    window.open(
+      `${API_URL}/alerts/report/${encodeURIComponent(
+        String(alertId)
+      )}`,
+      "_blank"
     );
   };
 
-  const canAcknowledge =
-    workflowStatus === "New";
+  // ============================================================
+  // HELPERS
+  // ============================================================
 
-  const canInvestigate =
-    workflowStatus === "Acknowledged";
+  const getValue = (...values) => {
 
-  const canResolve =
-    workflowStatus === "Investigating";
+    for (const value of values) {
 
-  // =========================================================
-  // STATUS ICON
-  // =========================================================
+      if (
+        value !== undefined &&
+        value !== null &&
+        value !== ""
+      ) {
+        return value;
+      }
 
-  const getWorkflowIcon = (status) => {
-    if (isCompleted(status)) {
-      return "✓";
     }
 
-    if (status === "Investigating") {
-      return "⌕";
-    }
-
-    return "•";
+    return null;
   };
 
-  // =========================================================
-  // LOADING
-  // =========================================================
+  // ============================================================
+  // NORMALIZE DATA
+  // ============================================================
 
-  if (loading && !investigation) {
+  const threatType =
+    getValue(
+      investigation?.threat_type,
+      investigation?.threat,
+      investigation?.attack_type,
+      investigation?.prediction,
+      investigation?.classification
+    ) || "Unknown Threat";
+
+  const severity =
+    getValue(
+      investigation?.severity,
+      investigation?.risk_level
+    ) || "Low";
+
+  const riskScore = Number(
+    getValue(
+      investigation?.risk_score,
+      investigation?.risk,
+      investigation?.riskScore
+    ) || 0
+  );
+
+  const rawConfidence =
+    getValue(
+      investigation?.confidence,
+      investigation?.confidence_value,
+      investigation?.model_confidence
+    );
+
+  const confidence =
+    rawConfidence === null
+      ? "0%"
+      : typeof rawConfidence === "number"
+      ? `${rawConfidence}%`
+      : String(
+          rawConfidence
+        ).includes("%")
+      ? String(rawConfidence)
+      : `${rawConfidence}%`;
+
+  const workflowStatus =
+    getValue(
+      investigation?.workflow_status,
+      investigation?.workflow,
+      investigation?.status_workflow
+    ) || "New";
+
+  const packetSize =
+    getValue(
+      investigation?.packet_size,
+      investigation?.packetSize
+    ) || 0;
+
+  const duration =
+    getValue(
+      investigation?.duration,
+      investigation?.duration_seconds
+    ) || 0;
+
+  const connectionCount =
+    getValue(
+      investigation?.connection_count,
+      investigation?.connections,
+      investigation?.connectionCount
+    ) || 0;
+
+  const protocol =
+    getValue(
+      investigation?.protocol_type,
+      investigation?.protocol,
+      investigation?.protocolType
+    ) || "--";
+
+  const service =
+    getValue(
+      investigation?.service,
+      investigation?.service_name
+    ) || "--";
+
+  const flag =
+    getValue(
+      investigation?.flag,
+      investigation?.connection_flag,
+      investigation?.connectionFlag
+    ) || "--";
+
+  const sourcePort =
+    getValue(
+      investigation?.source_port,
+      investigation?.src_port,
+      investigation?.sourcePort
+    ) ?? "--";
+
+  const destinationPort =
+    getValue(
+      investigation?.destination_port,
+      investigation?.dst_port,
+      investigation?.destinationPort
+    ) ?? "--";
+
+  const sourceIP =
+    getValue(
+      investigation?.source_ip,
+      investigation?.src_ip,
+      investigation?.sourceIP
+    ) || "--";
+
+  const destinationIP =
+    getValue(
+      investigation?.destination_ip,
+      investigation?.dst_ip,
+      investigation?.destinationIP
+    ) || "--";
+
+  const detectionTime =
+    getValue(
+      investigation?.timestamp,
+      investigation?.created_at,
+      investigation?.detection_time
+    );
+
+  const alertStatus =
+    getValue(
+      investigation?.status,
+      investigation?.alert_status
+    ) || "Threat Detected";
+
+  const alertSource =
+    getValue(
+      investigation?.source,
+      investigation?.source_name
+    ) || "Live Network Monitor";
+
+  const actualAlertId =
+    investigation?._id ||
+    investigation?.id ||
+    investigation?.alert_id ||
+    investigation?.alertId ||
+    alertId ||
+    "--";
+
+  // ============================================================
+  // FORMAT DATE
+  // ============================================================
+
+  const formatDate = (value) => {
+
+    if (!value) {
+      return "--";
+    }
+
+    const date = new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return String(value);
+    }
+
+    return date.toLocaleString();
+  };
+
+  // ============================================================
+  // STATUS CLASS
+  // ============================================================
+
+  const statusClass =
+    String(workflowStatus)
+      .toLowerCase()
+      .replace(/\s+/g, "-");
+
+  // ============================================================
+  // LOADING
+  // ============================================================
+
+  if (loading) {
     return (
       <div className="investigation-page">
-        <div className="investigation-loading">
-          <div className="loading-spinner"></div>
 
-          <h2>Investigating Security Event</h2>
+        <div className="investigation-loading">
+
+          <div className="loading-shield">
+            🛡️
+          </div>
+
+          <h2>
+            Loading Investigation
+          </h2>
 
           <p>
-            NetShield AI is analyzing the selected
-            network alert...
+            Retrieving security incident details...
           </p>
+
+          <div className="loading-bar">
+            <div></div>
+          </div>
+
         </div>
+
       </div>
     );
   }
 
-  // =========================================================
-  // PAGE
-  // =========================================================
+  // ============================================================
+  // MAIN
+  // ============================================================
 
   return (
     <div className="investigation-page">
@@ -276,485 +624,879 @@ function Investigation() {
 
       <header className="investigation-header">
 
-        <div>
-          <div className="page-eyebrow">
-            SECURITY / INVESTIGATION
+        <div className="brand-area">
+
+          <div className="brand-mark">
+            NS
           </div>
 
-          <h1>Threat Investigation</h1>
+          <div>
+            <h1>
+              NETSHIELD AI
+            </h1>
 
-          <p>
-            Analyze individual network alerts and
-            determine the required security response.
-          </p>
+            <span>
+              SECURITY OPERATIONS CENTER
+            </span>
+          </div>
+
         </div>
 
-        <div className="ai-active">
-          <span className="live-dot"></span>
-          AI INVESTIGATION ACTIVE
+        <div className="header-status">
+          <span className="status-dot"></span>
+          SYSTEM OPERATIONAL
         </div>
 
       </header>
 
-      {/* SEARCH */}
+      {/* NAVIGATION */}
 
-      <section className="investigation-search">
+      <nav className="investigation-nav">
 
-        <div className="search-heading">
-          <div className="section-eyebrow">
-            ALERT INVESTIGATION
-          </div>
+        <button
+          type="button"
+          onClick={() =>
+            navigate("/dashboard")
+          }
+        >
+          Dashboard
+        </button>
 
-          <h2>Investigate Security Event</h2>
+        <button
+          type="button"
+          onClick={() =>
+            navigate("/live-network")
+          }
+        >
+          Live Monitor
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            navigate("/threat-alerts")
+          }
+        >
+          Threat Alerts
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            navigate("/analytics")
+          }
+        >
+          Analytics
+        </button>
+
+        <button
+          className="active"
+          type="button"
+        >
+          Investigations
+        </button>
+
+      </nav>
+
+      <main className="investigation-container">
+
+        <div className="investigation-breadcrumb">
+          SECURITY / INVESTIGATION
         </div>
 
-        <form
-          className="investigation-search-form"
-          onSubmit={handleSubmit}
-        >
-          <input
-            type="text"
-            value={alertId}
-            placeholder="Enter Alert ID"
-            onChange={(event) =>
-              setAlertId(event.target.value)
-            }
-          />
+        {/* TITLE */}
 
-          <button
-            type="submit"
-            disabled={
-              loading || actionLoading
-            }
-          >
-            {loading ? "Investigating..." : "Investigate"}
-          </button>
-        </form>
+        <section className="investigation-title">
+
+          <div>
+
+            <div className="title-kicker">
+              SECURITY / INVESTIGATION
+            </div>
+
+            <h2>
+              Incident Investigation
+            </h2>
+
+            <p>
+              Detailed analysis of detected network
+              activity and AI security assessment.
+            </p>
+
+          </div>
+
+          <div className="title-actions">
+
+            <button
+              className="outline-button"
+              type="button"
+              onClick={() =>
+                navigate("/threat-alerts")
+              }
+            >
+              ← Threat Alerts
+            </button>
+
+            <button
+              className="security-report-button"
+              type="button"
+              onClick={downloadReport}
+            >
+              📄 Security Report
+            </button>
+
+          </div>
+
+        </section>
+
+        {/* ERROR */}
 
         {error && (
-          <div className="alert-message error-message">
-            ⚠ {error}
+          <div className="investigation-error">
+
+            <span>⚠</span>
+
+            <span>
+              {error}
+            </span>
+
           </div>
         )}
 
-        {message && (
-          <div className="alert-message success-message">
-            ✓ {message}
-          </div>
-        )}
+        {/* DETECTED EVENT */}
 
-      </section>
+        <section className="detected-event-card">
 
-      {/* RESULTS */}
+          <div>
 
-      {investigation && (
-        <div className="investigation-content">
+            <div className="event-live-label">
+              LIVE MONITORING
+            </div>
 
-          {/* THREAT SUMMARY */}
+            <div className="detected-event-heading">
 
-          <section className="investigation-card threat-summary-card">
-
-            <div className="card-heading">
+              <div className="warning-icon">
+                ⚠
+              </div>
 
               <div>
-                <span className="section-eyebrow">
-                  THREAT SUMMARY
+
+                <span>
+                  DETECTED EVENT
                 </span>
 
                 <h2>
-                  {investigation.threat_type ||
-                    "Unknown Threat"}
+                  {threatType}
                 </h2>
+
+                <p>
+                  Source: {alertSource}
+                </p>
+
               </div>
 
-              <span
-                className={`severity-badge ${
-                  investigation.severity
-                    ?.toLowerCase() || "low"
-                }`}
-              >
-                {investigation.severity || "Low"}
+            </div>
+
+          </div>
+
+          <div className="risk-display">
+
+            <span>
+              {severity}
+            </span>
+
+            <strong>
+              {riskScore}
+            </strong>
+
+            <small>
+              /100 RISK SCORE
+            </small>
+
+          </div>
+
+        </section>
+
+        {/* AI ASSESSMENT */}
+
+        <section className="investigation-panel">
+
+          <div className="panel-heading">
+
+            <div>
+
+              <span>
+                AI ASSESSMENT
               </span>
 
-            </div>
-
-            <div className="summary-grid">
-
-              <div className="summary-box">
-                <span>Risk Score</span>
-
-                <strong>
-                  {investigation.risk_score ?? 0}
-                  <small>/100</small>
-                </strong>
-              </div>
-
-              <div className="summary-box">
-                <span>Confidence</span>
-
-                <strong>
-                  {investigation.confidence || "0%"}
-                </strong>
-              </div>
-
-              <div className="summary-box">
-                <span>Status</span>
-
-                <strong>
-                  {investigation.status ||
-                    "Unknown"}
-                </strong>
-              </div>
-
-              <div className="summary-box">
-                <span>Workflow</span>
-
-                <strong
-                  className={`workflow-text ${workflowStatus.toLowerCase()}`}
-                >
-                  {workflowStatus}
-                </strong>
-              </div>
+              <h3>
+                Threat Analysis
+              </h3>
 
             </div>
 
-          </section>
+            <span className="model-label">
+              RANDOM FOREST
+            </span>
 
-          {/* WORKFLOW */}
+          </div>
 
-          <section className="investigation-card">
+          <div className="assessment-grid">
 
-            <div className="card-heading">
-              <div>
-                <span className="section-eyebrow">
-                  INCIDENT RESPONSE
+            <div className="assessment-card">
+              <span>THREAT TYPE</span>
+
+              <strong>
+                {threatType}
+              </strong>
+            </div>
+
+            <div className="assessment-card">
+
+              <span>
+                SEVERITY
+              </span>
+
+              <strong
+                className={`severity-text ${String(
+                  severity
+                ).toLowerCase()}`}
+              >
+                {severity}
+              </strong>
+
+            </div>
+
+            <div className="assessment-card">
+
+              <span>
+                RISK SCORE
+              </span>
+
+              <strong>
+                {riskScore}/100
+              </strong>
+
+            </div>
+
+            <div className="assessment-card">
+
+              <span>
+                AI CONFIDENCE
+              </span>
+
+              <strong>
+                {confidence}
+              </strong>
+
+            </div>
+
+          </div>
+
+        </section>
+
+        {/* INCIDENT EVIDENCE */}
+
+        <section className="investigation-panel">
+
+          <div className="panel-heading">
+
+            <div>
+
+              <span>
+                INCIDENT EVIDENCE
+              </span>
+
+              <h3>
+                Security Evidence
+              </h3>
+
+            </div>
+
+            <span className="model-label">
+              AI GENERATED
+            </span>
+
+          </div>
+
+          <div className="evidence-grid">
+
+            <div className="evidence-item">
+              <span>THREAT</span>
+              <strong>{threatType}</strong>
+            </div>
+
+            <div className="evidence-item">
+              <span>SEVERITY</span>
+              <strong>{severity}</strong>
+            </div>
+
+            <div className="evidence-item">
+              <span>RISK SCORE</span>
+              <strong>{riskScore}/100</strong>
+            </div>
+
+            <div className="evidence-item">
+              <span>AI CONFIDENCE</span>
+              <strong>{confidence}</strong>
+            </div>
+
+            <div className="evidence-item">
+              <span>SOURCE IP</span>
+              <strong>{sourceIP}</strong>
+            </div>
+
+            <div className="evidence-item">
+              <span>DESTINATION IP</span>
+              <strong>{destinationIP}</strong>
+            </div>
+
+            <div className="evidence-item">
+              <span>PROTOCOL</span>
+              <strong>{protocol}</strong>
+            </div>
+
+            <div className="evidence-item">
+              <span>SERVICE</span>
+              <strong>{service}</strong>
+            </div>
+
+            <div className="evidence-item">
+              <span>SOURCE PORT</span>
+              <strong>{sourcePort}</strong>
+            </div>
+
+            <div className="evidence-item">
+              <span>DESTINATION PORT</span>
+              <strong>{destinationPort}</strong>
+            </div>
+
+            <div className="evidence-item">
+              <span>PACKET SIZE</span>
+              <strong>
+                {packetSize} bytes
+              </strong>
+            </div>
+
+            <div className="evidence-item">
+              <span>DURATION</span>
+              <strong>
+                {duration} sec
+              </strong>
+            </div>
+
+          </div>
+
+        </section>
+
+        {/* NETWORK TELEMETRY */}
+
+        <section className="investigation-panel">
+
+          <div className="panel-heading">
+
+            <div>
+
+              <span>
+                NETWORK TELEMETRY
+              </span>
+
+              <h3>
+                Connection Details
+              </h3>
+
+            </div>
+
+          </div>
+
+          <div className="telemetry-grid">
+
+            <div className="telemetry-item">
+              <span>PACKET SIZE</span>
+              <strong>{packetSize}</strong>
+              <small>bytes</small>
+            </div>
+
+            <div className="telemetry-item">
+              <span>DURATION</span>
+              <strong>{duration}</strong>
+              <small>sec</small>
+            </div>
+
+            <div className="telemetry-item">
+              <span>CONNECTION COUNT</span>
+              <strong>
+                {connectionCount}
+              </strong>
+            </div>
+
+            <div className="telemetry-item">
+              <span>PROTOCOL</span>
+              <strong>{protocol}</strong>
+            </div>
+
+            <div className="telemetry-item">
+              <span>SERVICE</span>
+              <strong>{service}</strong>
+            </div>
+
+            <div className="telemetry-item">
+              <span>CONNECTION FLAG</span>
+              <strong>{flag}</strong>
+            </div>
+
+            <div className="telemetry-item">
+              <span>SOURCE PORT</span>
+              <strong>{sourcePort}</strong>
+            </div>
+
+            <div className="telemetry-item">
+              <span>DESTINATION PORT</span>
+              <strong>
+                {destinationPort}
+              </strong>
+            </div>
+
+          </div>
+
+        </section>
+
+        {/* INVESTIGATION NOTES */}
+
+        <section className="investigation-panel notes-card">
+
+          <div className="panel-heading">
+
+            <div>
+
+              <span>
+                ANALYST WORKSPACE
+              </span>
+
+              <h3>
+                Investigation Notes
+              </h3>
+
+            </div>
+
+            <span className="model-label">
+              PRIVATE
+            </span>
+
+          </div>
+
+          <p className="notes-description">
+            Record findings, suspicious activity,
+            investigation steps and analyst
+            observations for this security incident.
+          </p>
+
+          <textarea
+            className="investigation-notes"
+            value={notes}
+            onChange={(event) =>
+              setNotes(event.target.value)
+            }
+            placeholder="Enter investigation findings..."
+            rows={7}
+          />
+
+          <div className="notes-footer">
+
+            <span>
+              {notes.length} characters
+            </span>
+
+            <div className="notes-actions">
+
+              {notesMessage && (
+                <span className="notes-message">
+                  {notesMessage}
                 </span>
+              )}
 
-                <h2>Alert Workflow</h2>
-              </div>
+              <button
+                className="save-notes-button"
+                type="button"
+                disabled={savingNotes}
+                onClick={saveNotes}
+              >
+                {savingNotes
+                  ? "Saving..."
+                  : "💾 Save Notes"}
+              </button>
+
             </div>
 
-            <div className="workflow-timeline">
+          </div>
 
-              {workflowOrder.map(
-                (status, index) => (
-                  <React.Fragment key={status}>
+        </section>
 
-                    <div
-                      className={`workflow-step ${
-                        isCompleted(status)
-                          ? "completed"
-                          : ""
-                      } ${
-                        status === workflowStatus
-                          ? "current"
-                          : ""
-                      }`}
-                    >
+        {/* INCIDENT MANAGEMENT */}
 
-                      <div className="workflow-circle">
-                        {getWorkflowIcon(status)}
-                      </div>
+        <section className="investigation-panel">
 
-                      <span>{status}</span>
+          <div className="panel-heading">
 
-                    </div>
+            <div>
 
-                    {index <
-                      workflowOrder.length - 1 && (
-                      <div
-                        className={`workflow-line ${
-                          index < workflowIndex
-                            ? "completed"
-                            : ""
-                        }`}
-                      />
-                    )}
+              <span>
+                INCIDENT MANAGEMENT
+              </span>
 
-                  </React.Fragment>
-                )
+              <h3>
+                Investigation Status
+              </h3>
+
+            </div>
+
+            <span
+              className={`current-status-badge ${statusClass}`}
+            >
+              CURRENT: {workflowStatus}
+            </span>
+
+          </div>
+
+          <div className="workflow">
+
+            {/* NEW */}
+
+            <div
+              className={`workflow-step ${
+                workflowStatus === "New"
+                  ? "active"
+                  : ""
+              } ${
+                [
+                  "Acknowledged",
+                  "Investigating",
+                  "Resolved",
+                ].includes(workflowStatus)
+                  ? "completed"
+                  : ""
+              }`}
+            >
+
+              <div className="workflow-number">
+                01
+              </div>
+
+              <div className="workflow-content">
+                <strong>New</strong>
+
+                <span>
+                  Alert received
+                </span>
+              </div>
+
+            </div>
+
+            <div className="workflow-line"></div>
+
+            {/* ACKNOWLEDGED */}
+
+            <div
+              className={`workflow-step ${
+                workflowStatus === "Acknowledged"
+                  ? "active"
+                  : ""
+              } ${
+                [
+                  "Investigating",
+                  "Resolved",
+                ].includes(workflowStatus)
+                  ? "completed"
+                  : ""
+              }`}
+            >
+
+              <div className="workflow-number">
+                02
+              </div>
+
+              <div className="workflow-content">
+                <strong>
+                  Acknowledged
+                </strong>
+
+                <span>
+                  Alert confirmed
+                </span>
+              </div>
+
+            </div>
+
+            <div className="workflow-line"></div>
+
+            {/* INVESTIGATING */}
+
+            <div
+              className={`workflow-step ${
+                workflowStatus === "Investigating"
+                  ? "active"
+                  : ""
+              } ${
+                workflowStatus === "Resolved"
+                  ? "completed"
+                  : ""
+              }`}
+            >
+
+              <div className="workflow-number">
+                03
+              </div>
+
+              <div className="workflow-content">
+                <strong>
+                  Investigating
+                </strong>
+
+                <span>
+                  Security analysis
+                </span>
+              </div>
+
+            </div>
+
+            <div className="workflow-line"></div>
+
+            {/* RESOLVED */}
+
+            <div
+              className={`workflow-step ${
+                workflowStatus === "Resolved"
+                  ? "active completed"
+                  : ""
+              }`}
+            >
+
+              <div className="workflow-number">
+                04
+              </div>
+
+              <div className="workflow-content">
+                <strong>
+                  Resolved
+                </strong>
+
+                <span>
+                  Incident closed
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+
+          <div className="workflow-action-area">
+
+            <div className="current-status">
+
+              <span>
+                CURRENT STATUS
+              </span>
+
+              <strong>
+                {workflowStatus}
+              </strong>
+
+            </div>
+
+            <div className="workflow-actions">
+
+              {workflowStatus === "New" && (
+
+                <button
+                  className="acknowledge-button"
+                  type="button"
+                  disabled={updating}
+                  onClick={() =>
+                    updateWorkflow(
+                      "Acknowledged"
+                    )
+                  }
+                >
+                  {updating
+                    ? "Updating..."
+                    : "✓ Acknowledge Alert"}
+                </button>
+
+              )}
+
+              {workflowStatus ===
+                "Acknowledged" && (
+
+                <button
+                  className="investigate-action-button"
+                  type="button"
+                  disabled={updating}
+                  onClick={() =>
+                    updateWorkflow(
+                      "Investigating"
+                    )
+                  }
+                >
+                  {updating
+                    ? "Updating..."
+                    : "🔍 Start Investigation"}
+                </button>
+
+              )}
+
+              {workflowStatus ===
+                "Investigating" && (
+
+                <button
+                  className="resolve-button"
+                  type="button"
+                  disabled={updating}
+                  onClick={() =>
+                    updateWorkflow(
+                      "Resolved"
+                    )
+                  }
+                >
+                  {updating
+                    ? "Updating..."
+                    : "✓ Resolve Incident"}
+                </button>
+
+              )}
+
+              {workflowStatus ===
+                "Resolved" && (
+
+                <div className="resolved-message">
+                  ✓ INCIDENT RESOLVED
+                </div>
+
               )}
 
             </div>
 
-            {/* ACTION BUTTONS */}
+          </div>
 
-            <div className="workflow-actions">
+        </section>
 
-              <button
-                className="workflow-btn acknowledge-btn"
-                disabled={
-                  !canAcknowledge ||
-                  actionLoading
-                }
-                onClick={() =>
-                  updateWorkflow("acknowledge")
-                }
-              >
-                ✓ Acknowledge
-              </button>
+        {/* EVENT INFORMATION */}
 
-              <button
-                className="workflow-btn investigate-btn"
-                disabled={
-                  !canInvestigate ||
-                  actionLoading
-                }
-                onClick={() =>
-                  updateWorkflow("investigate")
-                }
-              >
-                ⌕ Start Investigation
-              </button>
+        <section className="investigation-panel">
 
-              <button
-                className="workflow-btn resolve-btn"
-                disabled={
-                  !canResolve ||
-                  actionLoading
-                }
-                onClick={() =>
-                  updateWorkflow("resolve")
-                }
-              >
-                ✓ Resolve Alert
-              </button>
+          <div className="panel-heading">
 
-              <button
-                className="workflow-btn report-btn"
-                disabled={actionLoading}
-                onClick={
-                  generateSecurityReport
-                }
-              >
-                📄 Security Report
-              </button>
+            <div>
 
-              <button
-                className="workflow-btn back-btn"
-                onClick={() =>
-                  navigate("/threat-alerts")
-                }
-              >
-                ← Back to Alerts
-              </button>
+              <span>
+                EVENT INFORMATION
+              </span>
+
+              <h3>
+                Detection Metadata
+              </h3>
 
             </div>
 
-            {/* CURRENT STATUS */}
+          </div>
 
-            <div
-              className={`current-workflow ${
-                workflowStatus
-                  .toLowerCase()
-              }`}
-            >
-              <div className="current-status-icon">
-                {workflowStatus ===
-                "Resolved"
-                  ? "✓"
-                  : workflowStatus ===
-                    "Investigating"
-                  ? "⌕"
-                  : "●"}
-              </div>
+          <div className="metadata-grid">
 
-              <div>
-                <span>
-                  CURRENT WORKFLOW STATUS
-                </span>
+            <div>
+              <span>ALERT ID</span>
 
-                <strong>
-                  {workflowStatus ===
-                  "Resolved"
-                    ? "Alert Resolved"
-                    : workflowStatus}
-                </strong>
-              </div>
+              <strong>
+                {actualAlertId}
+              </strong>
             </div>
 
-          </section>
+            <div>
+              <span>
+                DETECTION TIME
+              </span>
 
-          {/* NETWORK DETAILS */}
-
-          <section className="investigation-card">
-
-            <div className="card-heading">
-              <div>
-                <span className="section-eyebrow">
-                  NETWORK DETAILS
-                </span>
-
-                <h2>Traffic Information</h2>
-              </div>
+              <strong>
+                {formatDate(
+                  detectionTime
+                )}
+              </strong>
             </div>
 
-            <div className="network-grid">
+            <div>
+              <span>STATUS</span>
 
-              <div>
-                <span>Packet Size</span>
-                <strong>
-                  {investigation.packet_size ?? 0}
-                </strong>
-              </div>
-
-              <div>
-                <span>Duration</span>
-                <strong>
-                  {investigation.duration ?? 0}
-                </strong>
-              </div>
-
-              <div>
-                <span>Connections</span>
-                <strong>
-                  {investigation.connection_count ?? 0}
-                </strong>
-              </div>
-
-              <div>
-                <span>Source Port</span>
-                <strong>
-                  {investigation.source_port ?? "--"}
-                </strong>
-              </div>
-
-              <div>
-                <span>Destination Port</span>
-                <strong>
-                  {investigation.destination_port ?? "--"}
-                </strong>
-              </div>
-
-              <div>
-                <span>Protocol</span>
-                <strong>
-                  {investigation.protocol_type || "--"}
-                </strong>
-              </div>
-
-              <div>
-                <span>Service</span>
-                <strong>
-                  {investigation.service || "--"}
-                </strong>
-              </div>
-
-              <div>
-                <span>Flag</span>
-                <strong>
-                  {investigation.flag || "--"}
-                </strong>
-              </div>
-
+              <strong>
+                {alertStatus}
+              </strong>
             </div>
 
-          </section>
+            <div>
+              <span>WORKFLOW</span>
 
-          {/* AI ANALYSIS */}
-
-          <section className="investigation-card ai-analysis-card">
-
-            <div className="card-heading">
-
-              <div>
-                <span className="section-eyebrow">
-                  AI SECURITY ANALYSIS
-                </span>
-
-                <h2>Recommended Action</h2>
-              </div>
-
-              <div className="ai-symbol">
-                ✦
-              </div>
-
+              <strong>
+                {workflowStatus}
+              </strong>
             </div>
 
-            <div className="ai-analysis">
+            <div>
+              <span>SOURCE</span>
 
-              <div className="priority-panel">
-
-                <span>
-                  INVESTIGATION PRIORITY
-                </span>
-
-                <strong>
-                  {investigation.investigation
-                    ?.priority || "Normal"}
-                </strong>
-
-              </div>
-
-              <div className="recommendation">
-                <span>AI RECOMMENDATION</span>
-
-                <p>
-                  {investigation.investigation
-                    ?.recommendation ||
-                    "No immediate action required."}
-                </p>
-              </div>
-
+              <strong>
+                {alertSource}
+              </strong>
             </div>
 
-          </section>
+            <div>
+              <span>SOURCE IP</span>
 
-          {/* EVENT INFORMATION */}
-
-          <section className="investigation-card">
-
-            <div className="card-heading">
-              <div>
-                <span className="section-eyebrow">
-                  EVENT INFORMATION
-                </span>
-
-                <h2>Security Event Details</h2>
-              </div>
+              <strong>
+                {sourceIP}
+              </strong>
             </div>
 
-            <div className="event-grid">
+            <div>
+              <span>
+                DESTINATION IP
+              </span>
 
-              <div>
-                <span>Alert ID</span>
-
-                <strong className="alert-id">
-                  {investigation._id ||
-                    investigation.id ||
-                    alertId}
-                </strong>
-              </div>
-
-              <div>
-                <span>Timestamp</span>
-
-                <strong>
-                  {formatDate(
-                    investigation.timestamp
-                  )}
-                </strong>
-              </div>
-
-              <div>
-                <span>Source</span>
-
-                <strong>
-                  {investigation.source ||
-                    "Live Network Monitor"}
-                </strong>
-              </div>
-
+              <strong>
+                {destinationIP}
+              </strong>
             </div>
 
-          </section>
+          </div>
 
-        </div>
-      )}
+        </section>
+
+        {/* FOOTER */}
+
+        <footer className="investigation-footer">
+
+          <div className="footer-brand">
+
+            <strong>
+              🛡️ NETSHIELD AI
+            </strong>
+
+            <span>
+              AI-POWERED NETWORK SECURITY
+            </span>
+
+          </div>
+
+          <span>
+            SECURITY OPERATIONS CENTER
+          </span>
+
+          <span>
+            MILESTONE 3 • INCIDENT INVESTIGATION
+          </span>
+
+        </footer>
+
+      </main>
 
     </div>
   );
 }
 
 export default Investigation;
-

@@ -4,9 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth import router as auth_router
 from app.routes.alerts import router as alerts_router
 from app.routes.monitoring import router as monitoring_router
-
+from app.routes.analytics import router as analytics_router
 from app.services.live_monitor import start_monitor
-
+from app.routes.predictions import router as predictions_router
 
 # ============================================================
 # FASTAPI APPLICATION
@@ -95,7 +95,13 @@ def startup_event():
     )
 
     start_monitor()
+# ============================================================
+# SOC ANALYTICS
+# ============================================================
 
+app.include_router(
+    analytics_router
+)
 
 # ============================================================
 # ROOT ENDPOINT
@@ -110,3 +116,8 @@ def root():
         "status":
             "online"
     }
+app.include_router(
+    predictions_router,
+    prefix="/predictions",
+    tags=["AI Predictions"]
+)
