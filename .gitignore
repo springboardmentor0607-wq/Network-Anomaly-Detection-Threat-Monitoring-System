@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# NetShield AI large datasets
+backend/app/data/
+backend/ml/*.csv
+backend/models/*.pkl
+backend/models/*.csv
+backend/reports/*.csv
+
+# Frontend dependencies
+frontend/node_modules/
+frontend/dist/

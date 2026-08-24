@@ -1,0 +1,18 @@
+{
+    "total_samples": 508249,
+    "imbalance_ratio": 0.0795,
+    "is_balanced": false,
+    "balance_status": "Imbalanced (Minority class < 40% of majority class)",
+    "class_distribution": {
+        "Benign": {
+            "class_id": 0,
+            "sample_count": 470828,
+            "percentage": 92.64
+        },
+        "Attack": {
+            "class_id": 1,
+            "sample_count": 37421,
+            "percentage": 7.36
+        }
+    }
+}
