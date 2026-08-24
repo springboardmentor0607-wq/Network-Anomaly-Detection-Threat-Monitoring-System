@@ -1,0 +1,42 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+dist/
+
+# Environment secrets — NEVER commit these
+.env
+
+# OS files
+.DS_Store
+
+# Large datasets (optional — keep repo lightweight)
+ml/data/raw/
+ml/data/processed/
+
+# --- Ignored Log Files ---
+*.log
+*.log.*
+logs/
+
+# --- Python & Backend ---
+backend/venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/.env
+
+# --- Node & Frontend ---
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.env
+
+# --- Mac OS Junk ---
+.DS_Store
+
+# --- Large ML Models & Captures ---
+*.joblib
+*.pcap

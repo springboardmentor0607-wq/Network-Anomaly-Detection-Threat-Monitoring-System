@@ -1,0 +1,46 @@
+{
+    "model_name": "Random Forest Classifier",
+    "dataset": "CICIDS2017",
+    "accuracy": 98.92,
+    "precision": 98.14,
+    "recall": 98.67,
+    "f1_score": 98.40,
+    "cross_validation": 97.80,
+    "classes": {
+        "BENIGN": {
+            "precision": 0.99,
+            "recall": 0.99,
+            "f1_score": 0.99
+        },
+        "Bot": {
+            "precision": 0.92,
+            "recall": 0.88,
+            "f1_score": 0.90
+        },
+        "DDoS": {
+            "precision": 0.98,
+            "recall": 0.97,
+            "f1_score": 0.97
+        },
+        "DoS GoldenEye": {
+            "precision": 0.95,
+            "recall": 0.94,
+            "f1_score": 0.94
+        },
+        "DoS Hulk": {
+            "precision": 0.97,
+            "recall": 0.98,
+            "f1_score": 0.97
+        },
+        "PortScan": {
+            "precision": 0.99,
+            "recall": 0.99,
+            "f1_score": 0.99
+        },
+        "BruteForce": {
+            "precision": 0.91,
+            "recall": 0.89,
+            "f1_score": 0.90
+        }
+    }
+}
