@@ -427,6 +427,16 @@ def predict_cicids(
 
         prediction = cicids_attack_model.predict(features)[0]
 
+        confidence = 0.0
+
+        if hasattr(cicids_attack_model, "predict_proba"):
+
+            probabilities = cicids_attack_model.predict_proba(
+                features
+             )[0]
+
+            confidence = max(probabilities) * 100
+
         attack_type = cicids_attack_encoder.inverse_transform(
             [prediction]
         )[0]
@@ -439,8 +449,9 @@ def predict_cicids(
                 "severity": "Low",
                 "risk_score": 0,
                 "risk_level": "Low",
+                "confidence": f"{confidence:.2f}%",
                 "alert_id": None,
-                "alert_created": False,
+                "alert_created": False
             }
 
         alert, created = save_security_alert(
@@ -464,8 +475,9 @@ def predict_cicids(
             "severity": alert.severity,
             "risk_score": alert.risk_score,
             "risk_level": alert.risk_level,
+            "confidence": f"{confidence:.2f}%",
             "alert_id": alert.id,
-            "alert_created": created,
+            "alert_created": created
         }
 
     except Exception as e:
@@ -639,6 +651,16 @@ def predict_unsw(
             features
         )[0]
 
+        confidence = 0.0
+
+        if hasattr(unsw_attack_model, "predict_proba"):
+
+            probabilities = unsw_attack_model.predict_proba(
+                features
+            )[0]
+
+            confidence = max(probabilities) * 100
+
         attack_type = (
             unsw_attack_encoder
             .inverse_transform([prediction])[0]
@@ -657,6 +679,7 @@ def predict_unsw(
                 "severity": "Low",
                 "risk_score": 0,
                 "risk_level": "Low",
+                "confidence": f"{confidence:.2f}%",
                 "alert_id": None,
                 "alert_created": False,
             }
@@ -694,6 +717,7 @@ def predict_unsw(
             "severity": alert.severity,
             "risk_score": alert.risk_score,
             "risk_level": alert.risk_level,
+            "confidence": f"{confidence:.2f}%",
             "alert_id": alert.id,
             "alert_created": created,
         }

@@ -13,7 +13,8 @@ from api.report import router as report_router
 from api.model_testing import router as model_testing_router
 from api.incidents import router as incidents_router
 from api.alerts import router as alerts_router
-
+from api.security_report import router as security_report_router
+from api.analytics import router as analytics_router
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -46,6 +47,14 @@ app.include_router(dashboard_router)
 app.include_router(incidents_router)
 
 app.include_router(alerts_router)
+
+app.include_router(
+    security_report_router
+)
+
+app.include_router(
+    analytics_router
+)
 
 def get_db():
     db = SessionLocal()

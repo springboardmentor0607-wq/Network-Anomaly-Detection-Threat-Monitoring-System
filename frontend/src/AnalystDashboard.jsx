@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import API from "./api/api";
 import "./Dashboard.css";
 import ModelTesting from "./ModelTesting";
@@ -42,6 +42,15 @@ const storedUser = JSON.parse(
   const [selectedDataset, setSelectedDataset] =
   useState("CICIDS2017");
   const [selectedIncident, setSelectedIncident] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+const [unreadNotifications, setUnreadNotifications] = useState(0);
+const [showNotifications, setShowNotifications] = useState(false);
+const knownAlertIdsRef = useRef(new Set());
+const initialAlertsLoadedRef = useRef(false);
+const [securityReport, setSecurityReport] = useState(null);
+const [securityReportLoading, setSecurityReportLoading] = useState(false);
+const [securityAnalytics, setSecurityAnalytics] = useState(null);
+const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
 const [incidentAssignee, setIncidentAssignee] = useState(
   storedUser.full_name || "Security Analyst"
@@ -109,21 +118,72 @@ const [incidentAssignee, setIncidentAssignee] = useState(
   ];
 
 // ==============================
+// GET SECURITY ANALYTICS
+// ==============================
+
+const getSecurityAnalytics = async () => {
+
+  try {
+
+    setAnalyticsLoading(true);
+
+    const response = await API.get(
+      "/analytics/"
+    );
+
+    console.log(
+      "✅ Security analytics:",
+      response.data
+    );
+
+    setSecurityAnalytics(
+      response.data
+    );
+
+  } catch (error) {
+
+    console.error(
+      "❌ Analytics API Error:",
+      error.response?.data ||
+      error.message
+    );
+
+  } finally {
+
+    setAnalyticsLoading(false);
+
+  }
+};
+
+// ==============================
 // GET LIVE TRAFFIC
 // ==============================
 
 const getTraffic = async () => {
   try {
-    // Get traffic from backend
-   const response = await API.get(
-  `/traffic?dataset=${encodeURIComponent(selectedDataset)}`
-);
+
+    // --------------------------------
+    // GET SELECTED DATASET TRAFFIC
+    // --------------------------------
+
+    const response = await API.get(
+      `/traffic?dataset=${encodeURIComponent(
+        selectedDataset
+      )}`
+    );
 
     const data = response.data;
 
-    console.log("✅ Traffic received:", data);
+    console.log(
+      "✅ Traffic received:",
+      data
+    );
 
-    // Default prediction
+
+    // --------------------------------
+    // DEFAULT PREDICTION
+    // --------------------------------
+
     let prediction = {
       prediction: "Unknown",
       confidence: "0%",
@@ -131,258 +191,540 @@ const getTraffic = async () => {
       severity: "LOW"
     };
 
-    // ==============================
-    // RUN AI PREDICTION
-    // ==============================
 
-    try {
-      let predictionResponse;
+    // =================================
+    // CICIDS2017
+    // =================================
 
-if (selectedDataset === "CICIDS2017") {
+    if (
+      selectedDataset === "CICIDS2017"
+    ) {
 
-  predictionResponse = await API.post(
-    "/predict/cicids",
-    {
-      ...data,
-      source_ip: data.source,
-      destination_ip: data.destination
+      try {
+
+        const predictionResponse =
+          await API.post(
+            "/predict/cicids",
+            {
+
+              source_ip:
+                data.source ||
+                "Unknown",
+
+              destination_ip:
+                data.destination ||
+                "Unknown",
+
+              protocol:
+                data.protocol ||
+                "TCP",
+
+              destination_port:
+                Number(
+                  data.destination_port ||
+                  0
+                ),
+
+              duration:
+                Number(
+                  data.duration || 0
+                ),
+
+              src_packets:
+                Number(
+                  data.src_packets || 0
+                ),
+
+              dst_packets:
+                Number(
+                  data.dst_packets || 0
+                ),
+
+              src_bytes:
+                Number(
+                  data.src_bytes || 0
+                ),
+
+              dst_bytes:
+                Number(
+                  data.dst_bytes || 0
+                ),
+
+              flow_bytes_per_sec:
+                Number(
+                  data.flow_bytes_per_sec ||
+                  0
+                ),
+
+              flow_packets_per_sec:
+                Number(
+                  data.flow_packets_per_sec ||
+                  0
+                )
+            }
+          );
+
+        prediction =
+          predictionResponse.data;
+
+      } catch (predictionError) {
+
+        console.error(
+          "⚠️ CICIDS prediction failed:",
+          predictionError.response?.data ||
+          predictionError.message
+        );
+
+      }
+
     }
-  );
 
-} else {
 
-  predictionResponse = await API.post(
-    "/predict/unsw",
-    {
-      ...data,
-      source_ip: data.source,
-      destination_ip: data.destination
+    // =================================
+    // UNSW-NB15
+    // =================================
+
+    else if (
+      selectedDataset === "UNSW-NB15"
+    ) {
+
+      try {
+
+        const predictionResponse =
+          await API.post(
+            "/predict/unsw",
+            {
+
+              source_ip:
+                data.source ||
+                "Unknown",
+
+              destination_ip:
+                data.destination ||
+                "Unknown",
+
+              proto:
+                String(
+                  data.proto || ""
+                ),
+
+              service:
+                String(
+                  data.service || ""
+                ),
+
+              state:
+                String(
+                  data.state || ""
+                ),
+
+              dur:
+                Number(
+                  data.dur || 0
+                ),
+
+              spkts:
+                Number(
+                  data.spkts || 0
+                ),
+
+              dpkts:
+                Number(
+                  data.dpkts || 0
+                ),
+
+              sbytes:
+                Number(
+                  data.sbytes || 0
+                ),
+
+              dbytes:
+                Number(
+                  data.dbytes || 0
+                ),
+
+              rate:
+                Number(
+                  data.rate || 0
+                ),
+
+              sload:
+                Number(
+                  data.sload || 0
+                ),
+
+              dload:
+                Number(
+                  data.dload || 0
+                ),
+
+              sloss:
+                Number(
+                  data.sloss || 0
+                ),
+
+              dloss:
+                Number(
+                  data.dloss || 0
+                ),
+
+              sinpkt:
+                Number(
+                  data.sinpkt || 0
+                ),
+
+              dinpkt:
+                Number(
+                  data.dinpkt || 0
+                ),
+
+              sjit:
+                Number(
+                  data.sjit || 0
+                ),
+
+              djit:
+                Number(
+                  data.djit || 0
+                ),
+
+              swin:
+                Number(
+                  data.swin || 0
+                ),
+
+              stcpb:
+                Number(
+                  data.stcpb || 0
+                ),
+
+              dtcpb:
+                Number(
+                  data.dtcpb || 0
+                ),
+
+              dwin:
+                Number(
+                  data.dwin || 0
+                ),
+
+              tcprtt:
+                Number(
+                  data.tcprtt || 0
+                ),
+
+              synack:
+                Number(
+                  data.synack || 0
+                ),
+
+              ackdat:
+                Number(
+                  data.ackdat || 0
+                ),
+
+              smean:
+                Number(
+                  data.smean || 0
+                ),
+
+              dmean:
+                Number(
+                  data.dmean || 0
+                ),
+
+              trans_depth:
+                Number(
+                  data.trans_depth || 0
+                ),
+
+              response_body_len:
+                Number(
+                  data.response_body_len || 0
+                ),
+
+              ct_src_dport_ltm:
+                Number(
+                  data.ct_src_dport_ltm || 0
+                ),
+
+              ct_dst_sport_ltm:
+                Number(
+                  data.ct_dst_sport_ltm || 0
+                ),
+
+              is_ftp_login:
+                Number(
+                  data.is_ftp_login || 0
+                ),
+
+              ct_ftp_cmd:
+                Number(
+                  data.ct_ftp_cmd || 0
+                ),
+
+              ct_flw_http_mthd:
+                Number(
+                  data.ct_flw_http_mthd || 0
+                ),
+
+              is_sm_ips_ports:
+                Number(
+                  data.is_sm_ips_ports || 0
+                )
+            }
+          );
+
+        prediction =
+          predictionResponse.data;
+
+      } catch (predictionError) {
+
+        console.error(
+          "⚠️ UNSW prediction failed:",
+          predictionError.response?.data ||
+          predictionError.message
+        );
+
+      }
+
     }
-  );
 
-}
 
-prediction = predictionResponse.data;
-
-      console.log("✅ Prediction:", prediction);
-
-    } catch (predictionError) {
-      console.error(
-        "⚠️ Prediction failed:",
-        predictionError.response?.data ||
-        predictionError.message
-      );
-
-      // Traffic will still be displayed
-    }
-
-    // ==============================
-    // CREATE TRAFFIC OBJECT
-    // ==============================
+    // =================================
+    // CREATE UNIFIED TRAFFIC OBJECT
+    // =================================
 
     const newTraffic = {
+
       id: Date.now(),
 
-      source: data.source || "Unknown",
+      dataset:
+        selectedDataset,
 
-      destination: data.destination || "Unknown",
+      source:
+        data.source ||
+        "Unknown",
 
-      protocol: String(data.protocol || "Unknown"),
+      destination:
+        data.destination ||
+        "Unknown",
 
-      duration: Number(data.duration || 0),
 
-      src_packets: Number(data.src_packets || 0),
+      // -------------------------------
+      // CICIDS FIELDS
+      // -------------------------------
 
-      dst_packets: Number(data.dst_packets || 0),
+      protocol:
+        data.protocol ||
+        "Unknown",
 
-      src_bytes: Number(data.src_bytes || 0),
+      destination_port:
+        Number(
+          data.destination_port ||
+          0
+        ),
 
-      dst_bytes: Number(data.dst_bytes || 0),
+      duration:
+        Number(
+          data.duration ||
+          0
+        ),
 
-      actual_label: data.actual_label ?? "0",
+      src_packets:
+        Number(
+          data.src_packets ||
+          0
+        ),
 
-      status: prediction.prediction || "Unknown",
+      dst_packets:
+        Number(
+          data.dst_packets ||
+          0
+        ),
 
-      confidence: prediction.confidence || "0%",
+      src_bytes:
+        Number(
+          data.src_bytes ||
+          0
+        ),
 
-      attack_type: prediction.attack_type || "None",
+      dst_bytes:
+        Number(
+          data.dst_bytes ||
+          0
+        ),
 
-      severity: prediction.severity || "LOW"
+
+      // -------------------------------
+      // UNSW FIELDS
+      // -------------------------------
+
+      proto:
+        data.proto ||
+        "Unknown",
+
+      service:
+        data.service ||
+        "Unknown",
+
+      state:
+        data.state ||
+        "Unknown",
+
+      spkts:
+        Number(
+          data.spkts ||
+          0
+        ),
+
+      dpkts:
+        Number(
+          data.dpkts ||
+          0
+        ),
+
+      sbytes:
+        Number(
+          data.sbytes ||
+          0
+        ),
+
+      dbytes:
+        Number(
+          data.dbytes ||
+          0
+        ),
+
+
+      // -------------------------------
+      // AI RESULT
+      // -------------------------------
+
+      status:
+        prediction.prediction ||
+        "Unknown",
+
+      confidence:
+        prediction.confidence ||
+        "0%",
+
+      attack_type:
+        prediction.attack_type ||
+        "None",
+
+      severity:
+        prediction.severity ||
+        "LOW"
+
     };
+
 
     console.log(
       "📊 Adding traffic:",
       newTraffic
     );
 
-    // ==============================
+
+    // =================================
     // ADD TO LIVE TRAFFIC TABLE
-    // ==============================
+    // =================================
 
-    setTrafficData((prev) => [
-      ...prev.slice(-19),
-      newTraffic
-    ]);
+    setTrafficData(
+      (previous) => [
+        ...previous.slice(-19),
+        newTraffic
+      ]
+    );
 
-    // ==============================
-    // PROTOCOL ANALYTICS
-    // ==============================
 
-    const protocol = String(data.protocol);
+    // =================================
+    // TRAFFIC TREND
+    // =================================
 
-    setProtocolStats((prev) => {
-      if (protocol === "80") {
-        return {
-          ...prev,
-          HTTP: prev.HTTP + 1
-        };
-      }
+    setTrafficTrend(
+      (previous) => [
+        ...previous.slice(-9),
+        {
+          time:
+            new Date().toLocaleTimeString(),
 
-      if (protocol === "443") {
-        return {
-          ...prev,
-          HTTPS: prev.HTTPS + 1
-        };
-      }
+          value: 1
+        }
+      ]
+    );
 
-      if (protocol === "53") {
-        return {
-          ...prev,
-          DNS: prev.DNS + 1
-        };
-      }
+
+    // =================================
+    // LIVE DASHBOARD STATS
+    // =================================
+
+    setStats((previous) => {
+
+      const isAttack =
+        prediction.prediction ===
+        "Attack";
 
       return {
-        ...prev,
-        OTHER: prev.OTHER + 1
+
+        ...previous,
+
+        total_packets:
+          previous.total_packets + 1,
+
+        normal_traffic:
+          previous.normal_traffic +
+          (
+            isAttack
+              ? 0
+              : 1
+          ),
+
+        attack_traffic:
+          previous.attack_traffic +
+          (
+            isAttack
+              ? 1
+              : 0
+          ),
+
+        anomalies_detected:
+          previous.anomalies_detected +
+          (
+            isAttack
+              ? 1
+              : 0
+          ),
+
+        risk_score:
+          isAttack
+            ? Math.min(
+                100,
+                previous.risk_score +
+                10
+              )
+            : previous.risk_score,
+
+        risk_level:
+          isAttack
+            ? "HIGH"
+            : previous.risk_level ||
+              "LOW"
       };
+
     });
 
-    // ==============================
-    // TRAFFIC TREND
-    // ==============================
-
-    setTrafficTrend((prev) => [
-      ...prev.slice(-9),
-      {
-        time: new Date().toLocaleTimeString(),
-        value: 1
-      }
-    ]);
-
-    // ==============================
-// LIVE DASHBOARD STATS
-// ==============================
-
-setStats((prev) => {
-
-  const isAttack =
-    prediction.prediction === "Attack";
-
-  return {
-    ...prev,
-
-    total_packets:
-      prev.total_packets + 1,
-
-    normal_traffic:
-      prev.normal_traffic +
-      (isAttack ? 0 : 1),
-
-    attack_traffic:
-      prev.attack_traffic +
-      (isAttack ? 1 : 0),
-
-    anomalies_detected:
-      prev.anomalies_detected +
-      (isAttack ? 1 : 0),
-
-    risk_score:
-      isAttack
-        ? Math.min(
-            100,
-            prev.risk_score + 10
-          )
-        : prev.risk_score,
-
-    risk_level:
-      isAttack
-        ? "HIGH"
-        : prev.risk_level || "LOW"
-  };
-
-});
-
-    // ==============================
-    // CREATE ALERT
-    // ==============================
-
-    /*if (prediction.prediction === "Attack") {
-      const newAlert = {
-        id: Date.now(),
-
-        source: data.source || "Unknown",
-
-        attack_type:
-          prediction.attack_type ||
-          "Unknown Attack",
-
-        severity:
-          prediction.severity ||
-          "LOW",
-
-        confidence:
-          prediction.confidence ||
-          "0%",
-
-        time:
-          new Date().toLocaleTimeString()
-      };
-
-      setAlerts((prev) => [
-        newAlert,
-        ...prev.slice(0, 9)
-      ]);
-
-      // Timeline
-      setTimeline((prev) => [
-        {
-          id: Date.now(),
-
-          time:
-            new Date().toLocaleTimeString(),
-
-          event:
-            `${prediction.attack_type || "Attack"} detected`
-        },
-
-        ...prev.slice(0, 9)
-      ]);
-
-    } else {
-      setTimeline((prev) => [
-        {
-          id: Date.now(),
-
-          time:
-            new Date().toLocaleTimeString(),
-
-          event: "Normal traffic detected"
-        },
-
-        ...prev.slice(0, 9)
-      ]);
-    }*/
 
   } catch (error) {
+
     console.error(
       "❌ Traffic API Error:",
       error.response?.data ||
       error.message
     );
+
   }
 };
-
 
   // ==============================
   // GET DASHBOARD STATS
@@ -437,11 +779,12 @@ const getReportData = async () => {
   }
 };
 
-  /// ==============================
+  // ==============================
 // MANUAL ANALYZE TRAFFIC
 // ==============================
 
 const analyzeTraffic = async (index) => {
+
   const item = trafficData[index];
 
   if (!item) {
@@ -449,41 +792,275 @@ const analyzeTraffic = async (index) => {
   }
 
   try {
+
     setSelectedTraffic({
       ...item,
       analyzing: true
     });
 
-    const response = await API.post(
-      "/predict",
-      {
-        duration: Number(item.duration),
+    let result;
 
-        src_packets:
-          Number(item.src_packets),
 
-        dst_packets:
-          Number(item.dst_packets),
+    // ==========================================
+    // CICIDS2017 ANALYSIS
+    // ==========================================
 
-        src_bytes:
-          Number(item.src_bytes),
+    if (selectedDataset === "CICIDS2017") {
 
-        dst_bytes:
-          Number(item.dst_bytes),
+      const response = await API.post(
+        "/predict/cicids",
+        {
+          source_ip:
+            item.source || "Unknown",
 
-        protocol:
-          String(item.protocol)
-      }
-    );
+          destination_ip:
+            item.destination || "Unknown",
 
-    const result = response.data;
+          protocol:
+            item.protocol || "TCP",
 
-    console.log(
-      "Investigation result:",
-      result
-    );
+          destination_port:
+            Number(
+              item.destination_port || 0
+            ),
 
-    // Update traffic row
+          duration:
+            Number(
+              item.duration || 0
+            ),
+
+          src_packets:
+            Number(
+              item.src_packets || 0
+            ),
+
+          dst_packets:
+            Number(
+              item.dst_packets || 0
+            ),
+
+          src_bytes:
+            Number(
+              item.src_bytes || 0
+            ),
+
+          dst_bytes:
+            Number(
+              item.dst_bytes || 0
+            ),
+
+          flow_bytes_per_sec:
+            Number(
+              item.flow_bytes_per_sec || 0
+            ),
+
+          flow_packets_per_sec:
+            Number(
+              item.flow_packets_per_sec || 0
+            )
+        }
+      );
+
+      result = response.data;
+
+    }
+
+
+    // ==========================================
+    // UNSW-NB15 ANALYSIS
+    // ==========================================
+
+    else if (selectedDataset === "UNSW-NB15") {
+
+      const response = await API.post(
+        "/predict/unsw",
+        {
+          source_ip:
+            item.source || "Unknown",
+
+          destination_ip:
+            item.destination || "Unknown",
+
+          proto:
+            String(
+              item.proto || ""
+            ),
+
+          service:
+            String(
+              item.service || ""
+            ),
+
+          state:
+            String(
+              item.state || ""
+            ),
+
+          dur:
+            Number(
+              item.dur || 0
+            ),
+
+          spkts:
+            Number(
+              item.spkts || 0
+            ),
+
+          dpkts:
+            Number(
+              item.dpkts || 0
+            ),
+
+          sbytes:
+            Number(
+              item.sbytes || 0
+            ),
+
+          dbytes:
+            Number(
+              item.dbytes || 0
+            ),
+
+          rate:
+            Number(
+              item.rate || 0
+            ),
+
+          sload:
+            Number(
+              item.sload || 0
+            ),
+
+          dload:
+            Number(
+              item.dload || 0
+            ),
+
+          sloss:
+            Number(
+              item.sloss || 0
+            ),
+
+          dloss:
+            Number(
+              item.dloss || 0
+            ),
+
+          sinpkt:
+            Number(
+              item.sinpkt || 0
+            ),
+
+          dinpkt:
+            Number(
+              item.dinpkt || 0
+            ),
+
+          sjit:
+            Number(
+              item.sjit || 0
+            ),
+
+          djit:
+            Number(
+              item.djit || 0
+            ),
+
+          swin:
+            Number(
+              item.swin || 0
+            ),
+
+          stcpb:
+            Number(
+              item.stcpb || 0
+            ),
+
+          dtcpb:
+            Number(
+              item.dtcpb || 0
+            ),
+
+          dwin:
+            Number(
+              item.dwin || 0
+            ),
+
+          tcprtt:
+            Number(
+              item.tcprtt || 0
+            ),
+
+          synack:
+            Number(
+              item.synack || 0
+            ),
+
+          ackdat:
+            Number(
+              item.ackdat || 0
+            ),
+
+          smean:
+            Number(
+              item.smean || 0
+            ),
+
+          dmean:
+            Number(
+              item.dmean || 0
+            ),
+
+          trans_depth:
+            Number(
+              item.trans_depth || 0
+            ),
+
+          response_body_len:
+            Number(
+              item.response_body_len || 0
+            ),
+
+          ct_src_dport_ltm:
+            Number(
+              item.ct_src_dport_ltm || 0
+            ),
+
+          ct_dst_sport_ltm:
+            Number(
+              item.ct_dst_sport_ltm || 0
+            ),
+
+          is_ftp_login:
+            Number(
+              item.is_ftp_login || 0
+            ),
+
+          ct_ftp_cmd:
+            Number(
+              item.ct_ftp_cmd || 0
+            ),
+
+          ct_flw_http_mthd:
+            Number(
+              item.ct_flw_http_mthd || 0
+            ),
+
+          is_sm_ips_ports:
+            Number(
+              item.is_sm_ips_ports || 0
+            )
+        }
+      );
+
+      result = response.data;
+
+    }
+
+
+    // ==========================================
+    // UPDATE TRAFFIC ROW
+    // ==========================================
 
     setTrafficData((prev) =>
       prev.map((traffic, i) =>
@@ -492,10 +1069,12 @@ const analyzeTraffic = async (index) => {
               ...traffic,
 
               status:
-                result.prediction,
+                result.prediction ||
+                traffic.status,
 
               confidence:
-                result.confidence,
+                result.confidence ||
+                traffic.confidence,
 
               attack_type:
                 result.attack_type ||
@@ -509,49 +1088,21 @@ const analyzeTraffic = async (index) => {
       )
     );
 
-    // Create alert
 
-    /*if (result.prediction === "Attack") {
-
-      const newAlert = {
-        id: Date.now(),
-
-        source:
-          item.source ||
-          "Unknown",
-
-        attack_type:
-          result.attack_type ||
-          "Unknown Attack",
-
-        confidence:
-          result.confidence ||
-          "0%",
-
-        severity:
-          result.severity ||
-          "LOW",
-
-        time:
-          new Date().toLocaleTimeString()
-      };
-
-      setAlerts((prev) => [
-        newAlert,
-        ...prev.slice(0, 9)
-      ]);
-    }*/
-
-    // Investigation result
+    // ==========================================
+    // INVESTIGATION RESULT
+    // ==========================================
 
     setSelectedTraffic({
+
       ...item,
 
       prediction:
         result.prediction,
 
       confidence:
-        result.confidence,
+        result.confidence ||
+        item.confidence,
 
       attack_type:
         result.attack_type ||
@@ -561,7 +1112,19 @@ const analyzeTraffic = async (index) => {
         result.severity ||
         "LOW",
 
+      risk_score:
+        result.risk_score ?? 0,
+
+      risk_level:
+        result.risk_level ||
+        "LOW",
+
+      alert_id:
+        result.alert_id ||
+        null,
+
       analyzing: false
+
     });
 
   } catch (error) {
@@ -573,6 +1136,7 @@ const analyzeTraffic = async (index) => {
     );
 
     setSelectedTraffic({
+
       ...item,
 
       error:
@@ -580,7 +1144,9 @@ const analyzeTraffic = async (index) => {
         "Unable to analyze traffic.",
 
       analyzing: false
+
     });
+
   }
 };
 
@@ -758,25 +1324,161 @@ const downloadReport = () => {
 
 
 // ==============================
-// GET SECURITY ALERTS FROM DATABASE
+// GET SECURITY ALERTS + NOTIFY
 // ==============================
 
 const getAlerts = async () => {
+
   try {
+
     const response = await API.get("/alerts/");
 
-    console.log("✅ PostgreSQL alerts:", response.data);
+    const databaseAlerts =
+      response.data || [];
 
-    setAlerts(response.data);
+    setAlerts(databaseAlerts);
+
+
+    // ==========================================
+    // FIRST LOAD
+    // ==========================================
+
+    if (!initialAlertsLoadedRef.current) {
+
+      databaseAlerts.forEach((alert) => {
+        knownAlertIdsRef.current.add(
+          alert.id
+        );
+      });
+
+      initialAlertsLoadedRef.current = true;
+
+      return;
+    }
+
+
+    // ==========================================
+    // FIND ONLY NEW ALERTS
+    // ==========================================
+
+    const newAlerts =
+      databaseAlerts.filter(
+        (alert) =>
+          !knownAlertIdsRef.current.has(
+            alert.id
+          )
+      );
+
+
+    if (newAlerts.length === 0) {
+      return;
+    }
+
+
+    // ==========================================
+    // REMEMBER NEW ALERTS
+    // ==========================================
+
+    newAlerts.forEach((alert) => {
+
+      knownAlertIdsRef.current.add(
+        alert.id
+      );
+
+    });
+
+
+    // ==========================================
+    // CREATE NOTIFICATIONS
+    // ==========================================
+
+    const newNotifications =
+      newAlerts.map((alert) => ({
+
+        id:
+          `NOTIF-${alert.id}-${Date.now()}`,
+
+        alertId:
+          alert.id,
+
+        title:
+          `${alert.severity} Security Alert`,
+
+        message:
+          `${alert.dataset} detected ${alert.attack_type}`,
+
+        dataset:
+          alert.dataset,
+
+        attackType:
+          alert.attack_type,
+
+        severity:
+          alert.severity,
+
+        riskScore:
+          alert.risk_score,
+
+        detectedAt:
+          alert.detected_at
+
+      }));
+
+
+    setNotifications((previous) => [
+
+      ...newNotifications,
+
+      ...previous
+
+    ].slice(0, 20));
+
+
+    setUnreadNotifications((previous) =>
+      previous + newNotifications.length
+    );
+
+
+    // ==========================================
+    // BROWSER NOTIFICATION
+    // ==========================================
+
+    if (
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+
+      newNotifications.forEach(
+        (notification) => {
+
+          new Notification(
+            notification.title,
+            {
+              body:
+                `${notification.dataset} — ` +
+                `${notification.attackType} — ` +
+                `Risk ${notification.riskScore}`,
+
+              icon: "/favicon.ico"
+            }
+          );
+
+        }
+      );
+
+    }
 
   } catch (error) {
+
     console.error(
       "❌ Alert API Error:",
-      error.response?.data || error.message
+      error.response?.data ||
+      error.message
     );
-  }
-};
 
+  }
+
+};
 
 // ==============================
 // GET INCIDENTS FROM DATABASE
@@ -929,6 +1631,43 @@ const updateIncident = async (
   }
 };
 
+// ==============================
+// GET SECURITY REPORT
+// ==============================
+
+const getSecurityReport = async () => {
+  try {
+
+    setSecurityReportLoading(true);
+
+    const response = await API.get(
+      "/security-reports/"
+    );
+
+    console.log(
+      "✅ Security report:",
+      response.data
+    );
+
+    setSecurityReport(
+      response.data
+    );
+
+  } catch (error) {
+
+    console.error(
+      "❌ Security report error:",
+      error.response?.data ||
+      error.message
+    );
+
+  } finally {
+
+    setSecurityReportLoading(false);
+
+  }
+};
+
   // ==============================
   // INITIAL LOAD + AUTO REFRESH
   // ==============================
@@ -938,6 +1677,8 @@ const updateIncident = async (
   getTraffic();
   getDashboardStats();
   getReportData();
+  getSecurityReport();
+  getSecurityAnalytics();
 
   // Milestone 3 database data
   getAlerts();
@@ -955,6 +1696,10 @@ const updateIncident = async (
   }, 10000);
 
   return () => clearInterval(timer);
+
+  setTrafficData([]);
+
+  setSelectedTraffic(null);
 
 }, [selectedDataset]);
 
@@ -998,6 +1743,50 @@ const resolvedIncidentCount = incidents.filter(
   (incident) =>
     incident.status === "Resolved"
 ).length;
+
+// ==============================
+// ENABLE BROWSER NOTIFICATIONS
+// ==============================
+
+const enableNotifications = async () => {
+
+  if (!("Notification" in window)) {
+
+    window.alert(
+      "Browser notifications are not supported."
+    );
+
+    return;
+  }
+
+  try {
+
+    const permission =
+      await Notification.requestPermission();
+
+    if (permission === "granted") {
+
+      window.alert(
+        "✅ Security notifications enabled."
+      );
+
+    } else {
+
+      window.alert(
+        "Notifications were not enabled."
+      );
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      "Notification permission error:",
+      error
+    );
+
+  }
+};
 
   // ==============================
   // RETURN UI
@@ -1140,9 +1929,217 @@ const resolvedIncidentCount = incidents.filter(
 
       <main className="main">
 
-        <h1>
-          SOC Analyst Dashboard
-        </h1>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: "20px",
+      marginBottom: "25px",
+      flexWrap: "wrap"
+    }}
+  >
+
+    <h1 style={{ marginBottom: 0 }}>
+      SOC Analyst Dashboard
+    </h1>
+
+
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px"
+      }}
+    >
+
+      <button
+        onClick={enableNotifications}
+      >
+        🔔 Enable Notifications
+      </button>
+
+
+      <button
+  onClick={() => {
+    setShowNotifications(
+      (previous) => !previous
+    );
+
+    setUnreadNotifications(0);
+  }}
+  style={{
+    position: "relative"
+  }}
+>
+  🔔
+
+  {unreadNotifications > 0 && (
+    <span
+      style={{
+        position: "absolute",
+        top: "-8px",
+        right: "-8px",
+        minWidth: "22px",
+        height: "22px",
+        padding: "0 5px",
+        borderRadius: "50%",
+        background: "#ef4444",
+        color: "white",
+        fontSize: "12px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: "bold"
+      }}
+    >
+      {unreadNotifications}
+    </span>
+  )}
+</button>
+
+    </div>
+
+  </div>
+
+  {/* ==============================
+    NOTIFICATION PANEL
+============================== */}
+
+{showNotifications && (
+
+  <div
+    className="result-box"
+    style={{
+      marginTop: "0",
+      marginBottom: "25px"
+    }}
+  >
+
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: "15px"
+      }}
+    >
+
+      <h2>
+        🔔 Security Notifications
+      </h2>
+
+
+      <button
+        onClick={() =>
+          setNotifications([])
+        }
+      >
+        Clear
+      </button>
+
+    </div>
+
+
+    {notifications.length === 0 ? (
+
+      <p>
+        No new notifications.
+      </p>
+
+    ) : (
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px"
+        }}
+      >
+
+        {notifications.map(
+          (notification) => (
+
+            <div
+              key={notification.id}
+              className="notification-item"
+            >
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: "15px",
+                  alignItems: "center"
+                }}
+              >
+
+                <strong>
+                  🚨 {notification.title}
+                </strong>
+
+                <span
+                  className={`severity-badge ${
+                    String(
+                      notification.severity
+                    ).toLowerCase() ===
+                    "critical"
+                      ? "severity-critical"
+                      : String(
+                          notification.severity
+                        ).toLowerCase() ===
+                        "high"
+                      ? "severity-high"
+                      : String(
+                          notification.severity
+                        ).toLowerCase() ===
+                        "medium"
+                      ? "severity-medium"
+                      : "severity-low"
+                  }`}
+                >
+                  {notification.severity}
+                </span>
+
+              </div>
+
+
+              <p>
+                {notification.message}
+              </p>
+
+
+              <p>
+                <strong>
+                  Risk:
+                </strong>{" "}
+                {notification.riskScore}
+              </p>
+
+
+              <p>
+                <strong>
+                  Detected:
+                </strong>{" "}
+                {notification.detectedAt
+                  ? new Date(
+                      notification.detectedAt
+                    ).toLocaleString()
+                  : "Unknown"}
+              </p>
+
+            </div>
+
+          )
+        )}
+
+      </div>
+
+    )}
+
+  </div>
+
+)}
 
         {/* ==============================
             DASHBOARD
@@ -1315,166 +2312,263 @@ const resolvedIncidentCount = incidents.filter(
 
                 <table>
 
-                  <thead>
+  <thead>
 
-                    <tr>
+    <tr>
 
-                      <th>
-                        Source IP
-                      </th>
+      <th>
+        Source IP
+      </th>
 
-                      <th>
-                        Destination IP
-                      </th>
+      <th>
+        Destination IP
+      </th>
 
-                      <th>
-                        Protocol
-                      </th>
 
-                      <th>
-                        Src Packets
-                      </th>
+      {selectedDataset === "CICIDS2017" ? (
 
-                      <th>
-                        Dst Packets
-                      </th>
+        <>
+          <th>
+            Protocol
+          </th>
 
-                      <th>
-                        Src Bytes
-                      </th>
+          <th>
+            Src Packets
+          </th>
 
-                      <th>
-                        Dst Bytes
-                      </th>
+          <th>
+            Dst Packets
+          </th>
 
-                      <th>
-                        Status
-                      </th>
+          <th>
+            Src Bytes
+          </th>
 
-                      <th>
-                        Confidence
-                      </th>
+          <th>
+            Dst Bytes
+          </th>
+        </>
 
-                      <th>
-                        Action
-                      </th>
+      ) : (
 
-                    </tr>
+        <>
+          <th>
+            Protocol
+          </th>
 
-                  </thead>
+          <th>
+            Service
+          </th>
 
-                  <tbody>
+          <th>
+            State
+          </th>
 
-                    {trafficData
-                      .slice()
-                      .reverse()
-                      .map(
-                        (item, index) => {
+          <th>
+            Src Packets
+          </th>
 
-                          const realIndex =
-                            trafficData.length -
-                            1 -
-                            index;
+          <th>
+            Dst Packets
+          </th>
 
-                          return (
-                            <tr
-                              key={
-                                item.id
-                              }
-                            >
+          <th>
+            Src Bytes
+          </th>
 
-                              <td>
-                                {item.source}
-                              </td>
+          <th>
+            Dst Bytes
+          </th>
+        </>
 
-                              <td>
-                                {
-                                  item.destination
-                                }
-                              </td>
+      )}
 
-                              <td>
-                                {item.protocol}
-                              </td>
 
-                              <td>
-                                {
-                                  item.src_packets
-                                }
-                              </td>
+      <th>
+        Status
+      </th>
 
-                              <td>
-                                {
-                                  item.dst_packets
-                                }
-                              </td>
+      <th>
+        Confidence
+      </th>
 
-                              <td>
-                                {
-                                  item.src_bytes
-                                }
-                              </td>
+      <th>
+        Action
+      </th>
 
-                              <td>
-                                {
-                                  item.dst_bytes
-                                }
-                              </td>
+    </tr>
 
-                              <td>
+  </thead>
 
-                                <span
-                                  className={
-                                    item.status ===
-                                    "Attack"
-                                      ? "status attack"
-                                      : item.status ===
-                                        "Normal"
-                                      ? "status normal"
-                                      : "status waiting"
-                                  }
-                                >
 
-                                  {item.status ===
-                                  "Attack"
-                                    ? "🔴 ATTACK"
-                                    : item.status ===
-                                      "Normal"
-                                    ? "🟢 NORMAL"
-                                    : "⏳ WAITING"}
+  <tbody>
 
-                                </span>
+    {trafficData
+      .slice()
+      .reverse()
+      .map(
+        (item, index) => {
 
-                              </td>
+          const realIndex =
+            trafficData.length -
+            1 -
+            index;
 
-                              <td>
-                                {
-                                  item.confidence
-                                }
-                              </td>
 
-                              <td>
+          return (
 
-                                <button
-                                  onClick={() =>
-                                    analyzeTraffic(
-                                      realIndex
-                                    )
-                                  }
-                                >
-                                  Analyze
-                                </button>
+            <tr
+              key={item.id}
+            >
 
-                              </td>
+              {/* SOURCE */}
 
-                            </tr>
-                          );
-                        }
-                      )}
+              <td>
+                {item.source}
+              </td>
 
-                  </tbody>
 
-                </table>
+              {/* DESTINATION */}
+
+              <td>
+                {item.destination}
+              </td>
+
+
+              {/* =================================
+                  CICIDS2017
+              ================================= */}
+
+              {selectedDataset ===
+                "CICIDS2017" ? (
+
+                <>
+
+                  <td>
+                    {item.protocol}
+                  </td>
+
+                  <td>
+                    {item.src_packets}
+                  </td>
+
+                  <td>
+                    {item.dst_packets}
+                  </td>
+
+                  <td>
+                    {item.src_bytes}
+                  </td>
+
+                  <td>
+                    {item.dst_bytes}
+                  </td>
+
+                </>
+
+              ) : (
+
+                /* =================================
+                   UNSW-NB15
+                ================================= */
+
+                <>
+
+                  <td>
+                    {item.proto}
+                  </td>
+
+                  <td>
+                    {item.service}
+                  </td>
+
+                  <td>
+                    {item.state}
+                  </td>
+
+                  <td>
+                    {item.spkts}
+                  </td>
+
+                  <td>
+                    {item.dpkts}
+                  </td>
+
+                  <td>
+                    {item.sbytes}
+                  </td>
+
+                  <td>
+                    {item.dbytes}
+                  </td>
+
+                </>
+
+              )}
+
+
+              {/* STATUS */}
+
+              <td>
+
+                <span
+                  className={
+                    item.status ===
+                    "Attack"
+                      ? "status attack"
+                      : item.status ===
+                        "Normal"
+                      ? "status normal"
+                      : "status waiting"
+                  }
+                >
+
+                  {item.status ===
+                  "Attack"
+                    ? "🔴 ATTACK"
+                    : item.status ===
+                      "Normal"
+                    ? "🟢 NORMAL"
+                    : "⏳ WAITING"}
+
+                </span>
+
+              </td>
+
+
+              {/* CONFIDENCE */}
+
+              <td>
+                {item.confidence}
+              </td>
+
+
+              {/* ACTION */}
+
+              <td>
+
+                <button
+                  onClick={() =>
+                    analyzeTraffic(
+                      realIndex
+                    )
+                  }
+                >
+                  Analyze
+                </button>
+
+              </td>
+
+            </tr>
+
+          );
+
+        }
+      )}
+
+  </tbody>
+
+</table>
 
               </div>
 
@@ -2555,6 +3649,310 @@ const resolvedIncidentCount = incidents.filter(
 
               )}
 
+              {/* ==============================
+    SECURITY ANALYTICS
+============================== */}
+
+{securityAnalytics && (
+
+  <>
+
+    {/* =========================================
+        SUMMARY
+    ========================================= */}
+
+    <div className="cards">
+
+      <div className="card">
+        <h2>
+          {securityAnalytics.summary.total_alerts}
+        </h2>
+        <p>Total Alerts</p>
+      </div>
+
+      <div className="card">
+        <h2>
+          {securityAnalytics.summary.critical_alerts}
+        </h2>
+        <p>Critical Alerts</p>
+      </div>
+
+      <div className="card">
+        <h2>
+          {securityAnalytics.summary.high_alerts}
+        </h2>
+        <p>High Alerts</p>
+      </div>
+
+      <div className="card">
+        <h2>
+          {securityAnalytics.summary.medium_alerts}
+        </h2>
+        <p>Medium Alerts</p>
+      </div>
+
+    </div>
+
+
+    {/* =========================================
+        ATTACK TYPE DISTRIBUTION
+    ========================================= */}
+
+    <div className="chart-card">
+
+      <h2>
+        🚨 Attack Type Distribution
+      </h2>
+
+      {securityAnalytics.attack_distribution.length === 0 ? (
+
+        <p>No attack data available.</p>
+
+      ) : (
+
+        <ResponsiveContainer
+          width="100%"
+          height={400}
+        >
+
+          <PieChart>
+
+            <Pie
+              data={
+                securityAnalytics.attack_distribution
+              }
+              dataKey="value"
+              nameKey="name"
+              outerRadius={140}
+              label
+            >
+
+              {securityAnalytics.attack_distribution.map(
+                (entry, index) => (
+
+                  <Cell
+                    key={index}
+                    fill={
+                      COLORS[
+                        index %
+                        COLORS.length
+                      ]
+                    }
+                  />
+
+                )
+              )}
+
+            </Pie>
+
+            <Tooltip />
+
+            <Legend />
+
+          </PieChart>
+
+        </ResponsiveContainer>
+
+      )}
+
+    </div>
+
+
+    {/* =========================================
+        SEVERITY DISTRIBUTION
+    ========================================= */}
+
+    <div className="chart-card">
+
+      <h2>
+        ⚠️ Severity Distribution
+      </h2>
+
+      <ResponsiveContainer
+        width="100%"
+        height={350}
+      >
+
+        <BarChart
+          data={
+            securityAnalytics.severity_distribution
+          }
+        >
+
+          <CartesianGrid
+            strokeDasharray="3 3"
+          />
+
+          <XAxis
+            dataKey="name"
+          />
+
+          <YAxis />
+
+          <Tooltip />
+
+          <Legend />
+
+          <Bar
+            dataKey="value"
+            fill="#ef4444"
+          />
+
+        </BarChart>
+
+      </ResponsiveContainer>
+
+    </div>
+
+
+    {/* =========================================
+        DATASET DISTRIBUTION
+    ========================================= */}
+
+    <div className="chart-card">
+
+      <h2>
+        🗂️ Dataset Distribution
+      </h2>
+
+      <ResponsiveContainer
+        width="100%"
+        height={350}
+      >
+
+        <BarChart
+          data={
+            securityAnalytics.dataset_distribution
+          }
+        >
+
+          <CartesianGrid
+            strokeDasharray="3 3"
+          />
+
+          <XAxis
+            dataKey="name"
+          />
+
+          <YAxis />
+
+          <Tooltip />
+
+          <Legend />
+
+          <Bar
+            dataKey="value"
+            fill="#14b8a6"
+          />
+
+        </BarChart>
+
+      </ResponsiveContainer>
+
+    </div>
+
+
+    {/* =========================================
+        DAILY ATTACK TREND
+    ========================================= */}
+
+    <div className="chart-card">
+
+      <h2>
+        📈 Daily Attack Trend
+      </h2>
+
+      <ResponsiveContainer
+        width="100%"
+        height={350}
+      >
+
+        <LineChart
+          data={
+            securityAnalytics.daily_trend
+          }
+        >
+
+          <CartesianGrid
+            strokeDasharray="3 3"
+          />
+
+          <XAxis
+            dataKey="date"
+          />
+
+          <YAxis />
+
+          <Tooltip />
+
+          <Legend />
+
+          <Line
+            type="monotone"
+            dataKey="attacks"
+            stroke="#14b8a6"
+            strokeWidth={3}
+          />
+
+        </LineChart>
+
+      </ResponsiveContainer>
+
+    </div>
+
+
+    {/* =========================================
+        WEEKLY SECURITY TREND
+    ========================================= */}
+
+    <div className="chart-card">
+
+      <h2>
+        📊 Weekly Security Trend
+      </h2>
+
+      <ResponsiveContainer
+        width="100%"
+        height={350}
+      >
+
+        <LineChart
+          data={
+            securityAnalytics.weekly_trend
+          }
+        >
+
+          <CartesianGrid
+            strokeDasharray="3 3"
+          />
+
+          <XAxis
+            dataKey="week"
+          />
+
+          <YAxis />
+
+          <Tooltip />
+
+          <Legend />
+
+          <Line
+            type="monotone"
+            dataKey="attacks"
+            stroke="#ef4444"
+            strokeWidth={3}
+          />
+
+        </LineChart>
+
+      </ResponsiveContainer>
+
+    </div>
+
+  </>
+
+)}
+
             </div>
 
           </>
@@ -2749,6 +4147,609 @@ const resolvedIncidentCount = incidents.filter(
 
       </>
     )}
+
+    {/* ==============================
+    SECURITY INCIDENT REPORT
+============================== */}
+
+<div className="security-report-section">
+
+  <h2>
+    🛡️ Security Incident Report
+  </h2>
+
+  {securityReportLoading ? (
+
+    <p>
+      Loading security report...
+    </p>
+
+  ) : !securityReport ? (
+
+    <p>
+      No security report data available.
+    </p>
+
+  ) : (
+
+    <>
+
+      {/* ==============================
+          SECURITY SUMMARY
+      ============================== */}
+
+      <div className="cards">
+
+        <div className="card">
+          <h2>
+            {securityReport.summary.total_alerts}
+          </h2>
+
+          <p>
+            Total Alerts
+          </p>
+        </div>
+
+
+        <div className="card">
+          <h2>
+            {securityReport.summary.critical_alerts}
+          </h2>
+
+          <p>
+            Critical Alerts
+          </p>
+        </div>
+
+
+        <div className="card">
+          <h2>
+            {securityReport.summary.high_alerts}
+          </h2>
+
+          <p>
+            High Alerts
+          </p>
+        </div>
+
+
+        <div className="card">
+          <h2>
+            {securityReport.summary.total_incidents}
+          </h2>
+
+          <p>
+            Total Incidents
+          </p>
+        </div>
+
+      </div>
+
+
+      {/* ==============================
+          INCIDENT STATUS SUMMARY
+      ============================== */}
+
+      <div className="cards">
+
+        <div className="card">
+          <h2>
+            {securityReport.summary.open_incidents}
+          </h2>
+
+          <p>
+            Open Incidents
+          </p>
+        </div>
+
+
+        <div className="card">
+          <h2>
+            {securityReport.summary.in_progress_incidents}
+          </h2>
+
+          <p>
+            In Progress
+          </p>
+        </div>
+
+
+        <div className="card">
+          <h2>
+            {securityReport.summary.resolved_incidents}
+          </h2>
+
+          <p>
+            Resolved Incidents
+          </p>
+        </div>
+
+      </div>
+
+
+      {/* ==============================
+          SECURITY REPORT TABLE
+      ============================== */}
+
+      <div className="result-box">
+
+        <h2>
+          📋 Alert & Incident Details
+        </h2>
+
+        {securityReport.reports.length === 0 ? (
+
+          <p>
+            No security records available.
+          </p>
+
+        ) : (
+
+          <div
+            style={{
+              overflowX: "auto"
+            }}
+          >
+
+            <table>
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    Alert ID
+                  </th>
+
+                  <th>
+                    Dataset
+                  </th>
+
+                  <th>
+                    Attack Type
+                  </th>
+
+                  <th>
+                    Severity
+                  </th>
+
+                  <th>
+                    Source
+                  </th>
+
+                  <th>
+                    Source IP
+                  </th>
+
+                  <th>
+                    Destination IP
+                  </th>
+
+                  <th>
+                    Protocol
+                  </th>
+
+                  <th>
+                    Detection Details
+                  </th>
+
+                  <th>
+                    Risk
+                  </th>
+
+                  <th>
+                    Alert Status
+                  </th>
+
+                  <th>
+                    Incident Status
+                  </th>
+
+                  <th>
+                    Assigned To
+                  </th>
+
+                  <th>
+                    Detected At
+                  </th>
+
+                </tr>
+
+              </thead>
+
+
+              <tbody>
+
+                {securityReport.reports.map(
+                  (item) => (
+
+                    <tr
+                      key={item.alert_id}
+                    >
+
+                      <td>
+                        ALT-{item.alert_id}
+                      </td>
+
+
+                      <td>
+
+                        <span
+                          className={
+                            item.dataset ===
+                            "CICIDS2017"
+                              ? "dataset-badge dataset-cicids"
+                              : item.dataset ===
+                                "UNSW-NB15"
+                              ? "dataset-badge dataset-unsw"
+                              : "dataset-badge dataset-combined"
+                          }
+                        >
+                          {item.dataset}
+                        </span>
+
+                      </td>
+
+
+                      <td>
+                        {item.attack_type}
+                      </td>
+
+
+                      <td>
+
+                        <span
+                          className={`severity-badge ${
+                            String(
+                              item.severity
+                            ).toLowerCase() ===
+                            "critical"
+                              ? "severity-critical"
+                              : String(
+                                  item.severity
+                                ).toLowerCase() ===
+                                "high"
+                              ? "severity-high"
+                              : String(
+                                  item.severity
+                                ).toLowerCase() ===
+                                "medium"
+                              ? "severity-medium"
+                              : "severity-low"
+                          }`}
+                        >
+                          {item.severity}
+                        </span>
+
+                      </td>
+
+
+                      <td>
+                        {item.source ||
+                          "Unknown"}
+                      </td>
+
+
+                      <td>
+                        {item.source_ip ||
+                          "Unknown"}
+                      </td>
+
+
+                      <td>
+                        {item.destination_ip ||
+                          "Unknown"}
+                      </td>
+
+
+                      <td>
+                        {item.protocol ||
+                          "Unknown"}
+                      </td>
+
+
+                      <td
+                        style={{
+                          minWidth: "300px",
+                          textAlign: "left"
+                        }}
+                      >
+                        {item.detection_details ||
+                          "No details available."}
+                      </td>
+
+
+                      <td>
+
+                        <span className="risk-score">
+                          {item.risk_score ?? 0}
+                        </span>
+
+                      </td>
+
+
+                      <td>
+
+                        <span
+                          className={`incident-status ${
+                            String(
+                              item.alert_status
+                            ).toLowerCase() ===
+                            "open"
+                              ? "incident-open"
+                              : item.alert_status ===
+                                "In Progress"
+                              ? "incident-progress"
+                              : "incident-resolved"
+                          }`}
+                        >
+                          {item.alert_status}
+                        </span>
+
+                      </td>
+
+
+                      <td>
+
+                        <span
+                          className={`incident-status ${
+                            item.incident_status ===
+                            "No Incident"
+                              ? "incident-open"
+                              : item.incident_status ===
+                                "In Progress"
+                              ? "incident-progress"
+                              : item.incident_status ===
+                                "Resolved"
+                              ? "incident-resolved"
+                              : "incident-open"
+                          }`}
+                        >
+                          {item.incident_status}
+                        </span>
+
+                      </td>
+
+
+                      <td>
+                        {item.assigned_to ||
+                          "Not Assigned"}
+                      </td>
+
+
+                      <td>
+                        {item.detected_at
+                          ? new Date(
+                              item.detected_at
+                            ).toLocaleString()
+                          : "Unknown"}
+                      </td>
+
+                    </tr>
+
+                  )
+                )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        )}
+
+      </div>
+
+
+      {/* ==============================
+          DOWNLOAD BUTTON
+      ============================== */}
+
+      <div className="buttons">
+
+        <button
+          onClick={() => {
+
+            if (!securityReport) {
+              return;
+            }
+
+            const doc = new jsPDF();
+
+            let y = 20;
+
+            doc.setFontSize(22);
+
+            doc.text(
+              "NetShield AI",
+              20,
+              y
+            );
+
+            y += 10;
+
+            doc.setFontSize(16);
+
+            doc.text(
+              "Security Incident Report",
+              20,
+              y
+            );
+
+            y += 12;
+
+            doc.setFontSize(10);
+
+            doc.text(
+              `Generated: ${new Date().toLocaleString()}`,
+              20,
+              y
+            );
+
+            y += 12;
+
+            doc.setFontSize(13);
+
+            doc.text(
+              "Security Summary",
+              20,
+              y
+            );
+
+            y += 8;
+
+            doc.setFontSize(10);
+
+            doc.text(
+              `Total Alerts: ${securityReport.summary.total_alerts}`,
+              20,
+              y
+            );
+
+            y += 6;
+
+            doc.text(
+              `Critical Alerts: ${securityReport.summary.critical_alerts}`,
+              20,
+              y
+            );
+
+            y += 6;
+
+            doc.text(
+              `High Alerts: ${securityReport.summary.high_alerts}`,
+              20,
+              y
+            );
+
+            y += 6;
+
+            doc.text(
+              `Total Incidents: ${securityReport.summary.total_incidents}`,
+              20,
+              y
+            );
+
+            y += 6;
+
+            doc.text(
+              `Open Incidents: ${securityReport.summary.open_incidents}`,
+              20,
+              y
+            );
+
+            y += 6;
+
+            doc.text(
+              `In Progress: ${securityReport.summary.in_progress_incidents}`,
+              20,
+              y
+            );
+
+            y += 6;
+
+            doc.text(
+              `Resolved Incidents: ${securityReport.summary.resolved_incidents}`,
+              20,
+              y
+            );
+
+            y += 12;
+
+            doc.setFontSize(13);
+
+            doc.text(
+              "Security Alerts",
+              20,
+              y
+            );
+
+            y += 8;
+
+            doc.setFontSize(8);
+
+            securityReport.reports
+              .slice(0, 25)
+              .forEach((item) => {
+
+                if (y > 275) {
+
+                  doc.addPage();
+
+                  y = 20;
+
+                }
+
+                doc.text(
+                  `ALT-${item.alert_id} | ${item.dataset} | ${item.attack_type}`,
+                  20,
+                  y
+                );
+
+                y += 5;
+
+                doc.text(
+                  `Severity: ${item.severity} | Risk: ${item.risk_score} | Alert: ${item.alert_status}`,
+                  20,
+                  y
+                );
+
+                y += 5;
+
+                doc.text(
+                  `Incident: ${item.incident_status} | Assigned: ${item.assigned_to || "Not Assigned"}`,
+                  20,
+                  y
+                );
+
+                y += 5;
+
+                const details =
+                  item.detection_details ||
+                  "No detection details.";
+
+                const wrapped =
+                  doc.splitTextToSize(
+                    `Detection: ${details}`,
+                    170
+                  );
+
+                doc.text(
+                  wrapped,
+                  20,
+                  y
+                );
+
+                y +=
+                  wrapped.length * 4 + 5;
+
+                doc.text(
+                  `Source: ${item.source || "Unknown"} | ${item.source_ip || "Unknown"} → ${item.destination_ip || "Unknown"}`,
+                  20,
+                  y
+                );
+
+                y += 8;
+
+              });
+
+
+            doc.save(
+              "NetShield_AI_Security_Incident_Report.pdf"
+            );
+
+          }}
+        >
+          📥 Download Security Report
+        </button>
+
+      </div>
+
+    </>
+
+  )}
+
+</div>
 
   </div>
 )}

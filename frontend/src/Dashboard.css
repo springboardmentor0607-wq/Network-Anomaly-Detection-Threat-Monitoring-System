@@ -1166,4 +1166,66 @@ tbody tr:hover {
 .incident-management button {
     white-space: nowrap;
 }
+
+/* ============================================================
+   SECURITY NOTIFICATIONS
+============================================================ */
+
+.notification-item {
+    padding: 18px;
+
+    border-radius: 14px;
+
+    background: rgba(127, 29, 29, 0.35);
+
+    border-left: 5px solid #ef4444;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+    animation: notificationAnimation 0.4s ease;
+}
+
+.notification-item p {
+    margin: 8px 0;
+
+    color: #fecaca;
+}
+
+@keyframes notificationAnimation {
+
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================================
+   SECURITY REPORT
+============================================================ */
+
+.security-report-section {
+    width: 100%;
+}
+
+.security-report-section table {
+    min-width: 1800px;
+}
+
+.security-report-section td {
+    vertical-align: top;
+}
+
+.security-report-section .result-box {
+    margin-top: 25px;
+}
+
 }
