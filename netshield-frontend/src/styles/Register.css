@@ -1,0 +1,109 @@
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at 50% 25%, #1e293b 0%, #0b0f19 85%);
+  padding: 32px 16px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+.auth-card-wide {
+  max-width: 480px;
+}
+
+.auth-alert-success {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+
+.form-group select {
+  width: 100%;
+  padding: 13px 44px 13px 42px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  outline: none;
+  font-size: 0.92rem;
+  color: #f8fafc;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-group select option {
+  background: #111827;
+  color: #f8fafc;
+  padding: 10px;
+}
+
+.form-group select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+}
+
+.form-group select.input-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+/* Password Strength Indicator */
+.password-strength-container {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.strength-bar-track {
+  width: 100%;
+  height: 5px;
+  background: #334155;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.strength-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.strength-weak {
+  background: #ef4444;
+}
+
+.strength-medium {
+  background: #f59e0b;
+}
+
+.strength-strong {
+  background: #10b981;
+}
+
+.strength-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.label-weak {
+  color: #f87171;
+}
+
+.label-medium {
+  color: #fbbf24;
+}
+
+.label-strong {
+  color: #34d399;
+}
+
+@media (max-width: 540px) {
+  .auth-card-wide {
+    padding: 28px 20px;
+    border-radius: 14px;
+  }
+}
