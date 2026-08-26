@@ -1,0 +1,44 @@
+# =========================
+# Python
+# =========================
+
+netshield-backend/venv/
+netshield-backend/__pycache__/
+netshield-backend/**/*.pyc
+netshield-backend/**/*.pyo
+
+# =========================
+# Environment / Secrets
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# =========================
+# Datasets
+# =========================
+
+netshield-backend/datasets/*
+
+# =========================
+# Trained ML Models
+# =========================
+
+netshield-backend/ml/models/
+
+# =========================
+# Next.js
+# =========================
+
+netshield-frontend/node_modules/
+netshield-frontend/.next/
+netshield-frontend/tsconfig.tsbuildinfo
+
+# =========================
+# OS / Editor
+# =========================
+
+.DS_Store
+Thumbs.db
+.vscode/
