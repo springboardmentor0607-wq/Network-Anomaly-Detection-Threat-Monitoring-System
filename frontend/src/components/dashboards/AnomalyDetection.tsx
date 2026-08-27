@@ -4,25 +4,70 @@ import React, { useState, useEffect } from 'react';
 import { Target, AlertTriangle, Activity, ShieldAlert, Cpu, Network, Clock, CheckCircle } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 
-const mockPredictions = [
-  { time: '10:00', benign: 800, anomaly: 20 },
-  { time: '10:05', benign: 820, anomaly: 15 },
-  { time: '10:10', benign: 790, anomaly: 25 },
-  { time: '10:15', benign: 850, anomaly: 40 },
-  { time: '10:20', benign: 810, anomaly: 120 },
-  { time: '10:25', benign: 780, anomaly: 350 },
-  { time: '10:30', benign: 760, anomaly: 85 },
-];
+export default function AnomalyDetection({ dataset, dataSource, telemetryData }: any) {
+  const [predictions, setPredictions] = useState<any[]>([]);
+  const [classifications, setClassifications] = useState<any[]>([]);
+  const [insights, setInsights] = useState<any[]>([]);
 
-const classificationData = [
-  { name: 'DDoS', value: 45, color: '#ef4444' },
-  { name: 'Port Scan', value: 25, color: '#f97316' },
-  { name: 'Brute Force', value: 15, color: '#eab308' },
-  { name: 'Web Attack', value: 10, color: '#a855f7' },
-  { name: 'Other', value: 5, color: '#6b7280' },
-];
+  useEffect(() => {
+    const fetchData = async () => {
+      if (dataSource === "live") {
+        // Strict Live Mode
+        const anomalies = telemetryData.filter((t: any) => t.threatLevel === "High" || t.threatLevel === "Critical");
+        
+        // 1. Predictions
+        const recentAttacks = anomalies.length;
+        const totalLive = telemetryData.length;
+        setPredictions([
+          { time: "T-5m", benign: Math.max(0, totalLive - recentAttacks), anomaly: 0 },
+          { time: "T-4m", benign: Math.max(0, totalLive - recentAttacks), anomaly: Math.floor(recentAttacks * 0.2) },
+          { time: "Now",  benign: Math.max(0, totalLive - recentAttacks), anomaly: recentAttacks }
+        ]);
 
-export default function AnomalyDetection() {
+        // 2. Classifications
+        const classMap: Record<string, number> = {};
+        anomalies.forEach((t: any) => {
+          const pred = t.prediction || "Unknown";
+          classMap[pred] = (classMap[pred] || 0) + 1;
+        });
+        const colors = ['#ef4444', '#f97316', '#eab308', '#a855f7', '#6b7280'];
+        const classArray = Object.entries(classMap).map(([name, value], i) => ({
+          name, value, color: colors[i % colors.length]
+        }));
+        setClassifications(classArray.length ? classArray : [{ name: "No Anomalies", value: 1, color: "#6b7280" }]);
+
+        // 3. Insights
+        setInsights(anomalies.slice(0, 5).map((a: any) => ({
+          timestamp: "Just now",
+          source_ip: a.source,
+          target_ip: a.dest,
+          predicted_threat: a.prediction,
+          confidence: a.confidence,
+          action: a.threatLevel === "Critical" ? "Blocked" : "Logged"
+        })));
+
+        return;
+      }
+
+      // Historical Mode
+      try {
+        const queryParams = new URLSearchParams({ dataset: dataset || "" }).toString();
+        const res = await fetch(`http://localhost:8000/api/network/anomaly-data?${queryParams}`);
+        if (res.ok) {
+          const data = await res.json();
+          setPredictions(data.graph?.length ? data.graph : [{ time: "00:00", benign: 0, anomaly: 0 }]);
+          setClassifications(data.classification?.length ? data.classification : [{ name: "No Anomalies", value: 1, color: "#6b7280" }]);
+          setInsights(data.insights || []);
+        }
+      } catch (e) {
+        // Silently handle fetch errors during backend reloads so Next.js doesn't show an error overlay
+        console.warn("Backend unavailable during fetch:", e);
+      }
+    };
+    fetchData();
+    const interval = setInterval(fetchData, 15000);
+    return () => clearInterval(interval);
+  }, [dataset, dataSource, telemetryData]);
   return (
     <div className="space-y-6 w-full animate-blur-fade-up" style={{ animationDelay: "100ms" }}>
       {/* Title Bar */}
@@ -36,7 +81,7 @@ export default function AnomalyDetection() {
         </div>
         <div className="flex gap-3">
             <span className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full liquid-glass border border-red-500/30 text-red-400 font-medium bg-red-500/10">
-            <AlertTriangle className="w-3 h-3 animate-pulse" /> 12 Active Threats
+            <AlertTriangle className="w-3 h-3 animate-pulse" /> {insights.length} Active Threats
             </span>
             <span className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full liquid-glass border border-green-500/30 text-green-400 font-medium bg-green-500/10">
             <Cpu className="w-3 h-3 animate-pulse" /> Prediction Engine Active
@@ -55,7 +100,7 @@ export default function AnomalyDetection() {
           </div>
           <div className="text-sm text-gray-400 mb-2">Real-time forecast of intrusion attempts based on baseline deviations.</div>
           <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={mockPredictions} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+            <AreaChart data={predictions} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="benignGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
@@ -83,8 +128,8 @@ export default function AnomalyDetection() {
           <div className="flex-1 flex justify-center items-center relative">
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={classificationData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                  {classificationData.map((entry, index) => (
+                <Pie data={classifications} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {classifications.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -97,7 +142,7 @@ export default function AnomalyDetection() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-2">
-            {classificationData.map((item, i) => (
+            {classifications.map((item, i) => (
               <div key={i} className="flex items-center gap-2 text-xs text-gray-300">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
                 {item.name}
@@ -128,30 +173,22 @@ export default function AnomalyDetection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              <tr className="hover:bg-white/5 transition-colors">
-                <td className="px-6 py-4 flex items-center gap-2"><Clock className="w-3 h-3 text-gray-500" /> Just now</td>
-                <td className="px-6 py-4 font-mono text-gray-300">192.168.1.105</td>
-                <td className="px-6 py-4 font-mono text-gray-300">10.0.0.50</td>
-                <td className="px-6 py-4 text-red-400 font-medium">DDoS Attempt</td>
-                <td className="px-6 py-4"><span className="text-green-400 bg-green-500/10 px-2 py-1 rounded text-xs border border-green-500/20">98.5%</span></td>
-                <td className="px-6 py-4 text-gray-400"><CheckCircle className="w-4 h-4 inline mr-1 text-green-500" /> Blocked</td>
-              </tr>
-              <tr className="hover:bg-white/5 transition-colors">
-                <td className="px-6 py-4 flex items-center gap-2"><Clock className="w-3 h-3 text-gray-500" /> 2 min ago</td>
-                <td className="px-6 py-4 font-mono text-gray-300">45.22.19.11</td>
-                <td className="px-6 py-4 font-mono text-gray-300">10.0.0.12</td>
-                <td className="px-6 py-4 text-orange-400 font-medium">Port Scan</td>
-                <td className="px-6 py-4"><span className="text-green-400 bg-green-500/10 px-2 py-1 rounded text-xs border border-green-500/20">95.2%</span></td>
-                <td className="px-6 py-4 text-gray-400"><CheckCircle className="w-4 h-4 inline mr-1 text-green-500" /> Logged</td>
-              </tr>
-              <tr className="hover:bg-white/5 transition-colors">
-                <td className="px-6 py-4 flex items-center gap-2"><Clock className="w-3 h-3 text-gray-500" /> 5 min ago</td>
-                <td className="px-6 py-4 font-mono text-gray-300">188.45.9.22</td>
-                <td className="px-6 py-4 font-mono text-gray-300">10.0.0.5</td>
-                <td className="px-6 py-4 text-yellow-400 font-medium">Brute Force</td>
-                <td className="px-6 py-4"><span className="text-green-400 bg-green-500/10 px-2 py-1 rounded text-xs border border-green-500/20">89.1%</span></td>
-                <td className="px-6 py-4 text-gray-400"><CheckCircle className="w-4 h-4 inline mr-1 text-green-500" /> IP Banned</td>
-              </tr>
+              {insights.length > 0 ? insights.map((insight, i) => (
+                <tr key={i} className="hover:bg-white/5 transition-colors">
+                  <td className="px-6 py-4 flex items-center gap-2"><Clock className="w-3 h-3 text-gray-500" /> {insight.timestamp}</td>
+                  <td className="px-6 py-4 font-mono text-gray-300">{insight.source_ip}</td>
+                  <td className="px-6 py-4 font-mono text-gray-300">{insight.target_ip}</td>
+                  <td className={`px-6 py-4 font-medium ${insight.action === 'Blocked' ? 'text-red-400' : 'text-orange-400'}`}>{insight.predicted_threat}</td>
+                  <td className="px-6 py-4"><span className="text-green-400 bg-green-500/10 px-2 py-1 rounded text-xs border border-green-500/20">{insight.confidence}%</span></td>
+                  <td className="px-6 py-4 text-gray-400"><CheckCircle className="w-4 h-4 inline mr-1 text-green-500" /> {insight.action}</td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    No anomalies detected.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

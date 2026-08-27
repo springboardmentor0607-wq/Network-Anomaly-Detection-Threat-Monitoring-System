@@ -36,6 +36,10 @@ import UserManagement from "@/components/dashboards/UserManagement";
 import RoleManagement from "@/components/dashboards/RoleManagement";
 import AnomalyDetection from "@/components/dashboards/AnomalyDetection";
 import SecurityReports from "@/components/dashboards/SecurityReports";
+import AlertManagement from "@/components/dashboards/AlertManagement";
+import DetectionRules from "@/components/dashboards/DetectionRules";
+import LogManagement from "@/components/dashboards/LogManagement";
+import Notifications, { SystemNotification } from "@/components/dashboards/Notifications";
 import {
     AreaChart,
     Area,
@@ -81,6 +85,18 @@ export default function DashboardCinematicPage() {
     const [isCapturing, setIsCapturing] = useState(false);
     const wsRef = useRef<WebSocket | null>(null);
 
+    // Notifications State
+    const [notifications, setNotifications] = useState<SystemNotification[]>([]);
+    const [toast, setToast] = useState<SystemNotification | null>(null);
+
+    const triggerNotification = (notif: SystemNotification) => {
+        setNotifications(prev => [notif, ...prev].slice(0, 100)); // Keep last 100
+        setToast(notif);
+        setTimeout(() => {
+            setToast(current => current?.id === notif.id ? null : current);
+        }, 5000);
+    };
+
     const toggleCapture = () => {
         if (isCapturing) {
             if (wsRef.current) {
@@ -109,6 +125,17 @@ export default function DashboardCinematicPage() {
                         timestamp: new Date().toISOString(),
                     };
                     setTelemetryData(prev => [newRow, ...prev].slice(0, 50));
+                    
+                    if (newRow.threatLevel === "High" || newRow.threatLevel === "Critical") {
+                        triggerNotification({
+                            id: Math.random().toString(36).substr(2, 9),
+                            timestamp: new Date().toISOString(),
+                            severity: newRow.threatLevel,
+                            message: `${newRow.threatLevel} Threat Detected: ${newRow.prediction} from ${newRow.source}`,
+                            source: "Live Telemetry",
+                            read: false
+                        });
+                    }
                 } catch (e) {
                     console.error("Error parsing WebSocket message", e);
                 }
@@ -155,10 +182,10 @@ export default function DashboardCinematicPage() {
             return <ProcessedTelemetryTable telemetryData={telemetryData} isCapturing={isCapturing} toggleCapture={toggleCapture} clearTelemetryData={() => setTelemetryData([])} />;
         }
         if (activeTab === "machine-learning") {
-            return <ModelPerformance dataset={datasetSource} />;
+            return <ModelPerformance dataset={selectedDataset} />;
         }
         if (activeTab === "threat-analysis") {
-            return <AttackVisualization />;
+            return <AttackVisualization dataset={selectedDataset} dataSource={dataSource} telemetryData={telemetryData} />;
         }
         if (activeTab === "database") {
             return <DatabaseManagement />;
@@ -170,10 +197,28 @@ export default function DashboardCinematicPage() {
             return <RoleManagement />;
         }
         if (activeTab === "anomaly-detection") {
-            return <AnomalyDetection />;
+            return <AnomalyDetection dataset={selectedDataset} dataSource={dataSource} telemetryData={telemetryData} />;
+        }
+        if (activeTab === "alerts") {
+            return <AlertManagement dataset={selectedDataset} dataSource={dataSource} telemetryData={telemetryData} />;
+        }
+        if (activeTab === "detection-rules") {
+            return <DetectionRules />;
+        }
+        if (activeTab === "logs") {
+            return <LogManagement dataset={selectedDataset} dataSource={dataSource} telemetryData={telemetryData} />;
         }
         if (activeTab === "reports") {
             return <SecurityReports />;
+        }
+        if (activeTab === "notifications") {
+            return (
+                <Notifications 
+                    notifications={notifications} 
+                    clearNotifications={() => setNotifications([])}
+                    markAsRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))}
+                />
+            );
         }
         return <PlaceholderView title={data.title} description={data.desc} icon={data.icon} />;
     };
@@ -763,6 +808,30 @@ export default function DashboardCinematicPage() {
                     renderPlaceholder()
                 )}
             </main>
+
+            {/* Active Notification Toast */}
+            {toast && (
+                <div className={`fixed top-8 right-8 px-6 py-4 rounded-xl shadow-2xl z-50 flex items-start gap-4 animate-in slide-in-from-right-10 max-w-sm ${
+                    toast.severity === 'Critical' ? 'bg-red-500/90 text-white' : 
+                    toast.severity === 'High' ? 'bg-orange-500/90 text-white' : 'bg-blue-500/90 text-white'
+                }`}>
+                    {toast.severity === 'Critical' || toast.severity === 'High' ? (
+                        <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    ) : (
+                        <Bell className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    )}
+                    <div>
+                        <p className="font-bold text-sm mb-1">{toast.severity} Alert</p>
+                        <p className="text-sm opacity-90 leading-tight">{toast.message}</p>
+                    </div>
+                    <button 
+                        onClick={() => setToast(null)}
+                        className="p-1 hover:bg-white/20 rounded-md transition-colors ml-2 flex-shrink-0"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

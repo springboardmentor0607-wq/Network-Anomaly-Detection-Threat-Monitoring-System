@@ -6,10 +6,6 @@ import datetime
 
 router = APIRouter()
 
-# Helper function to generate mock IPs since CICIDS2017 often strips them
-def generate_mock_ip():
-    return f"{random.randint(10, 192)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(1, 254)}"
-
 def map_dataset(dataset_str: str) -> str:
     if not dataset_str: return None
     if "CICIDS" in dataset_str or "WorkingHours" in dataset_str or "ISCX" in dataset_str:
@@ -88,20 +84,22 @@ async def get_telemetry(skip: int = 0, limit: int = 50, protocol: str = None, th
             elif threat_level == "Low":
                 query["Label"] = {"$in": ["BENIGN", "Normal"]}
                 
-        cursor = collection.find(query).skip(skip).limit(limit)
+        cursor = collection.find(query).sort("_id", -1).skip(skip).limit(limit)
         
         data = []
         async for doc in cursor:
             label = doc.get("Label", "BENIGN")
             is_benign = label in ["BENIGN", "Normal"]
             
-            # Add some mock confidence scores since dataset doesn't have them
-            confidence = random.randint(85, 99) if not is_benign else random.randint(60, 95)
+            confidence_raw = doc.get("ml_confidence", 1.0)
+            confidence = int(confidence_raw * 100) if confidence_raw <= 1.0 else int(confidence_raw)
+            if is_benign and confidence == 100:
+                confidence = 99
             
             data.append({
                 "id": str(doc["_id"]),
-                "source_ip": doc.get("Source IP", generate_mock_ip()),
-                "destination_ip": doc.get("Destination IP", generate_mock_ip()),
+                "source_ip": doc.get("Source IP", "N/A"),
+                "destination_ip": doc.get("Destination IP", "N/A"),
                 "source_port": doc.get("Source Port", 0),
                 "destination_port": doc.get("Destination Port", 0),
                 "protocol": doc.get("Protocol", "TCP"),
@@ -123,7 +121,7 @@ async def get_telemetry(skip: int = 0, limit: int = 50, protocol: str = None, th
         return {"data": [], "total": 0}
 
 @router.get("/dashboard-stats")
-async def get_dashboard_stats(dataset: str = None, db = Depends(get_mongo)):
+async def get_dashboard_stats(dataset: str = None, severity: str = None, attack_type: str = None, time_range: str = None, db = Depends(get_mongo)):
     dataset = map_dataset(dataset)
     try:
         collection = db["network_traffic"]
@@ -132,6 +130,36 @@ async def get_dashboard_stats(dataset: str = None, db = Depends(get_mongo)):
         attack_match = {"Label": {"$nin": ["BENIGN", "Normal", "nan", "NaN", ""]}}
         if dataset:
             apply_dataset_filter(attack_match, dataset)
+        
+        # Apply filters
+        if severity:
+            if severity == "High":
+                attack_match["ml_risk_category"] = {"$in": ["High", "Critical"]}
+            elif severity == "Medium":
+                attack_match["ml_risk_category"] = "Medium"
+            elif severity == "Low":
+                attack_match["ml_risk_category"] = "Low"
+                
+        if attack_type:
+            if attack_type == "DDoS":
+                attack_match["Label"] = {"$regex": ".*DoS.*", "$options": "i"}
+            elif attack_type == "Port Scan":
+                attack_match["Label"] = {"$regex": ".*PortScan.*", "$options": "i"}
+            elif attack_type == "Brute Force":
+                attack_match["Label"] = {"$regex": ".*Brute Force.*", "$options": "i"}
+                
+        if time_range:
+            latest_doc = await collection.find_one({}, sort=[("_id", -1)])
+            now = datetime.datetime.utcnow()
+            if latest_doc and "Timestamp" in latest_doc:
+                try:
+                    now = datetime.datetime.fromisoformat(latest_doc["Timestamp"].split("+")[0])
+                except Exception:
+                    pass
+            if time_range == "Last 24 Hours":
+                attack_match["Timestamp"] = {"$gte": (now - datetime.timedelta(hours=24)).isoformat()}
+            elif time_range == "Last 7 Days":
+                attack_match["Timestamp"] = {"$gte": (now - datetime.timedelta(days=7)).isoformat()}
             
         attack_pipeline = [
             {"$match": attack_match},
@@ -154,9 +182,33 @@ async def get_dashboard_stats(dataset: str = None, db = Depends(get_mongo)):
             
         # 2. Protocol Distribution
         proto_pipeline = []
+        proto_match = {}
         if dataset:
-            proto_match = {}
             apply_dataset_filter(proto_match, dataset)
+            
+        if severity:
+            if severity == "High":
+                proto_match["ml_risk_category"] = {"$in": ["High", "Critical"]}
+            elif severity == "Medium":
+                proto_match["ml_risk_category"] = "Medium"
+            elif severity == "Low":
+                proto_match["ml_risk_category"] = "Low"
+                
+        if attack_type:
+            if attack_type == "DDoS":
+                proto_match["Label"] = {"$regex": ".*DoS.*", "$options": "i"}
+            elif attack_type == "Port Scan":
+                proto_match["Label"] = {"$regex": ".*PortScan.*", "$options": "i"}
+            elif attack_type == "Brute Force":
+                proto_match["Label"] = {"$regex": ".*Brute Force.*", "$options": "i"}
+                
+        if time_range:
+            if time_range == "Last 24 Hours":
+                proto_match["Timestamp"] = {"$gte": (now - datetime.timedelta(hours=24)).isoformat()}
+            elif time_range == "Last 7 Days":
+                proto_match["Timestamp"] = {"$gte": (now - datetime.timedelta(days=7)).isoformat()}
+                
+        if proto_match:
             proto_pipeline.append({"$match": proto_match})
         proto_pipeline.extend([
             {"$group": {"_id": "$Protocol", "count": {"$sum": 1}}},
@@ -174,6 +226,28 @@ async def get_dashboard_stats(dataset: str = None, db = Depends(get_mongo)):
         ip_match = {"Label": {"$nin": ["BENIGN", "Normal", "nan", "NaN", ""]}}
         if dataset:
             apply_dataset_filter(ip_match, dataset)
+            
+        if severity:
+            if severity == "High":
+                ip_match["ml_risk_category"] = {"$in": ["High", "Critical"]}
+            elif severity == "Medium":
+                ip_match["ml_risk_category"] = "Medium"
+            elif severity == "Low":
+                ip_match["ml_risk_category"] = "Low"
+                
+        if attack_type:
+            if attack_type == "DDoS":
+                ip_match["Label"] = {"$regex": ".*DoS.*", "$options": "i"}
+            elif attack_type == "Port Scan":
+                ip_match["Label"] = {"$regex": ".*PortScan.*", "$options": "i"}
+            elif attack_type == "Brute Force":
+                ip_match["Label"] = {"$regex": ".*Brute Force.*", "$options": "i"}
+                
+        if time_range:
+            if time_range == "Last 24 Hours":
+                ip_match["Timestamp"] = {"$gte": (now - datetime.timedelta(hours=24)).isoformat()}
+            elif time_range == "Last 7 Days":
+                ip_match["Timestamp"] = {"$gte": (now - datetime.timedelta(days=7)).isoformat()}
             
         ip_pipeline = [
             {"$match": ip_match},
@@ -294,8 +368,8 @@ async def get_recent_alerts(limit: int = 10, dataset: str = None, db = Depends(g
         async for doc in cursor:
             alerts.append({
                 "id": str(doc["_id"]),
-                "source_ip": doc.get("Source IP", generate_mock_ip()),
-                "destination_ip": doc.get("Destination IP", generate_mock_ip()),
+                "source_ip": doc.get("Source IP", "N/A"),
+                "destination_ip": doc.get("Destination IP", "N/A"),
                 "destination_port": doc.get("Destination Port", 0),
                 "anomaly_type": doc.get("Label", "Unknown Anomaly"),
                 "severity": "High",
@@ -304,3 +378,209 @@ async def get_recent_alerts(limit: int = 10, dataset: str = None, db = Depends(g
         return alerts
     except:
         return []
+
+@router.get("/alerts")
+async def get_alerts(dataset: str = None, limit: int = 50, db = Depends(get_mongo)):
+    dataset = map_dataset(dataset)
+    try:
+        collection = db["network_traffic"]
+        query = {"Label": {"$nin": ["BENIGN", "Normal", "nan", "NaN", ""]}}
+        if dataset:
+            apply_dataset_filter(query, dataset)
+        cursor = collection.find(query).sort("_id", -1).limit(limit)
+        alerts = []
+        async for doc in cursor:
+            # Map severity based on risk category or default
+            ml_risk = doc.get("ml_risk_category", "High")
+            severity = "critical" if ml_risk == "Critical" else ("warning" if ml_risk == "High" else "info")
+            label = doc.get("Label", "Unknown Anomaly")
+            src_ip = doc.get("Source IP", "N/A")
+            
+            alerts.append({
+                "id": str(doc["_id"]),
+                "timestamp": doc.get("Timestamp", datetime.datetime.utcnow().isoformat()),
+                "severity": severity,
+                "message": f"{label} attack detected from {src_ip}",
+                "source": "Network Sensor"
+            })
+        return alerts
+    except Exception as e:
+        print(e)
+        return []
+
+@router.get("/attack-timeline")
+async def get_attack_timeline(dataset: str = None, severity: str = None, attack_type: str = None, time_range: str = None, db = Depends(get_mongo)):
+    dataset = map_dataset(dataset)
+    try:
+        collection = db["network_traffic"]
+        query = {"Label": {"$nin": ["BENIGN", "Normal", "nan", "NaN", ""]}}
+        if dataset:
+            apply_dataset_filter(query, dataset)
+            
+        if severity:
+            if severity == "High":
+                query["ml_risk_category"] = {"$in": ["High", "Critical"]}
+            elif severity == "Medium":
+                query["ml_risk_category"] = "Medium"
+            elif severity == "Low":
+                query["ml_risk_category"] = "Low"
+                
+        if attack_type:
+            if attack_type == "DDoS":
+                query["Label"] = {"$regex": ".*DoS.*", "$options": "i"}
+            elif attack_type == "Port Scan":
+                query["Label"] = {"$regex": ".*PortScan.*", "$options": "i"}
+            elif attack_type == "Brute Force":
+                query["Label"] = {"$regex": ".*Brute Force.*", "$options": "i"}
+                
+        if time_range:
+            latest_doc = await collection.find_one({}, sort=[("_id", -1)])
+            now = datetime.datetime.utcnow()
+            if latest_doc and "Timestamp" in latest_doc:
+                try:
+                    now = datetime.datetime.fromisoformat(latest_doc["Timestamp"].split("+")[0])
+                except Exception:
+                    pass
+            if time_range == "Last 24 Hours":
+                query["Timestamp"] = {"$gte": (now - datetime.timedelta(hours=24)).isoformat()}
+            elif time_range == "Last 7 Days":
+                query["Timestamp"] = {"$gte": (now - datetime.timedelta(days=7)).isoformat()}
+            
+        # MongoDB Aggregation for Attack Timeline
+        # Group by Hour (e.g., "2026-07-30T14")
+        pipeline = [
+            {"$match": query},
+            {"$project": {
+                "hour": {"$substr": ["$Timestamp", 11, 2]}
+            }},
+            {"$group": {
+                "_id": "$hour",
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"_id": 1}}
+        ]
+        
+        timeline_data = {}
+        async for doc in collection.aggregate(pipeline):
+            # doc["_id"] will be the hour string like "09" or "14"
+            hour = str(doc.get("_id", "00"))
+            if len(hour) == 1:
+                hour = "0" + hour
+            time_label = f"{hour}:00"
+            timeline_data[time_label] = doc["count"]
+            
+        timeline = []
+        # Ensure we always return at least some time buckets for the chart to render properly
+        base_times = ["00:00", "02:00", "04:00", "06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00", "22:00"]
+        
+        # If there are actual results, we merge them, otherwise return empty base times
+        if not timeline_data:
+            return [{"time": t, "attacks": 0} for t in base_times]
+            
+        # We can just return exactly the hours that have data, sorted. 
+        # Recharts handles irregular timeline points decently.
+        for h in range(24):
+            time_label = f"{h:02d}:00"
+            if time_label in timeline_data:
+                 timeline.append({"time": time_label, "attacks": timeline_data[time_label]})
+            else:
+                 # To keep the line smooth, we can insert 0 for hours with no attacks
+                 # but within the range of first attack and last attack
+                 timeline.append({"time": time_label, "attacks": 0})
+                 
+        return timeline
+    except Exception as e:
+        print(e)
+        return []
+
+@router.get("/anomaly-data")
+async def get_anomaly_data(dataset: str = None, db = Depends(get_mongo)):
+    dataset = map_dataset(dataset)
+    try:
+        collection = db["network_traffic"]
+        
+        # 1. Prediction Graph (Benign vs Anomaly over time)
+        # Group by hour
+        match_query = {}
+        if dataset:
+            apply_dataset_filter(match_query, dataset)
+            
+        pipeline = [
+            {"$match": match_query},
+            {"$project": {
+                "hour": {"$substr": ["$Timestamp", 11, 2]},
+                "is_anomaly": {"$cond": [{"$in": ["$Label", ["BENIGN", "Normal", "nan", "NaN", ""]]}, 0, 1]}
+            }},
+            {"$group": {
+                "_id": "$hour",
+                "total": {"$sum": 1},
+                "anomalies": {"$sum": "$is_anomaly"}
+            }},
+            {"$sort": {"_id": 1}}
+        ]
+        
+        graph_data = []
+        async for doc in collection.aggregate(pipeline):
+            hour = str(doc.get("_id", "00"))
+            if len(hour) == 1: hour = "0" + hour
+            time_label = f"{hour}:00"
+            anomalies = doc.get("anomalies", 0)
+            benign = doc.get("total", 0) - anomalies
+            graph_data.append({
+                "time": time_label,
+                "benign": benign,
+                "anomaly": anomalies
+            })
+            
+        # 2. Classification Pie Chart
+        class_query = {"Label": {"$nin": ["BENIGN", "Normal", "nan", "NaN", ""]}}
+        if dataset:
+            apply_dataset_filter(class_query, dataset)
+            
+        class_pipeline = [
+            {"$match": class_query},
+            {"$group": {"_id": "$Label", "value": {"$sum": 1}}},
+            {"$sort": {"value": -1}},
+            {"$limit": 5}
+        ]
+        
+        classification = []
+        colors = ['#ef4444', '#f97316', '#eab308', '#a855f7', '#6b7280']
+        idx = 0
+        async for doc in collection.aggregate(class_pipeline):
+            name = str(doc.get("_id", "Other")).strip()
+            if "dos" in name.lower() or "ddos" in name.lower(): name = "DDoS"
+            elif "web attack" in name.lower(): name = "Web Attack"
+            elif "portscan" in name.lower(): name = "Port Scan"
+            elif "brute force" in name.lower(): name = "Brute Force"
+                
+            classification.append({
+                "name": name,
+                "value": doc["value"],
+                "color": colors[idx % len(colors)]
+            })
+            idx += 1
+            
+        # 3. Recent Insights (last 5 anomalies)
+        insights = []
+        cursor = collection.find(class_query).sort("_id", -1).limit(5)
+        async for doc in cursor:
+            confidence_raw = doc.get("ml_confidence", 1.0)
+            confidence = int(confidence_raw * 100) if confidence_raw <= 1.0 else int(confidence_raw)
+            insights.append({
+                "timestamp": doc.get("Timestamp", "Just now"),
+                "source_ip": doc.get("Source IP", "N/A"),
+                "target_ip": doc.get("Destination IP", "N/A"),
+                "predicted_threat": doc.get("Label", "Anomaly"),
+                "confidence": confidence,
+                "action": "Blocked" if doc.get("ml_risk_category") == "Critical" else "Logged"
+            })
+            
+        return {
+            "graph": graph_data,
+            "classification": classification,
+            "insights": insights
+        }
+    except Exception as e:
+        print(e)
+        return {"graph": [], "classification": [], "insights": []}

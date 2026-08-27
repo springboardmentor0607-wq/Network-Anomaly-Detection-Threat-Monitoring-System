@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ClipboardList, Download, FileText, AlertOctagon, TrendingUp, ShieldCheck, PieChart as PieChartIcon } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
@@ -22,7 +22,27 @@ const anomalyTrends = [
   { day: 'Sun', anomalies: 60, detected: 60, missed: 0 },
 ];
 
+type Report = {
+  id: string;
+  name: string;
+  type: string;
+  date: string;
+  size: string;
+};
+
 export default function SecurityReports() {
+  const [reports, setReports] = useState<Report[]>([]);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/api/reports/list')
+      .then(res => res.json())
+      .then(data => setReports(data))
+      .catch(err => console.error("Error fetching reports:", err));
+  }, []);
+
+  const handleDownload = (id: string) => {
+    window.open(`http://localhost:8000/api/reports/download/${id}`, "_blank");
+  };
   return (
     <div className="space-y-6 w-full animate-blur-fade-up" style={{ animationDelay: "100ms" }}>
       {/* Title Bar */}
@@ -112,33 +132,29 @@ export default function SecurityReports() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  <tr className="hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4 font-medium text-white flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-red-400" /> Milestone 2 Final Report
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">Executive Summary</td>
-                    <td className="px-6 py-4 text-gray-400">Oct 24, 2023 - 09:00 AM</td>
-                    <td className="px-6 py-4 text-gray-400 font-mono">2.4 MB</td>
-                    <td className="px-6 py-4 text-blue-400 cursor-pointer hover:text-blue-300 font-medium">Download</td>
-                  </tr>
-                  <tr className="hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4 font-medium text-white flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-blue-400" /> Network Baseline Audit
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">Anomaly Analysis</td>
-                    <td className="px-6 py-4 text-gray-400">Oct 23, 2023 - 18:30 PM</td>
-                    <td className="px-6 py-4 text-gray-400 font-mono">1.1 MB</td>
-                    <td className="px-6 py-4 text-blue-400 cursor-pointer hover:text-blue-300 font-medium">Download</td>
-                  </tr>
-                  <tr className="hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4 font-medium text-white flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-green-400" /> Intrusion Prediction Model Eval
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">ML Model Metrics</td>
-                    <td className="px-6 py-4 text-gray-400">Oct 22, 2023 - 11:15 AM</td>
-                    <td className="px-6 py-4 text-gray-400 font-mono">5.8 MB</td>
-                    <td className="px-6 py-4 text-blue-400 cursor-pointer hover:text-blue-300 font-medium">Download</td>
-                  </tr>
+                  {reports.map((report) => (
+                    <tr key={report.id} className="hover:bg-white/5 transition-colors">
+                      <td className="px-6 py-4 font-medium text-white flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-blue-400" /> {report.name}
+                      </td>
+                      <td className="px-6 py-4 text-gray-300">{report.type}</td>
+                      <td className="px-6 py-4 text-gray-400">{report.date}</td>
+                      <td className="px-6 py-4 text-gray-400 font-mono">{report.size}</td>
+                      <td 
+                        className="px-6 py-4 text-blue-400 cursor-pointer hover:text-blue-300 font-medium"
+                        onClick={() => handleDownload(report.id)}
+                      >
+                        Download
+                      </td>
+                    </tr>
+                  ))}
+                  {reports.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                        No reports available.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

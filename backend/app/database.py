@@ -3,8 +3,11 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.config import settings
 
-# --- PostgreSQL Setup ---
-engine = create_engine(settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True)
+# --- Database Setup ---
+engine = create_engine(
+    settings.SQLALCHEMY_DATABASE_URI, 
+    connect_args={"check_same_thread": False} if "sqlite" in settings.SQLALCHEMY_DATABASE_URI else {}
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

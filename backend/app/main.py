@@ -6,7 +6,7 @@ if sys.platform == 'win32':
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, network, ml, live_traffic, database, users
+from app.routes import auth, network, ml, live_traffic, database, users, reports
 from app.database import engine, Base
 
 # Create relational tables
@@ -30,6 +30,8 @@ app.include_router(ml.router, prefix="/api/ml", tags=["Machine Learning"])
 app.include_router(live_traffic.router, prefix="/api/live", tags=["Live Traffic"])
 app.include_router(database.router, prefix="/api/database", tags=["Database Management"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
+app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to NetShield API"}

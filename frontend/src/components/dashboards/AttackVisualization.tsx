@@ -2,30 +2,103 @@
 
 import { AlertTriangle, RefreshCw, Filter } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-const timelineData = [
-  { time: "00:00", attacks: 8 },
-  { time: "02:00", attacks: 14 },
-  { time: "04:00", attacks: 22 },
-  { time: "06:00", attacks: 35 },
-  { time: "08:00", attacks: 28 },
-  { time: "10:00", attacks: 42 },
-  { time: "12:00", attacks: 36 },
-  { time: "14:00", attacks: 48 },
-];
+const COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#ec4899", "#14b8a6"];
 
-const protocolData = [
-  { name: "TCP", value: 45, color: "#3b82f6" },
-  { name: "UDP", value: 30, color: "#8b5cf6" },
-  { name: "ICMP", value: 15, color: "#f59e0b" },
-  { name: "HTTP", value: 10, color: "#10b981" },
-];
-
-export default function AttackVisualization() {
+export default function AttackVisualization({ dataset, dataSource, telemetryData }: any) {
   const [severity, setSeverity] = useState("All Severities");
   const [attackType, setAttackType] = useState("All Attack Types");
   const [timeRange, setTimeRange] = useState("All Time");
+  
+  const [timelineData, setTimelineData] = useState<{time: string, attacks: number}[]>([]);
+  const [protocolData, setProtocolData] = useState<{name: string, value: number, color: string}[]>([]);
+  
+  const fetchData = async () => {
+    if (dataSource === "live") {
+      // In strict live mode, parse telemetryData directly
+      const attacks = telemetryData.filter((t: any) => t.threatLevel === "High" || t.threatLevel === "Critical");
+      if (attacks.length === 0) {
+        setTimelineData([
+          { time: "00:00", attacks: 0 }, { time: "02:00", attacks: 0 },
+          { time: "04:00", attacks: 0 }, { time: "06:00", attacks: 0 }
+        ]);
+      } else {
+        // Mock timeline based on live for visual effect or accurate minutely tracking
+        const recentAttacks = attacks.length;
+        setTimelineData([
+          { time: "T-5m", attacks: 0 },
+          { time: "T-4m", attacks: Math.floor(recentAttacks * 0.2) },
+          { time: "T-3m", attacks: Math.floor(recentAttacks * 0.3) },
+          { time: "T-2m", attacks: Math.floor(recentAttacks * 0.4) },
+          { time: "T-1m", attacks: Math.floor(recentAttacks * 0.8) },
+          { time: "Now",  attacks: recentAttacks }
+        ]);
+      }
+
+      // Protocols from live
+      const protos: Record<string, number> = {};
+      telemetryData.forEach((t: any) => {
+        protos[t.protocol] = (protos[t.protocol] || 0) + 1;
+      });
+      const formattedProtos = Object.entries(protos).map(([name, value], i) => ({
+        name: name || "UNKNOWN",
+        value,
+        color: COLORS[i % COLORS.length]
+      }));
+      if (formattedProtos.length === 0) {
+        setProtocolData([{ name: "No Data", value: 1, color: "#374151" }]);
+      } else {
+        setProtocolData(formattedProtos);
+      }
+      return;
+    }
+
+    try {
+      const queryParams = new URLSearchParams({
+        dataset: dataset || "",
+        severity: severity !== "All Severities" ? severity : "",
+        attack_type: attackType !== "All Attack Types" ? attackType : "",
+        time_range: timeRange !== "All Time" ? timeRange : ""
+      }).toString();
+
+      // Fetch timeline
+      const timelineRes = await fetch(`http://localhost:8000/api/network/attack-timeline?${queryParams}`);
+      if (timelineRes.ok) {
+        const data = await timelineRes.json();
+        setTimelineData(data.length ? data : [
+          { time: "00:00", attacks: 0 }, { time: "02:00", attacks: 0 },
+          { time: "04:00", attacks: 0 }, { time: "06:00", attacks: 0 }
+        ]);
+      }
+      
+      // Fetch protocols from dashboard-stats
+      const statsRes = await fetch(`http://localhost:8000/api/network/dashboard-stats?${queryParams}`);
+      if (statsRes.ok) {
+        const stats = await statsRes.json();
+        if (stats.protocols && stats.protocols.length > 0) {
+          const formattedProtos = stats.protocols.map((p: any, i: number) => ({
+            name: p.name,
+            value: p.value,
+            color: COLORS[i % COLORS.length]
+          }));
+          setProtocolData(formattedProtos);
+        } else {
+           setProtocolData([{ name: "No Data", value: 1, color: "#374151" }]);
+        }
+      }
+    } catch (e) {
+      console.warn("Backend unavailable:", e);
+      setTimelineData([{ time: "00:00", attacks: 0 }]);
+      setProtocolData([{ name: "No Data", value: 1, color: "#374151" }]);
+    }
+  };
+  
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 15000);
+    return () => clearInterval(interval);
+  }, [severity, attackType, timeRange, dataset, dataSource, telemetryData]);
 
   const resetFilters = () => {
     setSeverity("All Severities");
@@ -52,8 +125,8 @@ export default function AttackVisualization() {
             <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
             <span className="text-xs font-medium text-white">Alerts</span>
           </div>
-          <button className="flex items-center gap-2 text-xs font-medium px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
-            Refresh Data
+          <button onClick={fetchData} className="flex items-center gap-2 text-xs font-medium px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh Data
           </button>
         </div>
       </div>
