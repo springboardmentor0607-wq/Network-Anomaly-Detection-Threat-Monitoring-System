@@ -168,7 +168,7 @@ export default function CinematicSidebar({ role, activeTab, setActiveTab, onLogo
                 {role === 'admin' ? 'admin@netshield.ai' : 'analyst@netshield.ai'}
               </p>
             </div>
-            <button title="Notifications" className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors relative">
+            <button onClick={() => setActiveTab('notifications')} title="Notifications" className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors relative">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
             </button>

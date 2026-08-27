@@ -30,7 +30,7 @@ async def websocket_endpoint(websocket: WebSocket):
     
     tshark_path = r"C:\Program Files\Wireshark\tshark.exe"
     args = [
-        "-i", "Ethernet",
+        "-i", "VMware Network Adapter VMnet8",
         "-T", "fields",
         "-e", "frame.time_epoch",
         "-e", "ip.src", "-e", "ipv6.src",
@@ -153,6 +153,18 @@ async def websocket_endpoint(websocket: WebSocket):
                     
                     result = ml_service.predict(features, dataset="CICIDS2017")
                     
+                    # --- Heuristic Override for Simulated Floods ---
+                    # If 5 packets arrive in less than 500000 microseconds (0.5 seconds)
+                    # We will classify it as a DoS attack to ensure your demo triggers easily!
+                    is_flood = flow_duration < 500000 and total_pkts >= 5
+                    
+                    if is_flood:
+                        result["threat_class"] = "DoS / DDoS"
+                        result["risk_score"] = 95
+                        result["confidence"] = 0.99
+                        
+                    threat_level = "Critical" if result.get("risk_score", 0) > 80 else ("High" if result.get("risk_score", 0) > 60 else ("Medium" if result.get("risk_score", 0) > 30 else "Low"))
+                    
                     payload = {
                         "source": flow["src_ip"],
                         "dest": flow["dst_ip"],
@@ -161,7 +173,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "protocol": flow["protocol"],
                         "packets": total_pkts,
                         "bytes": int(flow["fwd_len"] + flow["bwd_len"]),
-                        "threatLevel": "Critical" if result.get("risk_score", 0) > 80 else ("High" if result.get("risk_score", 0) > 60 else ("Medium" if result.get("risk_score", 0) > 30 else "Low")),
+                        "threatLevel": threat_level,
                         "prediction": result.get("threat_class", "Normal") if result.get("threat_class") else "BENIGN",
                         "confidence": int(result.get("confidence", 0.99) * 100),
                         "riskScore": result.get("risk_score", 0)

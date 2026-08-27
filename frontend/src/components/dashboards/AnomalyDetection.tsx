@@ -10,9 +10,9 @@ export default function AnomalyDetection({ dataset, dataSource, telemetryData }:
   const [insights, setInsights] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (dataSource === "live") {
-        // Strict Live Mode
+    const fetchAnomalies = async () => {
+      if (telemetryData && telemetryData.length > 0) {
+        // Build anomalies from live dataMode
         const anomalies = telemetryData.filter((t: any) => t.threatLevel === "High" || t.threatLevel === "Critical");
         
         // 1. Predictions
@@ -64,8 +64,8 @@ export default function AnomalyDetection({ dataset, dataSource, telemetryData }:
         console.warn("Backend unavailable during fetch:", e);
       }
     };
-    fetchData();
-    const interval = setInterval(fetchData, 15000);
+    fetchAnomalies();
+    const interval = setInterval(fetchAnomalies, 15000);
     return () => clearInterval(interval);
   }, [dataset, dataSource, telemetryData]);
   return (

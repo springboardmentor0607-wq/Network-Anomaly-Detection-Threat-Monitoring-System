@@ -9,7 +9,7 @@ export default function AlertManagement({ dataset, dataSource, telemetryData }: 
   
   useEffect(() => {
     const fetchAlerts = async () => {
-      if (dataSource === "live") {
+      if (telemetryData && telemetryData.length > 0) {
         const activeAlerts = telemetryData
           .filter((t: any) => t.threatLevel === "High" || t.threatLevel === "Critical")
           .map((t: any) => ({

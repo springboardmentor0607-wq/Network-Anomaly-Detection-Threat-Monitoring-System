@@ -91,10 +91,6 @@ export default function DashboardCinematicPage() {
 
     const triggerNotification = (notif: SystemNotification) => {
         setNotifications(prev => [notif, ...prev].slice(0, 100)); // Keep last 100
-        setToast(notif);
-        setTimeout(() => {
-            setToast(current => current?.id === notif.id ? null : current);
-        }, 5000);
     };
 
     const toggleCapture = () => {

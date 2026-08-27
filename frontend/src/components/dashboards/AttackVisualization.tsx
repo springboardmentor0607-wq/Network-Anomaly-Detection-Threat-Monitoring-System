@@ -15,7 +15,7 @@ export default function AttackVisualization({ dataset, dataSource, telemetryData
   const [protocolData, setProtocolData] = useState<{name: string, value: number, color: string}[]>([]);
   
   const fetchData = async () => {
-    if (dataSource === "live") {
+    if (telemetryData && telemetryData.length > 0) {
       // In strict live mode, parse telemetryData directly
       const attacks = telemetryData.filter((t: any) => t.threatLevel === "High" || t.threatLevel === "Critical");
       if (attacks.length === 0) {
