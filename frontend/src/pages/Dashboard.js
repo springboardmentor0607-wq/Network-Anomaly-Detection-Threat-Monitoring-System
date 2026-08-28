@@ -366,6 +366,7 @@ function Dashboard() {
           <button
             className="nav-item"
             type="button"
+            onClick={() => navigate("/analytics")}
           >
             <span>⌁</span>
             Threat Analysis
@@ -377,9 +378,12 @@ function Dashboard() {
 
           <p>INTELLIGENCE</p>
 
+          {/* FIXED: AI PREDICTIONS NAVIGATION */}
+
           <button
             className="nav-item"
             type="button"
+            onClick={() => navigate("/predictions")}
           >
             <span>✦</span>
             AI Predictions
@@ -388,6 +392,9 @@ function Dashboard() {
           <button
             className="nav-item"
             type="button"
+            onClick={() =>
+              navigate("/threat-timeline")
+            }
           >
             <span>◷</span>
             Threat Timeline

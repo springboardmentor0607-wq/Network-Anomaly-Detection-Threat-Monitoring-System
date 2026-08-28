@@ -1,21 +1,39 @@
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import {
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area,
+} from "recharts";
+import { useNavigate } from "react-router-dom";
 import "./Predictions.css";
 
 const API_URL = "http://127.0.0.1:8000";
 
 function Predictions() {
-  
+  const navigate = useNavigate();
 
   const [data, setData] = useState({
     summary: {},
-    predictions: []
+    predictions: [],
   });
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+
+  // ============================================================
+  // FETCH PREDICTIONS
+  // ============================================================
 
   const fetchPredictions = async () => {
     try {
@@ -27,14 +45,18 @@ function Predictions() {
 
       console.log("Predictions API:", response.data);
 
-      setData(response.data);
+      setData(response.data || {
+        summary: {},
+        predictions: [],
+      });
+
       setError("");
     } catch (err) {
       console.error("Predictions API Error:", err);
 
       setError(
         err.response?.data?.detail ||
-        "Unable to load predictions."
+        "Unable to load AI predictions."
       );
     } finally {
       setLoading(false);
@@ -53,22 +75,191 @@ function Predictions() {
   }, []);
 
   const summary = data?.summary || {};
-  const predictions = data?.predictions || [];
+  const predictions = useMemo(
+  () => data?.predictions || [],
+  [data?.predictions]
+);
+  // ============================================================
+  // COLORS
+  // ============================================================
 
-  const severityClass = (severity) => {
-    const value = String(severity || "").toLowerCase();
+  const chartColors = [
+    "#3b82f6",
+    "#ef4444",
+    "#f97316",
+    "#8b5cf6",
+    "#06b6d4",
+    "#22c55e",
+    "#eab308",
+    "#ec4899",
+  ];
 
-    if (value === "critical") return "critical";
-    if (value === "high") return "high";
-    if (value === "medium") return "medium";
-    return "low";
-  };
+  // ============================================================
+  // THREAT DISTRIBUTION
+  // ============================================================
 
-  const statusClass = (status) => {
-    return status === "Threat Detected"
-      ? "threat"
-      : "normal";
-  };
+  const threatDistribution = useMemo(() => {
+    const counts = {};
+
+    predictions.forEach((item) => {
+      const threat =
+        item?.threat_type ||
+        item?.prediction ||
+        "Unknown";
+
+      counts[threat] = (counts[threat] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .map(([name, value]) => ({
+        name,
+        value,
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [predictions]);
+
+  // ============================================================
+  // SEVERITY DATA
+  // ============================================================
+
+  const severityData = useMemo(() => {
+    const levels = [
+      "Critical",
+      "High",
+      "Medium",
+      "Low",
+    ];
+
+    return levels.map((level) => ({
+      name: level,
+      count: predictions.filter(
+        (item) =>
+          String(item?.severity || "").toLowerCase() ===
+          level.toLowerCase()
+      ).length,
+    }));
+  }, [predictions]);
+
+  // ============================================================
+  // RISK DISTRIBUTION
+  // ============================================================
+
+  const riskData = useMemo(() => {
+    const ranges = [
+      {
+        name: "Low",
+        min: 0,
+        max: 24,
+      },
+      {
+        name: "Moderate",
+        min: 25,
+        max: 49,
+      },
+      {
+        name: "High",
+        min: 50,
+        max: 74,
+      },
+      {
+        name: "Critical",
+        min: 75,
+        max: 100,
+      },
+    ];
+
+    return ranges.map((range) => ({
+      name: range.name,
+      count: predictions.filter((item) => {
+        const risk = Number(item?.risk_score || 0);
+
+        return (
+          risk >= range.min &&
+          risk <= range.max
+        );
+      }).length,
+    }));
+  }, [predictions]);
+
+  // ============================================================
+  // CONFIDENCE DATA
+  // ============================================================
+
+  const confidenceData = useMemo(() => {
+    return predictions
+      .slice(0, 8)
+      .map((item, index) => ({
+        name:
+          item?.threat_type ||
+          item?.prediction ||
+          `Prediction ${index + 1}`,
+        confidence:
+          Number(item?.confidence) || 0,
+      }));
+  }, [predictions]);
+
+  // ============================================================
+  // PREDICTION TREND
+  // ============================================================
+
+  const trendData = useMemo(() => {
+    const groups = {};
+
+    predictions.forEach((item) => {
+      if (!item?.timestamp) return;
+
+      const date = new Date(item.timestamp);
+
+      if (Number.isNaN(date.getTime())) return;
+
+      const label = date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      groups[label] = (groups[label] || 0) + 1;
+    });
+
+    return Object.entries(groups)
+      .map(([time, predictions]) => ({
+        time,
+        predictions,
+      }))
+      .slice(-12);
+  }, [predictions]);
+
+  // ============================================================
+  // THREAT RATE
+  // ============================================================
+
+  const threatRate = useMemo(() => {
+    if (!predictions.length) return 0;
+
+    const threats = predictions.filter((item) => {
+      const status = String(
+        item?.status || ""
+      ).toLowerCase();
+
+      const threat = String(
+        item?.threat_type ||
+        item?.prediction ||
+        ""
+      ).toLowerCase();
+
+      return (
+        status.includes("threat") ||
+        !threat.includes("normal")
+      );
+    }).length;
+
+    return Math.round(
+      (threats / predictions.length) * 100
+    );
+  }, [predictions]);
+
+  // ============================================================
+  // TIME FORMAT
+  // ============================================================
 
   const formatTime = (timestamp) => {
     if (!timestamp) return "-";
@@ -82,116 +273,136 @@ function Predictions() {
     return date.toLocaleString();
   };
 
+  // ============================================================
+  // LOADING
+  // ============================================================
+
   if (loading) {
     return (
       <div className="predictions-loading">
-        <div className="loading-icon">🧠</div>
+        <div className="loading-orbit">
+          🧠
+        </div>
 
         <h1>NetShield AI</h1>
 
-        <p>Loading AI Predictions...</p>
+        <p>
+          Initializing AI threat intelligence...
+        </p>
 
-        <div className="loading-spinner"></div>
+        <div className="loading-line">
+          <span></span>
+        </div>
       </div>
     );
   }
 
+  // ============================================================
+  // PAGE
+  // ============================================================
+
   return (
     <div className="predictions-page">
 
-      {/* ================= SIDEBAR ================= */}
+      {/* ========================================================
+          SIDEBAR
+      ======================================================== */}
 
       <aside className="predictions-sidebar">
 
         <div className="predictions-brand">
-          <div className="brand-icon">🛡️</div>
+
+          <div className="brand-icon">
+            🛡️
+          </div>
 
           <div>
             <h2>NetShield</h2>
             <span>AI SECURITY</span>
           </div>
+
         </div>
 
-       <div className="predictions-nav-section">
+        <div className="nav-section">
 
-  <p>MONITORING</p>
+          <p>MONITORING</p>
 
-  <button
-    type="button"
-    className="predictions-nav-item"
-    onClick={() => {
-      window.location.href = "/dashboard";
-    }}
-  >
-    <span>▦</span>
-    Dashboard
-  </button>
+          <button
+            onClick={() => navigate("/dashboard")}
+          >
+            <span>▦</span>
+            Dashboard
+          </button>
 
-  <button
-    type="button"
-    className="predictions-nav-item"
-    onClick={() => {
-      window.location.href = "/live-network";
-    }}
-  >
-    <span>◉</span>
-    Live Network
-  </button>
+          <button
+            onClick={() => navigate("/live-network")}
+          >
+            <span>◉</span>
+            Live Network
+          </button>
 
-  <button
-    type="button"
-    className="predictions-nav-item"
-    onClick={() => {
-      window.location.href = "/threat-alerts";
-    }}
-  >
-    <span>⚠</span>
-    Threat Alerts
-  </button>
+          <button
+            onClick={() => navigate("/threat-alerts")}
+          >
+            <span>⚠</span>
+            Threat Alerts
+          </button>
 
-  <button
-    type="button"
-    className="predictions-nav-item"
-    onClick={() => {
-      window.location.href = "/analytics";
-    }}
-  >
-    <span>⌁</span>
-    Threat Analysis
-  </button>
+          <button
+            onClick={() => navigate("/analytics")}
+          >
+            <span>⌁</span>
+            Threat Analysis
+          </button>
 
-</div>
+        </div>
 
+        <div className="nav-section">
 
-<div className="predictions-nav-section">
+          <p>INTELLIGENCE</p>
 
-  <p>INTELLIGENCE</p>
+          <button className="active">
+            <span>✦</span>
+            AI Predictions
+          </button>
 
-  <button
-    type="button"
-    className="predictions-nav-item active"
-  >
-    <span>✦</span>
-    AI Predictions
-  </button>
+          <button
+            onClick={() => navigate("/analytics")}
+          >
+            <span>◷</span>
+            Threat Timeline
+          </button>
 
-  <button
-    type="button"
-    className="predictions-nav-item"
-    onClick={() => {
-      window.location.href = "/analytics";
-    }}
-  >
-    <span>◷</span>
-    Threat Timeline
-  </button>
+        </div>
 
-</div>
+        <div className="sidebar-bottom">
+
+          <div className="system-status">
+
+            <span></span>
+
+            <div>
+              <strong>AI Engine Online</strong>
+              <small>Prediction service active</small>
+            </div>
+
+          </div>
+
+          <div className="version">
+            NETSHIELD AI • MILESTONE 4
+          </div>
+
+        </div>
+
       </aside>
 
-      {/* ================= MAIN ================= */}
+      {/* ========================================================
+          MAIN
+      ======================================================== */}
 
       <main className="predictions-main">
+
+        {/* HEADER */}
 
         <header className="predictions-header">
 
@@ -201,11 +412,13 @@ function Predictions() {
               SECURITY / AI INTELLIGENCE
             </span>
 
-            <h1>AI Predictions</h1>
+            <h1>
+              AI Threat Intelligence
+            </h1>
 
             <p>
-              AI-powered prediction and classification
-              of network security threats.
+              Predictive analysis of network threats
+              powered by machine learning.
             </p>
 
           </div>
@@ -218,7 +431,6 @@ function Predictions() {
             </div>
 
             <button
-              type="button"
               onClick={fetchPredictions}
               disabled={refreshing}
             >
@@ -229,31 +441,70 @@ function Predictions() {
 
         </header>
 
-        {/* ================= ERROR ================= */}
+        {/* ERROR */}
 
         {error && (
           <div className="prediction-error">
-            ⚠️ {error}
+            <span>⚠️</span>
 
-            <button
-              type="button"
-              onClick={fetchPredictions}
-            >
+            <div>
+              <strong>Prediction Service Error</strong>
+              <p>{error}</p>
+            </div>
+
+            <button onClick={fetchPredictions}>
               Retry
             </button>
           </div>
         )}
 
-        {/* ================= SUMMARY ================= */}
+        {/* ======================================================
+            TOP AI STATUS
+        ====================================================== */}
+
+        <section className="ai-status-panel">
+
+          <div className="ai-status-left">
+
+            <div className="ai-brain">
+              🧠
+            </div>
+
+            <div>
+              <span>ACTIVE MACHINE LEARNING MODEL</span>
+
+              <h2>
+                Random Forest Threat Predictor
+              </h2>
+
+              <p>
+                Continuously classifying network activity
+                and estimating security risk.
+              </p>
+            </div>
+
+          </div>
+
+          <div className="model-state">
+            <div className="pulse"></div>
+            <strong>ONLINE</strong>
+            <span>Real-time inference</span>
+          </div>
+
+        </section>
+
+        {/* ======================================================
+            SUMMARY CARDS
+        ====================================================== */}
 
         <section className="summary-grid">
 
           <div className="summary-card blue">
             <span>TOTAL PREDICTIONS</span>
             <strong>
-              {summary.total_predictions ?? 0}
+              {summary.total_predictions ?? predictions.length}
             </strong>
-            <small>AI predictions analyzed</small>
+            <small>AI decisions analyzed</small>
           </div>
 
           <div className="summary-card red">
@@ -261,15 +512,15 @@ function Predictions() {
             <strong>
               {summary.threat_predictions ?? 0}
             </strong>
-            <small>Potential security threats</small>
+            <small>Potential attacks detected</small>
           </div>
 
           <div className="summary-card critical">
-            <span>CRITICAL PREDICTIONS</span>
+            <span>CRITICAL THREATS</span>
             <strong>
               {summary.critical_predictions ?? 0}
             </strong>
-            <small>Critical severity threats</small>
+            <small>Require immediate attention</small>
           </div>
 
           <div className="summary-card purple">
@@ -277,56 +528,462 @@ function Predictions() {
             <strong>
               {summary.average_confidence ?? 0}%
             </strong>
-            <small>Model confidence</small>
+            <small>Model prediction confidence</small>
           </div>
 
           <div className="summary-card orange">
-            <span>AVG RISK</span>
+            <span>THREAT RATE</span>
             <strong>
-              {summary.average_risk ?? 0}/100
+              {threatRate}%
             </strong>
-            <small>AI risk assessment</small>
+            <small>Predictions classified as threats</small>
           </div>
 
         </section>
 
-        {/* ================= AI ENGINE ================= */}
+        {/* ======================================================
+            CHART 1 + CHART 2
+        ====================================================== */}
 
-        <section className="ai-engine">
+        <section className="chart-grid">
 
-          <div className="engine-icon">
-            🧠
+          {/* PREDICTION TREND */}
+
+          <div className="chart-card large">
+
+            <div className="chart-header">
+
+              <div>
+                <span>REAL-TIME INTELLIGENCE</span>
+                <h2>Prediction Activity</h2>
+              </div>
+
+              <div className="chart-indicator">
+                <span></span>
+                LIVE
+              </div>
+
+            </div>
+
+            <div className="chart-area">
+
+              {trendData.length === 0 ? (
+
+                <div className="chart-empty">
+                  <span>📈</span>
+                  <p>No prediction trend data available</p>
+                </div>
+
+              ) : (
+
+                <ResponsiveContainer width="100%" height={300}>
+
+                  <AreaChart data={trendData}>
+
+                    <defs>
+                      <linearGradient
+                        id="predictionGradient"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#3b82f6"
+                          stopOpacity={0.35}
+                        />
+
+                        <stop
+                          offset="95%"
+                          stopColor="#3b82f6"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#1e293b"
+                    />
+
+                    <XAxis
+                      dataKey="time"
+                      stroke="#64748b"
+                      fontSize={10}
+                    />
+
+                    <YAxis
+                      stroke="#64748b"
+                      fontSize={10}
+                    />
+
+                    <Tooltip
+                      contentStyle={{
+                        background: "#0d1929",
+                        border: "1px solid #26364d",
+                        borderRadius: "8px",
+                        color: "#fff",
+                      }}
+                    />
+
+                    <Area
+                      type="monotone"
+                      dataKey="predictions"
+                      stroke="#3b82f6"
+                      fill="url(#predictionGradient)"
+                      strokeWidth={3}
+                    />
+
+                  </AreaChart>
+
+                </ResponsiveContainer>
+
+              )}
+
+            </div>
+
           </div>
 
-          <div className="engine-info">
-            <span>AI DETECTION ENGINE</span>
+          {/* THREAT DISTRIBUTION */}
 
-            <h2>
-              Random Forest Threat Predictor
-            </h2>
+          <div className="chart-card">
 
-            <p>
-              Continuously analyzing network traffic
-              for potential security threats.
-            </p>
-          </div>
+            <div className="chart-header">
 
-          <div className="engine-online">
-            <span></span>
-            ONLINE
+              <div>
+                <span>CLASSIFICATION</span>
+                <h2>Threat Distribution</h2>
+              </div>
+
+            </div>
+
+            {threatDistribution.length === 0 ? (
+
+              <div className="chart-empty">
+                <span>🍩</span>
+                <p>No threat data available</p>
+              </div>
+
+            ) : (
+
+              <div className="pie-container">
+
+                <ResponsiveContainer width="100%" height={250}>
+
+                  <PieChart>
+
+                    <Pie
+                      data={threatDistribution}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={65}
+                      outerRadius={95}
+                      paddingAngle={3}
+                    >
+
+                      {threatDistribution.map(
+                        (entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={
+                              chartColors[
+                                index %
+                                chartColors.length
+                              ]
+                            }
+                          />
+                        )
+                      )}
+
+                    </Pie>
+
+                    <Tooltip
+                      contentStyle={{
+                        background: "#0d1929",
+                        border: "1px solid #26364d",
+                        borderRadius: "8px",
+                        color: "#fff",
+                      }}
+                    />
+
+                  </PieChart>
+
+                </ResponsiveContainer>
+
+                <div className="pie-legend">
+
+                  {threatDistribution
+                    .slice(0, 5)
+                    .map((item, index) => (
+
+                      <div
+                        className="legend-item"
+                        key={item.name}
+                      >
+
+                        <span
+                          style={{
+                            background:
+                              chartColors[
+                                index %
+                                chartColors.length
+                              ],
+                          }}
+                        ></span>
+
+                        <label>
+                          {item.name}
+                        </label>
+
+                        <strong>
+                          {item.value}
+                        </strong>
+
+                      </div>
+
+                    ))}
+
+                </div>
+
+              </div>
+
+            )}
+
           </div>
 
         </section>
 
-        {/* ================= PREDICTIONS ================= */}
+        {/* ======================================================
+            CHART 3 + CHART 4
+        ====================================================== */}
 
-        <section className="predictions-panel">
+        <section className="chart-grid">
 
-          <div className="panel-header">
+          {/* SEVERITY */}
+
+          <div className="chart-card">
+
+            <div className="chart-header">
+
+              <div>
+                <span>THREAT SEVERITY</span>
+                <h2>Severity Breakdown</h2>
+              </div>
+
+            </div>
+
+            <ResponsiveContainer
+              width="100%"
+              height={280}
+            >
+
+              <BarChart data={severityData}>
+
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#1e293b"
+                  vertical={false}
+                />
+
+                <XAxis
+                  dataKey="name"
+                  stroke="#64748b"
+                  fontSize={10}
+                />
+
+                <YAxis
+                  stroke="#64748b"
+                  fontSize={10}
+                />
+
+                <Tooltip
+                  contentStyle={{
+                    background: "#0d1929",
+                    border: "1px solid #26364d",
+                    borderRadius: "8px",
+                  }}
+                />
+
+                <Bar
+                  dataKey="count"
+                  fill="#ef4444"
+                  radius={[5, 5, 0, 0]}
+                />
+
+              </BarChart>
+
+            </ResponsiveContainer>
+
+          </div>
+
+          {/* RISK */}
+
+          <div className="chart-card">
+
+            <div className="chart-header">
+
+              <div>
+                <span>RISK INTELLIGENCE</span>
+                <h2>Risk Distribution</h2>
+              </div>
+
+            </div>
+
+            <ResponsiveContainer
+              width="100%"
+              height={280}
+            >
+
+              <BarChart
+                data={riskData}
+                layout="vertical"
+              >
+
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#1e293b"
+                  horizontal={false}
+                />
+
+                <XAxis
+                  type="number"
+                  stroke="#64748b"
+                  fontSize={10}
+                />
+
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  stroke="#64748b"
+                  fontSize={10}
+                  width={65}
+                />
+
+                <Tooltip
+                  contentStyle={{
+                    background: "#0d1929",
+                    border: "1px solid #26364d",
+                    borderRadius: "8px",
+                  }}
+                />
+
+                <Bar
+                  dataKey="count"
+                  fill="#f97316"
+                  radius={[0, 5, 5, 0]}
+                />
+
+              </BarChart>
+
+            </ResponsiveContainer>
+
+          </div>
+
+        </section>
+
+        {/* ======================================================
+            CHART 5 — CONFIDENCE
+        ====================================================== */}
+
+        <section className="chart-card confidence-card">
+
+          <div className="chart-header">
 
             <div>
-              <span>AI INTELLIGENCE</span>
-              <h2>Recent Predictions</h2>
+              <span>MODEL PERFORMANCE</span>
+              <h2>AI Confidence by Prediction</h2>
+            </div>
+
+            <div className="confidence-badge">
+              MODEL CONFIDENCE
+            </div>
+
+          </div>
+
+          {confidenceData.length === 0 ? (
+
+            <div className="chart-empty">
+              <span>🎯</span>
+              <p>No confidence data available</p>
+            </div>
+
+          ) : (
+
+            <ResponsiveContainer
+              width="100%"
+              height={300}
+            >
+
+              <BarChart
+                data={confidenceData}
+                layout="vertical"
+                margin={{
+                  left: 20,
+                  right: 30,
+                }}
+              >
+
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#1e293b"
+                  horizontal={false}
+                />
+
+                <XAxis
+                  type="number"
+                  domain={[0, 100]}
+                  stroke="#64748b"
+                  fontSize={10}
+                />
+
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={120}
+                  stroke="#64748b"
+                  fontSize={10}
+                />
+
+                <Tooltip
+                  contentStyle={{
+                    background: "#0d1929",
+                    border: "1px solid #26364d",
+                    borderRadius: "8px",
+                  }}
+                  formatter={(value) => [
+                    `${value}%`,
+                    "Confidence",
+                  ]}
+                />
+
+                <Bar
+                  dataKey="confidence"
+                  fill="#8b5cf6"
+                  radius={[0, 6, 6, 0]}
+                />
+
+              </BarChart>
+
+            </ResponsiveContainer>
+
+          )}
+
+        </section>
+
+        {/* ======================================================
+            RECENT PREDICTIONS
+        ====================================================== */}
+
+        <section className="recent-panel">
+
+          <div className="chart-header">
+
+            <div>
+              <span>PREDICTION LOG</span>
+              <h2>Recent AI Decisions</h2>
             </div>
 
             <strong>
@@ -345,127 +1002,115 @@ function Predictions() {
 
               <p>
                 The AI engine has not generated
-                any predictions yet.
+                predictions yet.
               </p>
 
             </div>
 
           ) : (
 
-            <div className="table-wrapper">
+            <div className="prediction-list">
 
-              <table>
+              {predictions
+                .slice(0, 10)
+                .map((item, index) => {
 
-                <thead>
+                  const threat =
+                    item?.threat_type ||
+                    item?.prediction ||
+                    "Unknown";
 
-                  <tr>
-                    <th>THREAT</th>
-                    <th>SEVERITY</th>
-                    <th>CONFIDENCE</th>
-                    <th>RISK</th>
-                    <th>STATUS</th>
-                    <th>SERVICE</th>
-                    <th>PROTOCOL</th>
-                    <th>SOURCE</th>
-                    <th>DESTINATION</th>
-                    <th>TIME</th>
-                  </tr>
+                  const severity =
+                    item?.severity ||
+                    "Low";
 
-                </thead>
+                  const confidence =
+                    Number(item?.confidence) || 0;
 
-                <tbody>
+                  const risk =
+                    Number(item?.risk_score) || 0;
 
-                  {predictions.map((item, index) => (
+                  return (
 
-                    <tr key={item.id || index}>
+                    <div
+                      className="prediction-row"
+                      key={item.id || index}
+                    >
 
-                      <td>
+                      <div className="prediction-number">
+                        #{String(index + 1).padStart(2, "0")}
+                      </div>
+
+                      <div className="prediction-threat">
+
                         <strong>
-                          {item.threat_type || "Unknown"}
+                          {threat}
                         </strong>
-                      </td>
 
-                      <td>
-                        <span
-                          className={`severity ${severityClass(
-                            item.severity
-                          )}`}
-                        >
-                          {item.severity || "Unknown"}
+                        <span>
+                          {formatTime(item.timestamp)}
                         </span>
-                      </td>
 
-                      <td>
+                      </div>
 
-                        <div className="confidence">
+                      <span
+                        className={`severity ${String(
+                          severity
+                        ).toLowerCase()}`}
+                      >
+                        {severity}
+                      </span>
 
-                          <strong>
-                            {item.confidence ?? 0}%
-                          </strong>
+                      <div className="mini-confidence">
 
-                          <div className="confidence-bar">
+                        <span>
+                          {confidence}%
+                        </span>
 
-                            <div
-                              style={{
-                                width: `${Math.min(
-                                  Math.max(
-                                    Number(item.confidence) || 0,
-                                    0
-                                  ),
-                                  100
-                                )}%`
-                              }}
-                            />
-
-                          </div>
-
+                        <div>
+                          <i
+                            style={{
+                              width: `${Math.min(
+                                Math.max(
+                                  confidence,
+                                  0
+                                ),
+                                100
+                              )}%`,
+                            }}
+                          ></i>
                         </div>
 
-                      </td>
+                      </div>
 
-                      <td>
-                        <strong className="risk">
-                          {item.risk_score ?? 0}
+                      <div className="prediction-risk">
+
+                        <span>RISK</span>
+
+                        <strong>
+                          {risk}
                         </strong>
-                      </td>
 
-                      <td>
-                        <span
-                          className={`status ${statusClass(
-                            item.status
-                          )}`}
-                        >
-                          {item.status || "Unknown"}
-                        </span>
-                      </td>
+                      </div>
 
-                      <td>
-                        {item.service || "-"}
-                      </td>
+                      <span
+                        className={`prediction-status ${
+                          String(
+                            item?.status || ""
+                          )
+                            .toLowerCase()
+                            .includes("threat")
+                            ? "threat"
+                            : "normal"
+                        }`}
+                      >
+                        {item?.status || "Unknown"}
+                      </span>
 
-                      <td>
-                        {item.protocol || "-"}
-                      </td>
+                    </div>
 
-                      <td>
-                        {item.source_ip || "-"}
-                      </td>
-
-                      <td>
-                        {item.destination_ip || "-"}
-                      </td>
-
-                      <td>
-                        {formatTime(item.timestamp)}
-                      </td>
-
-                    </tr>
-
-                  ))}
-
-                </tbody>
-
-              </table>
+                  );
+                })}
 
             </div>
 
@@ -473,21 +1118,21 @@ function Predictions() {
 
         </section>
 
-        {/* ================= FOOTER ================= */}
+        {/* FOOTER */}
 
         <footer className="predictions-footer">
 
           <span>
             🛡️ <strong>NetShield AI</strong>
-            {" "}• AI-Powered Network Security
+            {" "}• Predictive Network Security
+          </span>
+
+          <span className="footer-online">
+            ● AI Engine Operational
           </span>
 
           <span>
-            🟢 AI Engine Operational
-          </span>
-
-          <span>
-            Milestone 3 • AI Predictions
+            Milestone 4 • AI Intelligence
           </span>
 
         </footer>
@@ -499,4 +1144,3 @@ function Predictions() {
 }
 
 export default Predictions;
-
