@@ -1,21 +1,19 @@
 import React, { createContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast'; 
+import { useNavigate } from 'react-router-dom';
 
-// Create the context
 export const TrafficContext = createContext();
 
 export const TrafficProvider = ({ children }) => {
-  // Global State for Network Traffic Page
+  const navigate = useNavigate();
+
+  // Global State
   const [selectedDataset, setSelectedDataset] = useState('cicids2017');
   const [packets, setPackets] = useState([]);
   const [columns, setColumns] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [status, setStatus] = useState('Connecting...');
-  
-  // Global State for Network Anomaly Page
   const [anomalies, setAnomalies] = useState([]);
-  
-  // --- DERIVED LIVE ANOMALY COUNT ---
   const anomalyCount = anomalies.length;
 
   const [stats, setStats] = useState({
@@ -24,7 +22,6 @@ export const TrafficProvider = ({ children }) => {
     riskScore: 12
   });
 
-  // --- AUTHORITATIVE BACKEND RISK & STATS SYNC ---
   const fetchBackendStats = async () => {
     try {
       const res = await fetch('http://localhost:8000/api/network/stats');
@@ -41,34 +38,33 @@ export const TrafficProvider = ({ children }) => {
     }
   };
 
+  // Royal Upgrade: Independent Global Hydration
+  // Fetches authoritative MongoDB baseline exactly ONCE when the app boots or refreshes
   useEffect(() => {
-    // 1. Reset stream-specific state
+    const fetchGlobalBaseline = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/api/alerts');
+        const data = await res.json();
+        
+        if (data.status === 'success' && data.alerts) {
+          setAnomalies(data.alerts.slice(0, 50));
+        }
+      } catch (err) {
+        console.error("Failed to hydrate global baseline:", err);
+      }
+    };
+
+    fetchGlobalBaseline();
+    fetchBackendStats();
+  }, []); // Empty array ensures this survives dataset toggles and only fires on hard refresh
+
+  // WebSocket & Live Stream Engine
+  useEffect(() => {
     setPackets([]);
     setChartData([]);
     setStatus('Connecting...');
 
-    // 2. Fetch Persistent MongoDB History & Backend Stats
-    const fetchHistory = async () => {
-      try {
-        const res = await fetch('http://localhost:8000/api/alerts/history');
-        const data = await res.json();
-        
-        if (data.status === 'success' && data.anomalies) {
-          setAnomalies(data.anomalies);
-        }
-      } catch (err) {
-        console.error("Failed to fetch DB history:", err);
-        setAnomalies([]);
-      }
-    };
-
-    fetchHistory();
-    fetchBackendStats();
-
-    // Poll backend risk engine every 5 seconds to stay fully synchronized
     const statsInterval = setInterval(fetchBackendStats, 5000);
-
-    // 3. Open WebSocket Connection
     const ws = new WebSocket(`ws://localhost:8000/ws/traffic/stream?dataset=${selectedDataset}`);
 
     ws.onopen = () => setStatus('Live Stream Active');
@@ -78,7 +74,6 @@ export const TrafficProvider = ({ children }) => {
     ws.onmessage = (event) => {
       const packet = JSON.parse(event.data);
 
-      // 1. Update Traffic Page Data
       const excludedKeys = ['active_dataset', 'ai_classification', 'is_anomaly'];
       setColumns(Object.keys(packet).filter(k => !excludedKeys.includes(k)).slice(0, 4)); 
       setPackets(prev => [packet, ...prev].slice(0, 10));
@@ -86,22 +81,33 @@ export const TrafficProvider = ({ children }) => {
       const bandwidthMetric = packet[' Total Length of Fwd Packets'] || packet['Total Length of Fwd Packets'] || packet['spkts'] || 0;
       setChartData(prev => [...prev, bandwidthMetric].slice(-15));
 
-      // 2. Update Anomaly Page Data & Fire Toast
       if (packet.is_anomaly) {
         const threatName = packet.ai_classification || 'Unknown Threat';
         const sourceIp = packet['Source IP'] || 'Mac Interface';
 
-        toast.error(`CRITICAL THREAT: [${threatName}] from ${sourceIp}`, {
-          duration: 4000,
-          position: 'top-right',
-          style: { background: '#0A0A0B', color: '#ef4444', border: '1px solid #7f1d1d', fontSize: '13px', fontWeight: '600' },
-          iconTheme: { primary: '#ef4444', secondary: '#0A0A0B' },
-        });
+        toast.error(
+          (t) => (
+            <div 
+              className="cursor-pointer flex flex-col gap-1 w-full" 
+              onClick={() => { 
+                navigate('/dashboard/threats'); 
+                toast.dismiss(t.id);           
+              }}
+            >
+              <span className="font-bold text-[13px] tracking-wide uppercase text-red-400">
+                CRITICAL THREAT DETECTED
+              </span>
+              <span className="text-[12px] text-white">[{threatName}] originating from {sourceIp}</span>
+              <span className="text-[10px] text-red-400/80 mt-1 italic">Click here to investigate incident &rarr;</span>
+            </div>
+          ),
+          { duration: 6000, position: 'top-right', style: { cursor: 'pointer', minWidth: '280px', background: '#0A0A0B', border: '1px solid #ef4444' } }
+        );
 
         const newAnomaly = {
           id: `anm_${Math.floor(Math.random() * 10000)}`,
           time: new Date().toLocaleTimeString(),
-          source: 'Live WebSocket Stream', 
+          source: sourceIp, 
           type: threatName,
           description: 'Deviates from standard baseline behavior',
           severity: 'Critical',
@@ -109,12 +115,9 @@ export const TrafficProvider = ({ children }) => {
         };
         
         setAnomalies(prev => [newAnomaly, ...prev].slice(0, 50));
-        
-        // Instantly re-sync backend risk score upon detecting a live threat
         fetchBackendStats();
       }
 
-      // Increment packet counter smoothly
       setStats(prev => ({
         ...prev,
         totalScanned: prev.totalScanned + 1

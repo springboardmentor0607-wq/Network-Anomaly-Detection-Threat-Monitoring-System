@@ -1,51 +1,51 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; 
-import { TrafficContext } from '../context/TrafficContext'; // 1. Import Global Traffic Brain
+import { TrafficContext } from '../context/TrafficContext'; 
 
 const DashboardLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth(); 
-  const { anomalies } = useContext(TrafficContext); // 2. Pull live anomalies
+  const { anomalies } = useContext(TrafficContext); 
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark'); 
+  
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
-
   const userRole = user?.role || 'analyst';
 
-  const handleLogout = () => {
-    logout(); 
-    navigate('/login');
-  };
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
+  const handleLogout = () => { logout(); navigate('/login'); };
   const getInitials = (name) => {
     if (!name) return 'AS';
-    const parts = name.split(' ');
-    if (parts.length > 1) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
+    const p = name.split(' ');
+    return p.length > 1 ? (p[0][0] + p[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
   };
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setIsNotificationOpen(false);
-      }
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsDropdownOpen(false);
+      if (notificationRef.current && !notificationRef.current.contains(e.target)) setIsNotificationOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const navModules = [
-    { name: 'Overview', path: '/dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z' },
+    { name: 'Dashboard', path: '/dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z' },
     { name: 'Network Traffic', path: '/dashboard/traffic', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
     { name: 'Anomaly Detection', path: '/dashboard/anomaly', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
     { name: 'Model Performance', path: '/dashboard/performance', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2  2h-2a2 2 0 01-2-2z' },
@@ -63,191 +63,155 @@ const DashboardLayout = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] text-[#F2F2F0] flex font-sans">
+    <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] dark:bg-[#000000] dark:text-[#F2F2F0] flex font-sans transition-colors duration-300">
       
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-white/[0.07] bg-[#0A0A0B] flex flex-col fixed h-full z-20">
-        <div className="h-16 flex items-center px-6 border-b border-white/[0.07]">
-          <div className="w-2 h-2 rounded-full bg-white mr-2.5" />
+      <aside className="w-64 border-r border-gray-200 dark:border-white/[0.07] bg-white/70 dark:bg-[#0A0A0B]/60 backdrop-blur-2xl flex flex-col fixed h-full z-20 transition-all duration-300">
+        <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-white/[0.07]">
+          <div className="w-2 h-2 rounded-full mr-2.5 bg-[#0071E3] dark:bg-white transition-colors" />
           <span className="font-bold tracking-tight text-[15px]">NetShield AI</span>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
-          <div className="px-3 mb-2 text-[11px] font-semibold text-[#9A9A97] uppercase tracking-wider">Modules</div>
+          <div className="px-3 mb-2 text-[11px] font-semibold text-[#86868B] dark:text-[#9A9A97] uppercase tracking-wider">Modules</div>
           
-          {navModules.map((item) => (
-            <Link
-              key={item.name}
-              to={item.path}
-              className={`flex items-center px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
-                location.pathname === item.path 
-                  ? 'bg-white/[0.08] text-white' 
-                  : 'text-[#9A9A97] hover:bg-white/[0.04] hover:text-[#D6D6D3]'
-              }`}
-            >
-              <svg className="w-4 h-4 mr-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-              </svg>
-              {item.name}
-            </Link>
-          ))}
+          {navModules.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.name}
+                to={item.path}
+                className={`flex items-center px-3 py-2 rounded-lg text-[13px] transition-all duration-200 ${
+                  isActive 
+                    ? 'bg-black/[0.05] text-[#0071E3] font-semibold dark:bg-white/[0.1] dark:text-[#0A84FF]' 
+                    : 'text-[#1D1D1F] font-medium hover:bg-black/[0.03] dark:text-[#F2F2F0] dark:hover:bg-white/[0.05]'
+                }`}
+              >
+                <svg className={`w-4 h-4 mr-3 ${isActive ? 'opacity-100' : 'opacity-60'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isActive ? 2.5 : 2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                </svg>
+                {item.name}
+              </Link>
+            );
+          })}
 
           {userRole === 'administrator' && (
             <>
-              <div className="px-3 mt-8 mb-2 text-[11px] font-semibold text-[#9A9A97] uppercase tracking-wider">Administration</div>
-              {adminModules.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`flex items-center px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
-                    location.pathname === item.path 
-                      ? 'bg-white/[0.08] text-white' 
-                      : 'text-[#9A9A97] hover:bg-white/[0.04] hover:text-[#D6D6D3]'
-                  }`}
-                >
-                  <svg className="w-4 h-4 mr-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-                  </svg>
-                  {item.name}
-                </Link>
-              ))}
+              <div className="px-3 mt-8 mb-2 text-[11px] font-semibold text-[#86868B] dark:text-[#9A9A97] uppercase tracking-wider">Administration</div>
+              {adminModules.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    className={`flex items-center px-3 py-2 rounded-lg text-[13px] transition-all duration-200 ${
+                      isActive 
+                        ? 'bg-black/[0.05] text-[#0071E3] font-semibold dark:bg-white/[0.1] dark:text-[#0A84FF]' 
+                        : 'text-[#1D1D1F] font-medium hover:bg-black/[0.03] dark:text-[#F2F2F0] dark:hover:bg-white/[0.05]'
+                    }`}
+                  >
+                    <svg className={`w-4 h-4 mr-3 ${isActive ? 'opacity-100' : 'opacity-60'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isActive ? 2.5 : 2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                    </svg>
+                    {item.name}
+                  </Link>
+                );
+              })}
             </>
           )}
         </nav>
       </aside>
 
-      {/* Main Content Area */}
       <main className="flex-1 ml-64 flex flex-col min-h-screen">
-        {/* Top Header */}
-        <header className="h-16 border-b border-white/[0.07] bg-[#0A0A0B]/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between px-8">
-          <h1 className="text-[15px] font-medium text-[#D6D6D3]">
-            {navModules.find(m => m.path === location.pathname)?.name || 
-             adminModules.find(m => m.path === location.pathname)?.name || 
-             'Dashboard'}
+        <header className="h-16 border-b border-gray-200 dark:border-white/[0.07] bg-white/60 dark:bg-[#0A0A0B]/60 backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-none sticky top-0 z-10 flex items-center justify-between px-8 transition-all duration-300">
+          <h1 className="text-[15px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F2F2F0]">
+            {navModules.find(m => m.path === location.pathname)?.name || adminModules.find(m => m.path === location.pathname)?.name || 'Dashboard'}
           </h1>
           
           <div className="flex items-center gap-4">
             
-            {/* Clickable Notifications Dropdown */}
+            <button 
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/30 text-gray-500 dark:text-[#9A9A97] hover:text-gray-900 dark:hover:text-white bg-white/50 dark:bg-transparent shadow-sm dark:shadow-none transition-all outline-none"
+            >
+              {theme === 'dark' ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+
             <div className="relative" ref={notificationRef}>
               <button 
-                onClick={() => {
-                  setIsNotificationOpen(!isNotificationOpen);
-                  setIsDropdownOpen(false); 
-                }}
-                className="flex items-center justify-center w-8 h-8 rounded-full border border-white/10 hover:border-white/30 transition-colors cursor-pointer text-[#9A9A97] hover:text-white relative outline-none"
+                onClick={() => { setIsNotificationOpen(!isNotificationOpen); setIsDropdownOpen(false); }}
+                className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/30 text-gray-500 dark:text-[#9A9A97] hover:text-gray-900 dark:hover:text-white bg-white/50 dark:bg-transparent shadow-sm dark:shadow-none transition-all outline-none relative"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                
-                {/* 3. DYNAMIC PULSING RED BADGE */}
-                {anomalies.length > 0 && (
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-[#0A0A0B] animate-pulse"></span>
-                )}
+                {anomalies.length > 0 && <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-[#0A0A0B] animate-pulse" />}
               </button>
 
-              {/* Notification Menu */}
               {isNotificationOpen && (
-                <div className="absolute right-0 mt-3 w-80 bg-[#0A0A0B] border border-white/[0.07] rounded-xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200 flex flex-col overflow-hidden">
-                  <div className="px-4 py-3 border-b border-white/[0.07] flex justify-between items-center bg-white/[0.01]">
-                    <h3 className="text-[13px] font-medium text-[#F2F2F0]">Notifications ({anomalies.length})</h3>
+                <div className="absolute right-0 mt-3 w-80 bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-3xl border border-gray-200 dark:border-white/[0.07] rounded-xl shadow-xl dark:shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200 flex flex-col overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-200 dark:border-white/[0.07] flex justify-between items-center">
+                    <h3 className="text-[13px] font-medium text-[#1D1D1F] dark:text-[#F2F2F0]">Notifications ({anomalies.length})</h3>
                   </div>
                   
-                  <div className="max-h-[300px] overflow-y-auto divide-y divide-white/[0.03]">
-                    {/* 4. DYNAMIC NOTIFICATIONS MAPPING */}
+                  <div className="max-h-[300px] overflow-y-auto divide-y divide-gray-100 dark:divide-white/[0.03]">
                     {anomalies.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-[12px] text-[#9A9A97]">
-                        Network is secure. No recent threats.
-                      </div>
+                      <div className="px-4 py-8 text-center text-[12px] text-[#86868B] dark:text-[#9A9A97]">Network is secure.</div>
                     ) : (
                       anomalies.slice(0, 5).map((notif) => (
-                        <div 
-                          key={notif.id} 
-                          onClick={() => {
-                            setIsNotificationOpen(false);
-                            navigate('/dashboard/threats'); // 5. Click transports to Threat Monitor
-                          }}
-                          className="px-4 py-3 hover:bg-white/[0.04] transition-colors cursor-pointer border-l-2 border-transparent hover:border-red-500"
-                        >
+                        <div key={notif.id} onClick={() => { setIsNotificationOpen(false); navigate('/dashboard/threats'); }} className="px-4 py-3 transition-colors cursor-pointer border-l-2 border-transparent hover:border-red-500 hover:bg-black/[0.04] dark:hover:bg-white/[0.04]">
                           <div className="flex justify-between items-start mb-1">
-                            <span className="text-[13px] font-semibold text-red-400">{notif.type}</span>
-                            <span className="text-[10px] text-[#9A9A97] opacity-70">{notif.time}</span>
+                            <span className="text-[13px] font-semibold text-red-500">{notif.type}</span>
+                            <span className="text-[10px] text-[#86868B] dark:text-[#9A9A97]">{notif.time}</span>
                           </div>
-                          <p className="text-[11px] text-[#D6D6D3] leading-relaxed mb-0.5">Source: {notif.source}</p>
-                          <p className="text-[10px] text-[#9A9A97] italic">{notif.description}</p>
+                          <p className="text-[11px] text-[#1D1D1F] dark:text-[#D6D6D3] leading-relaxed mb-0.5">Source: {notif.source}</p>
                         </div>
                       ))
                     )}
                   </div>
-                  
-                  {anomalies.length > 0 && (
-                    <div className="px-4 py-2 border-t border-white/[0.07] text-center bg-white/[0.01]">
-                      <Link 
-                        to="/dashboard/threats" 
-                        onClick={() => setIsNotificationOpen(false)} 
-                        className="text-[12px] text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
-                      >
-                        View all in Threat Monitor &rarr;
-                      </Link>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
 
-            {/* Clickable Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button 
-                onClick={() => {
-                  setIsDropdownOpen(!isDropdownOpen);
-                  setIsNotificationOpen(false); 
-                }}
-                className="flex items-center gap-2 pl-4 border-l border-white/[0.07] hover:opacity-80 transition-opacity text-left outline-none"
+                onClick={() => { setIsDropdownOpen(!isDropdownOpen); setIsNotificationOpen(false); }}
+                className="flex items-center gap-2 pl-4 border-l border-gray-200 dark:border-white/[0.07] transition-opacity text-left outline-none hover:opacity-70"
               >
-                <div className="w-7 h-7 rounded bg-white/10 flex items-center justify-center text-[12px] font-bold text-white">
+                <div className="w-7 h-7 rounded flex items-center justify-center text-[12px] font-bold bg-gray-100 text-gray-700 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none transition-colors">
                   {getInitials(user?.full_name)}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[12px] font-medium leading-tight text-[#F2F2F0]">
-                    {user?.full_name || 'Loading...'}
-                  </span>
-                  <span className="text-[10px] text-[#9A9A97] leading-tight capitalize">
-                    {userRole}
-                  </span>
+                  <span className="text-[12px] font-medium leading-tight text-[#1D1D1F] dark:text-[#F2F2F0]">{user?.full_name || 'Loading...'}</span>
+                  <span className="text-[10px] leading-tight capitalize text-[#86868B] dark:text-[#9A9A97]">{userRole}</span>
                 </div>
-                <svg className={`w-3.5 h-3.5 text-[#9A9A97] ml-1 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className={`w-3.5 h-3.5 ml-1 transition-transform text-[#86868B] dark:text-[#9A9A97] ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-3 w-56 bg-[#0A0A0B] border border-white/[0.07] rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="px-4 py-2.5 border-b border-white/[0.07] mb-1">
-                    <p className="text-[11px] text-[#9A9A97] mb-0.5">Signed in as</p>
-                    <p className="text-[13px] font-medium text-[#F2F2F0] truncate">
-                      {user?.email}
-                    </p>
-                    <p className="text-[11px] text-[#9A9A97] truncate mt-0.5">
-                      {user?.full_name}
-                    </p>
+                <div className="absolute right-0 mt-3 w-56 bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-3xl border border-gray-200 dark:border-white/[0.07] rounded-xl shadow-xl dark:shadow-2xl py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 py-2.5 border-b border-gray-200 dark:border-white/[0.07] mb-1">
+                    <p className="text-[11px] mb-0.5 text-[#86868B] dark:text-[#9A9A97]">Signed in as</p>
+                    <p className="text-[13px] font-medium truncate text-[#1D1D1F] dark:text-[#F2F2F0]">{user?.email}</p>
                   </div>
                   
-                  <Link 
-                    to="/dashboard/profile" 
-                    onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-[#D6D6D3] hover:bg-white/[0.04] hover:text-white transition-colors"
-                  >
+                  <Link to="/dashboard/profile" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2 text-[13px] transition-colors text-[#1D1D1F] dark:text-[#D6D6D3] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-black dark:hover:text-white">
                     <svg className="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                     My Profile
                   </Link>
                   
-                  <button 
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] text-red-400 hover:bg-red-400/10 transition-colors border-t border-white/[0.07] mt-1 pt-2 cursor-pointer"
-                  >
+                  <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] text-red-500 transition-colors border-t border-gray-200 dark:border-white/[0.07] mt-1 pt-2 cursor-pointer hover:bg-red-50 dark:hover:bg-red-500/10">
                     <svg className="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
@@ -256,15 +220,13 @@ const DashboardLayout = () => {
                 </div>
               )}
             </div>
-
           </div>
         </header>
 
         <div className="flex-1 p-8">
-          <Outlet />
+          <Outlet context={{ theme }} />
         </div>
       </main>
-
     </div>
   );
 };

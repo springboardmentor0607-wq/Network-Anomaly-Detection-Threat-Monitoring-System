@@ -1,27 +1,27 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-
-  // Check for existing token and user on load
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
+  // Royal Upgrade: Synchronous Lazy Initialization.
+  // React reads localStorage BEFORE the first render, preventing premature redirects.
+  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+  
+  const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem('user');
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    try {
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (error) {
+      console.error("Failed to parse stored user", error);
+      return null;
     }
-  }, []);
+  });
 
   const login = (newToken, userData) => {
     setToken(newToken);
     setUser(userData);
     localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(userData)); // Save the entire user object
+    localStorage.setItem('user', JSON.stringify(userData)); 
   };
 
   const logout = () => {

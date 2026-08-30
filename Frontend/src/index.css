@@ -1,1 +1,41 @@
 @import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  /* Dynamic Toast & Theme Variables */
+  :root {
+    --toast-bg: rgba(255, 255, 255, 0.7);
+    --toast-text: #1D1D1F;
+    --toast-border: rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark {
+    --toast-bg: rgba(28, 28, 30, 0.75);
+    --toast-text: #F2F2F0;
+    --toast-border: rgba(255, 255, 255, 0.15);
+  }
+
+  body {
+    @apply bg-[#F5F5F7] dark:bg-[#000000] transition-colors duration-300;
+  }
+}
+
+@layer components {
+  /* True macOS Control Center Glassmorphism */
+  .apple-card {
+    @apply bg-white/40 dark:bg-[#1C1C1E]/40 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] rounded-2xl transition-all duration-300;
+  }
+
+  .apple-text-primary {
+    @apply text-[#1D1D1F] dark:text-[#F2F2F0] font-semibold tracking-tight transition-colors duration-300;
+  }
+
+  .apple-text-muted {
+    @apply text-[#86868B] dark:text-[#9A9A97] font-medium transition-colors duration-300;
+  }
+
+  .apple-inset {
+    @apply bg-black/5 border border-black/5 dark:bg-white/5 dark:border-white/10 rounded-xl transition-colors duration-300;
+  }
+}

@@ -35,15 +35,23 @@ def log_packet_to_db(packet_data: dict):
 # ==========================================
 
 def log_anomaly_to_db(threat_data: dict):
-    """Saves a detected threat to the database permanently."""
+    """Saves a detected threat to the database permanently with SOC dashboard fields."""
+    current_time = datetime.utcnow()
+    
     log_entry = {
-        "timestamp": datetime.utcnow(), # For strict backend sorting
+        "timestamp": current_time, # For strict backend sorting
         "time_formatted": threat_data.get("time", datetime.now().strftime("%I:%M:%S %p")),
         "source": threat_data.get("source", "Live Stream / AI"),
         "type": threat_data.get("type", "Unknown Threat"),
         "description": threat_data.get("description", "Anomalous signature detected."),
         "severity": threat_data.get("severity", "Critical"),
-        "confidence": threat_data.get("confidence", "0.0%")
+        "confidence": threat_data.get("confidence", "0.0%"),
+        
+        # --- NEW MILESTONE 3 FIELDS ---
+        "week_number": current_time.isocalendar()[1], 
+        "status": "Open", 
+        "assigned_to": "Unassigned", 
+        "investigation_notes": []
     }
     try:
         result = incident_logs.insert_one(log_entry)
@@ -52,6 +60,7 @@ def log_anomaly_to_db(threat_data: dict):
         log_entry["id"] = str(result.inserted_id)
         del log_entry["_id"] # Remove raw ObjectId (FastAPI can't JSON-serialize it)
         log_entry["time"] = log_entry.pop("time_formatted")
+        
         return log_entry
     except Exception as e:
         print(f"MongoDB Incident Insert Error: {e}")

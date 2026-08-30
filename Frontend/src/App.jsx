@@ -29,27 +29,27 @@ import ModelPerformance from './pages/ModelPerformance';
 function App() {
   return (
     <>
-      {/* Global Toast Notifications for SOC Alerts */}
+      {/* Global Toast Notifications synced with CSS variables for glassmorphism */}
       <Toaster 
         position="top-right" 
         reverseOrder={false} 
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#0A0A0B',
-            color: '#F2F2F0',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'var(--toast-bg, rgba(255, 255, 255, 0.7))',
+            color: 'var(--toast-text, #1D1D1F)',
+            border: '1px solid var(--toast-border, rgba(0, 0, 0, 0.05))',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
           },
         }}
       />
 
       <Routes>
-        {/* Public Routes - Anyone can access these */}
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Protected Dashboard Routes - Requires Login */}
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
@@ -64,7 +64,6 @@ function App() {
             <Route path="analytics" element={<Analytics />} />
             <Route path="security" element={<SecurityAnalytics />} />
             
-            {/* Admin-Only Routes - Requires 'administrator' role */}
             <Route element={<ProtectedRoute allowedRoles={['administrator']} />}>
               <Route path="team" element={<TeamManagement />} />
               <Route path="settings" element={<Settings />} />
