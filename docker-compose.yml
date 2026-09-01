@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: netshield-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: netshield
+      POSTGRES_PASSWORD: netshield_pass
+      POSTGRES_DB: netshield_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netshield -d netshield_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: netshield-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=NetShield AI
+      - APP_ENV=development
+      - DEBUG=True
+      - DATABASE_URL=postgresql://netshield:netshield_pass@postgres:5432/netshield_db
+      - SECRET_KEY=netshield_super_secret_development_key_change_in_production_32bytes
+      - JWT_SECRET_KEY=netshield_jwt_secret_development_key_change_in_production_32bytes
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+      - ./ml_artifacts:/app/ml_artifacts
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: netshield-frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

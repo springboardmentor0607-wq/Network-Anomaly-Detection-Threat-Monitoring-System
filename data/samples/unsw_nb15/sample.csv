@@ -1,0 +1,5 @@
+srcip,sport,dstip,dsport,proto,state,dur,sbytes,dbytes,spkts,dpkts,attack_cat,label
+192.168.1.50,49152,10.0.0.2,80,tcp,FIN,0.12,1200,4500,10,5,Normal,0
+203.0.113.24,58912,10.0.0.5,8080,udp,CON,5.12,980400,0,1420,0,Fuzzers,1
+198.51.100.88,33412,10.0.0.2,22,tcp,CON,3.84,124000,89000,540,480,Exploits,1
+192.168.1.110,53210,8.8.8.8,53,udp,INT,0.04,148,250,2,2,Normal,0
