@@ -165,7 +165,7 @@ export default function DashboardStatsCharts({ dataset }: { dataset?: string }) 
                 cy="50%"
                 innerRadius={60}
                 outerRadius={80}
-                paddingAngle={5}
+                paddingAngle={(data.protocols || []).length > 1 ? 5 : 0}
                 dataKey="value"
                 stroke="none"
               >

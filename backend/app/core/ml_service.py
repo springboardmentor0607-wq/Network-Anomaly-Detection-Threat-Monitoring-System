@@ -125,5 +125,7 @@ class MLService:
             logger.error(f"Prediction error for {dataset}: {e}")
             return {"error": str(e), "status": "failed"}
 
-# Create a singleton instance
-ml_service = MLService(base_model_dir=r"e:\NetShield\backend\app\models")
+# Create a singleton instance using a path relative to this file,
+# so it works both in local development and inside Docker containers.
+_models_dir = os.path.join(os.path.dirname(__file__), "..", "models")
+ml_service = MLService(base_model_dir=_models_dir)

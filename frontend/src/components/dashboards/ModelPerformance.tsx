@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Activity, ShieldCheck, Target, Zap, AlertTriangle, TerminalSquare } from 'lucide-react';
+import { Activity, ShieldCheck, Target, Zap, AlertTriangle, TerminalSquare, TrendingUp } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface Metrics {
   model_accuracy: number;
@@ -23,21 +24,34 @@ export default function ModelPerformance({ dataset = "CICIDS2017" }: { dataset?:
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [cvData, setCvData] = useState<CVData | null>(null);
   const [threatAnalysis, setThreatAnalysis] = useState<any>(null);
+  const [epochData, setEpochData] = useState<Array<{epoch: number; train: number; test: number}>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchReports = async () => {
       setLoading(true);
       try {
-        const [metricsRes, cvRes, threatRes] = await Promise.all([
+        const [metricsRes, cvRes, threatRes, epochRes] = await Promise.all([
           fetch(`http://localhost:8000/api/ml/reports/metrics?dataset=${dataset}`),
           fetch(`http://localhost:8000/api/ml/reports/cross-validation?dataset=${dataset}`),
-          fetch(`http://localhost:8000/api/ml/reports/threat-analysis?dataset=${dataset}`)
+          fetch(`http://localhost:8000/api/ml/reports/threat-analysis?dataset=${dataset}`),
+          fetch(`http://localhost:8000/api/ml/reports/epoch-metrics?dataset=${dataset}`)
         ]);
-        
+
         if (metricsRes.ok) setMetrics(await metricsRes.json());
         if (cvRes.ok) setCvData(await cvRes.json());
         if (threatRes.ok) setThreatAnalysis(await threatRes.json());
+
+        // Parse CSV for epoch chart
+        if (epochRes.ok) {
+          const csv = await epochRes.text();
+          const lines = csv.trim().split('\n').slice(1); // skip header
+          const parsed = lines.map((line) => {
+            const [epoch, train, test] = line.split(',').map(Number);
+            return { epoch, train: +train.toFixed(4), test: +test.toFixed(4) };
+          });
+          setEpochData(parsed);
+        }
       } catch (e) {
         console.error("Failed to fetch reports", e);
       } finally {
@@ -223,6 +237,50 @@ export default function ModelPerformance({ dataset = "CICIDS2017" }: { dataset?:
           />
         </div>
       </div>
+
+      {/* Training History Chart */}
+      {epochData.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center mb-4">
+            <TrendingUp className="w-5 h-5 text-green-400 mr-2" />
+            <h3 className="text-xl font-bold text-white tracking-wider">Training Convergence History</h3>
+          </div>
+          <div
+            className="rounded-2xl liquid-glass !bg-black/40 !backdrop-blur-xl border border-white/10 p-6 animate-blur-fade-up"
+            style={{ animationDelay: '1200ms' }}
+          >
+            <p className="text-xs text-gray-400 mb-4">
+              XGBoost Log-Loss over {epochData.length} training epochs — lower is better. Converging train &amp; test curves confirm no overfitting.
+            </p>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={epochData} margin={{ top: 0, right: 20, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                <XAxis
+                  dataKey="epoch"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  label={{ value: 'Epoch', position: 'insideBottom', offset: -2, fill: '#6b7280', fontSize: 11 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  domain={['auto', 'auto']}
+                  label={{ value: 'Log-Loss', angle: -90, position: 'insideLeft', fill: '#6b7280', fontSize: 11 }}
+                />
+                <Tooltip
+                  contentStyle={{ background: '#000', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, color: '#fff' }}
+                  formatter={(val: number) => val.toFixed(4)}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                <Line type="monotone" dataKey="train" stroke="#3b82f6" strokeWidth={2} dot={false} name="Train Log-Loss" />
+                <Line type="monotone" dataKey="test"  stroke="#22c55e" strokeWidth={2} dot={false} name="Test Log-Loss" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -7,7 +7,7 @@ import json
 from app.core.ml_service import ml_service
 
 router = APIRouter()
-REPORTS_DIR = r"e:\NetShield\backend\reports"
+REPORTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "reports")
 
 class PredictionRequest(BaseModel):
     features: Dict[str, float]
