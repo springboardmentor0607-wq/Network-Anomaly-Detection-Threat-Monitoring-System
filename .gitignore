@@ -51,6 +51,7 @@ env.bak/
 venv.bak/
 backend/venv/
 backend/env/
+.venv/
 
 # ------------------------------------------------------------------------------
 # 3. Database & Local Storage
