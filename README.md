@@ -2,529 +2,570 @@
 
 ## Network Anomaly Detection & Threat Monitoring System
 
-NetShield AI is an AI-powered network security monitoring platform designed to detect, classify, analyze, and monitor suspicious network activity in real time.
+NetShield AI is an AI-powered network security monitoring platform designed to detect, classify, analyze, and manage suspicious network activities in real time.
 
-The system combines **Machine Learning, FastAPI, React, MongoDB, and Docker** to provide a complete security monitoring environment.
+The system combines **Machine Learning, Network Intrusion Detection, Real-Time Monitoring, Security Analytics, Incident Investigation, and Automated Security Reporting** into a single security operations dashboard.
 
-## 🎯 Project Objective
+> **Milestone 4 — Testing, Deployment & Documentation**
 
-The main objective of NetShield AI is to identify abnormal network behavior and potential cyber threats using a **Random Forest machine learning model** trained on the **NSL-KDD dataset**.
+---
 
-The platform provides security teams with real-time visibility into:
+## 📌 Project Overview
 
-* Network security events
+Modern networks generate a large amount of traffic, making it difficult for security teams to manually identify suspicious activities.
+
+NetShield AI addresses this challenge by using a **Random Forest machine learning model** trained on the **NSL-KDD dataset** to identify network traffic patterns and classify potential threats.
+
+The platform provides:
+
+* 🔐 User authentication
+* 📡 Real-time network monitoring
+* 🚨 Threat detection and alert management
+* 🤖 AI-based threat prediction
+* 📈 Security analytics
+* ◷ Threat timeline
+* 🔍 Incident investigation
+* 📄 Automated security reports
+* 🐳 Docker-based deployment
+* 🗄️ MongoDB data storage
+
+---
+
+# ✨ Key Features
+
+## 🔐 User Authentication
+
+Users can securely register and log in to the NetShield AI platform.
+
+## 📡 Live Network Monitoring
+
+Provides continuous monitoring of network activity and displays:
+
+* Network events
 * Detected threats
-* Threat severity
 * Risk scores
-* AI prediction confidence
-* Security analytics
-* Threat timelines
-* Incident investigation
-* Security reports
+* Severity levels
+* Incoming and outgoing traffic
+* Suspicious connections
+* Monitoring status
 
-## 🚀 Key Features
+## 🚨 Threat Alerts
 
-* 🔐 User Registration & Login
-* 📡 Real-Time Network Monitoring
-* 🚨 Threat Detection & Alert Management
-* 🤖 AI-Based Threat Prediction
-* 📊 Security Analytics Dashboard
-* 📈 Threat Timeline Visualization
-* 🔍 Incident Investigation
-* 🧠 Random Forest Machine Learning Model
-* 📄 Automated Security Report Generation
-* 🗄️ MongoDB Alert Storage
-* 🐳 Docker Containerized Deployment
-* ⚡ Auto-refreshing Security Monitoring
-
-## 📌 Project Status
-
-**Milestone 4 — Testing, Deployment & Documentation**
-
-The system has been functionally tested and containerized using Docker Compose.
-
-## ✅ Current System Components
-
-| Component | Technology       |    Port | Status     |
-| --------- | ---------------- | ------: | ---------- |
-| Frontend  | React + Nginx    |    3000 | 🟢 Running |
-| Backend   | FastAPI + Python |    8000 | 🟢 Running |
-| Database  | MongoDB 8        |   27017 | 🟢 Running |
-| AI Engine | Random Forest    | Backend | 🟢 Online  |
-
-
-## 🛠️ Technology Stack
-
-### Frontend
-
-* React.js
-* HTML5
-* CSS3
-* React Router
-* Recharts
-
-### Backend
-
-* Python
-* FastAPI
-* Uvicorn
-* PyMongo
-
-### Database
-
-* MongoDB 8
-
-### Artificial Intelligence & Machine Learning
-
-* Scikit-learn
-* Random Forest Classifier
-* NSL-KDD Dataset
-
-### Deployment & Infrastructure
-
-* Docker
-* Docker Compose
-* Nginx
-* AWS / Azure *(planned cloud deployment)*
-
-### Reporting
-
-* ReportLab
-* PDF Security Reports
-
-
-## 🏗️ System Architecture
-
-NetShield AI follows a three-tier architecture consisting of the React frontend, FastAPI backend, and MongoDB database.
+Security analysts can review detected security events and manage incidents through different workflow states:
 
 ```text
-                    🛡️ NETSHIELD AI
-                         │
-          ┌──────────────┴──────────────┐
-          │                             │
-     React Frontend                FastAPI Backend
-       + Nginx                         │
-      Port 3000                        │
-          │                    ┌────────┴────────┐
-          │                    │                 │
-          │              AI/ML Engine       API Routes
-          │              Random Forest           │
-          │                    │                 │
-          │                    └────────┬────────┘
-          │                             │
-          └─────────────────────────────┤
-                                        │
-                                   MongoDB 8
-                                   Port 27017
-                                        │
-                                 Users & Alerts
+New → Acknowledged → Investigating → Resolved
 ```
 
-### 🔄 Application Workflow
+## 📈 Security Analytics
 
-```text
-Network Traffic
-      ↓
-Data Processing
-      ↓
-AI/ML Prediction
-      ↓
-Threat Classification
-      ↓
-Risk Score Calculation
-      ↓
-Security Alert Generation
-      ↓
-MongoDB Storage
-      ↓
-React Security Dashboard
-      ↓
-Investigation & Security Reporting
-```
+Provides security intelligence through:
 
-### 🧩 Main Components
+* Threat activity metrics
+* Risk analysis
+* Threat distribution
+* Attack velocity
+* Source IP concentration
+* AI model performance
+* Attack pattern analysis
+* Severity distribution
+* Active threats
+* Recent security events
 
-| Component           | Responsibility                             |
-| ------------------- | ------------------------------------------ |
-| React Frontend      | Provides the security monitoring interface |
-| Nginx               | Serves the React production build          |
-| FastAPI Backend     | Handles APIs and application logic         |   
-| Random Forest Model | Predicts network threats                   |
-| MongoDB             | Stores users and security alerts           |
-| ReportLab           | Generates security reports                 |
-| Docker              | Containerizes the application              |
-| Docker Compose      | Runs the complete application stack        |
+## 🤖 AI Predictions
 
+The AI prediction module uses the trained Random Forest model to classify network traffic and provide:
 
-## 🤖 AI & Machine Learning
+* Threat type
+* Prediction
+* Severity
+* Confidence
+* Risk score
 
-NetShield AI uses a **Random Forest Classifier** to identify and classify suspicious network activity.
-
-### 📚 Dataset
-
-The machine learning model is trained using the **NSL-KDD dataset**, a widely used dataset for network intrusion detection research.
-
-The dataset contains network connection records with multiple features that are used to identify different types of network activity.
-
-### 🧠 Machine Learning Pipeline
-
-```text
-NSL-KDD Dataset
-       ↓
-Data Preprocessing
-       ↓
-Feature Preparation
-       ↓
-Random Forest Training
-       ↓
-Model Evaluation
-       ↓
-Threat Prediction
-       ↓
-Risk Assessment
-       ↓
-Security Alert
-```
-
-### 🔍 Threat Categories
-
-The system can classify network activity into categories such as:
+Supported threat categories include:
 
 * Normal Traffic
 * DoS Attack
 * Probe
 * R2L
 
-### 📊 Prediction Information
+## ◷ Threat Timeline
 
-For detected network events, the AI system provides:
+Displays security events in chronological order to help analysts understand the progression of network incidents.
 
-* Threat type
-* Prediction result
-* Severity level
-* Prediction confidence
-* Risk score
+## 🔍 Incident Investigation
 
-### ⚙️ AI Engine
+Security analysts can investigate individual alerts and view:
 
-The Random Forest model is integrated into the FastAPI backend and is used for real-time threat prediction during network monitoring.
+* Incident evidence
+* Network telemetry
+* Connection details
+* Source and destination information
+* Protocol
+* Ports
+* Packet size
+* Duration
+* Investigation notes
+* Incident workflow status
 
+## 📄 Automated Security Reports
 
-## 📋 Application Features & Modules
-
-### 🔐 1. User Authentication
-
-The authentication module provides secure access to the NetShield AI platform.
-
-Features include:
-
-* User registration
-* User login
-* Authentication validation
-* Protected application access
+NetShield AI can generate PDF security reports containing information about investigated security incidents.
 
 ---
 
-### 📡 2. Live Network Monitoring
-
-The Live Network module provides real-time visibility into network security events.
-
-It displays:
-
-* Total network events
-* Detected threats
-* Critical threats
-* Average risk
-* Recent network events
-* Monitoring status
-* AI model status
-* Database connection status
-
-The dashboard automatically refreshes to provide updated security information.
-
----
-
-### 🚨 3. Threat Alerts
-
-The Threat Alerts module allows security events to be monitored and managed.
-
-Security analysts can:
-
-* View detected alerts
-* Check threat severity
-* View risk scores
-* Acknowledge alerts
-* Start investigations
-* Resolve alerts
-* Add investigation notes
-* Generate security reports
-
----
-
-### 📊 4. Security Analytics
-
-The Security Analytics module provides a detailed overview of network security activity.
-
-It includes:
-
-* Total events
-* Active threats
-* Critical threats
-* High-severity threats
-* Resolved incidents
-* AI confidence
-* Average risk
-* Attack velocity
-* Source IP concentration
-* Threat distribution
-* Risk escalation
-* Attack pattern analysis
-
----
-
-### ✦ 5. AI Predictions
-
-The AI Predictions module displays machine learning predictions generated by the Random Forest model.
-
-It provides:
-
-* Total predictions
-* Threat predictions
-* Critical threats
-* Average AI confidence
-* Threat rate
-* Threat distribution
-* Severity distribution
-* Risk distribution
-* Recent AI decisions
-
----
-
-### ◷ 6. Threat Timeline
-
-The Threat Timeline module provides a chronological view of security events.
-
-It helps security analysts understand:
-
-* When threats occurred
-* Threat types
-* Severity levels
-* Risk levels
-* Security event progression
-
----
-
-### 🔍 7. Incident Investigation
-
-The Investigation module provides detailed information about individual security incidents.
-
-Analysts can:
-
-* Review security events
-* Examine threat information
-* Check risk scores
-* View AI predictions
-* Update investigation status
-* Add investigation notes
-* Generate security reports
-
----
-
-### 📄 8. Security Reports
-
-NetShield AI can generate PDF security reports for investigated incidents.
-
-Reports provide a structured summary of the detected security event and its associated security information.
-
-
-## 🐳 Docker Deployment
-
-NetShield AI is containerized using Docker and Docker Compose.
-
-The application consists of three main containers:
+# 🏗️ System Architecture
 
 ```text
-┌─────────────────────────────────────┐
-│          NetShield AI                │
-├─────────────────────────────────────┤
-│                                     │
-│  React + Nginx       → Port 3000   │
-│                                     │
-│  FastAPI Backend     → Port 8000   │
-│                                     │
-│  MongoDB 8           → Port 27017  │
-│                                     │
-└─────────────────────────────────────┘
+                    ┌───────────────────────┐
+                    │      NETSHIELD AI     │
+                    │  Network Security     │
+                    │      Platform         │
+                    └───────────┬───────────┘
+                                │
+                 ┌──────────────┴──────────────┐
+                 │                             │
+        ┌────────▼────────┐          ┌─────────▼────────┐
+        │ React Frontend  │          │ FastAPI Backend  │
+        │ + Nginx         │          │ + Python         │
+        │ Port 3000       │          │ Port 8000        │
+        └────────┬────────┘          └─────────┬────────┘
+                 │                             │
+                 │                             │
+                 │                    ┌────────▼────────┐
+                 │                    │ Random Forest   │
+                 │                    │ AI Engine       │
+                 │                    └────────┬────────┘
+                 │                             │
+                 └──────────────┬──────────────┘
+                                │
+                       ┌────────▼────────┐
+                       │    MongoDB 8    │
+                       │    Port 27017   │
+                       └─────────────────┘
 ```
 
-### 📦 Docker Services
+---
 
-| Service  | Container            |  Port |
-| -------- | -------------------- | ----: |
-| Frontend | `netshield-frontend` |  3000 |
-| Backend  | `netshield-backend`  |  8000 |
-| Database | `netshield-mongodb`  | 27017 |
+# 🔄 Application Workflow
 
-### ⚙️ Prerequisites
+```text
+User Login / Registration
+          │
+          ▼
+     Security Dashboard
+          │
+          ▼
+ Live Network Monitoring
+          │
+          ▼
+   Network Event Detection
+          │
+          ▼
+    Random Forest Model
+          │
+          ▼
+ Threat Classification
+          │
+          ▼
+     Risk Assessment
+          │
+          ▼
+      Threat Alert
+          │
+          ▼
+ Incident Investigation
+          │
+          ▼
+ Investigation Resolution
+          │
+          ▼
+   PDF Security Report
+```
 
-Before running NetShield AI with Docker, install:
+---
+
+# 🧠 Artificial Intelligence & Machine Learning
+
+## Machine Learning Model
+
+NetShield AI uses a **Random Forest Classifier** for network anomaly detection and threat classification.
+
+The model is trained using the **NSL-KDD network intrusion detection dataset**.
+
+### Machine Learning Pipeline
+
+```text
+NSL-KDD Dataset
+       │
+       ▼
+Data Preprocessing
+       │
+       ▼
+Feature Encoding
+       │
+       ▼
+Feature Scaling
+       │
+       ▼
+Random Forest Training
+       │
+       ▼
+Threat Prediction
+       │
+       ▼
+Severity & Risk Assessment
+```
+
+### Input Features
+
+The NSL-KDD dataset contains network traffic features related to:
+
+* Connection duration
+* Protocol
+* Service
+* Network flags
+* Source bytes
+* Destination bytes
+* Connection statistics
+* Host-based traffic information
+* Other network behavior characteristics
+
+### Threat Categories
+
+| Category       | Description                        |
+| -------------- | ---------------------------------- |
+| Normal Traffic | Legitimate network activity        |
+| DoS Attack     | Denial-of-Service related activity |
+| Probe          | Network scanning or reconnaissance |
+| R2L            | Remote-to-Local attack             |
+
+### Prediction Output
+
+Each prediction can contain:
+
+```text
+Threat Type
+Prediction
+Severity
+AI Confidence
+Risk Score
+```
+
+---
+
+# 🛠️ Technology Stack
+
+## Frontend
+
+* React.js
+* JavaScript
+* HTML5
+* CSS3
+* React Router
+* Recharts
+* Nginx
+
+## Backend
+
+* Python
+* FastAPI
+* Uvicorn
+* PyMongo
+
+## Database
+
+* MongoDB 8
+
+## Artificial Intelligence
+
+* Scikit-learn
+* Random Forest
+* NSL-KDD Dataset
+* NumPy
+* Pandas
+* Joblib
+
+## Reporting
+
+* ReportLab
+* PDF generation
+
+## Deployment
+
+* Docker
+* Docker Compose
+* Nginx
+
+## Future Cloud Deployment
+
+* AWS
+* Azure
+
+Cloud deployment can be added depending on available free-tier or academic resources.
+
+---
+
+# 📂 Project Structure
+
+```text
+NetShield AI/
+│
+├── backend/
+│   ├── app/
+│   │   ├── ai/
+│   │   │   ├── classifier.py
+│   │   │   ├── detector.py
+│   │   │   ├── evaluate_model.py
+│   │   │   ├── preprocessing.py
+│   │   │   ├── risk_score.py
+│   │   │   ├── report_generator.py
+│   │   │   ├── train_model.py
+│   │   │   └── model files
+│   │   │
+│   │   ├── routes/
+│   │   ├── database.py
+│   │   └── main.py
+│   │
+│   ├── data/
+│   ├── dataset/
+│   ├── reports/
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── Login.js
+│   │   │   ├── Register.js
+│   │   │   ├── Dashboard.js
+│   │   │   ├── LiveNetwork.js
+│   │   │   ├── ThreatAlerts.js
+│   │   │   ├── Analytics.js
+│   │   │   ├── Predictions.js
+│   │   │   ├── ThreatTimeline.js
+│   │   │   └── Investigation.js
+│   │   │
+│   │   └── App.js
+│   │
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── package.json
+│
+├── screenshots/
+│   ├── login.png
+│   ├── register.png
+│   ├── dashboard_overview.png
+│   ├── dashboard_details.png
+│   ├── livenetwork_overview.png
+│   ├── livenetwork_charts.png
+│   ├── livenetwork_events.png
+│   ├── livenetwork_monitoring.png
+│   ├── threatalerts_overview.png
+│   ├── threatalerts_table.png
+│   ├── analytics_overview.png
+│   ├── analytics_activity.png
+│   ├── analytics_ai_performance.png
+│   ├── analytics_patterns.png
+│   ├── analytics_threats.png
+│   ├── analytics_events.png
+│   ├── predictions_overview.png
+│   ├── predictions_distribution.png
+│   ├── predictions_decisions.png
+│   ├── timeline_overview.png
+│   ├── timeline_events.png
+│   ├── investigation_overview.png
+│   ├── investigation_info.png
+│   ├── investigation_management.png
+│   └── investigation_details.png
+│
+├── docker-compose.yml
+├── .gitignore
+└── README.md
+```
+
+---
+
+# 🐳 Docker Deployment
+
+NetShield AI is containerized using Docker Compose.
+
+The application consists of three main services:
+
+| Service  | Technology       |  Port |
+| -------- | ---------------- | ----: |
+| Frontend | React + Nginx    |  3000 |
+| Backend  | FastAPI + Python |  8000 |
+| Database | MongoDB 8        | 27017 |
+
+---
+
+## Prerequisites
+
+Install:
 
 * Docker Desktop
-* Docker Compose
 * Git
+* Node.js (for local frontend development)
+* Python (for local backend development)
 
-Docker Desktop should be configured to use the **WSL 2 backend** on Windows.
+Docker Desktop should be running before starting the containers.
 
-### 🚀 Start the Application
+---
 
-Open PowerShell in the project root directory:
+## Start the Application
 
-```powershell
+From the project root:
+
+```bash
 docker compose up -d
 ```
 
-### 🔎 Check Container Status
+---
 
-Run:
+## Check Running Containers
 
-```powershell
+```bash
 docker compose ps
 ```
 
-All three containers should show an `Up` status.
+Expected services:
 
-### 🌐 Access the Application
+```text
+netshield-frontend
+netshield-backend
+netshield-mongodb
+```
 
-After the containers start, open:
+---
 
-**Frontend:**
+## Access the Application
+
+### Frontend
 
 ```text
 http://localhost:3000
 ```
 
-**Backend:**
+### Backend
 
 ```text
 http://localhost:8000
 ```
 
-**FastAPI Swagger Documentation:**
+### FastAPI Swagger Documentation
 
 ```text
 http://localhost:8000/docs
 ```
 
-### 🛑 Stop the Application
+---
 
-To stop the containers:
+## Stop the Application
 
-```powershell
+```bash
 docker compose down
 ```
 
-### 🔄 Rebuild the Application
+---
+
+## Rebuild the Application
 
 After making code changes:
 
-```powershell
+```bash
 docker compose build
 docker compose up -d
 ```
 
-### 📋 View Logs
+---
 
-Backend logs:
+## View Backend Logs
 
-```powershell
+```bash
 docker compose logs backend
 ```
 
-Frontend logs:
+## View Frontend Logs
 
-```powershell
+```bash
 docker compose logs frontend
 ```
 
-MongoDB logs:
+## View MongoDB Logs
 
-```powershell
+```bash
 docker compose logs mongodb
 ```
 
+---
 
-## 🔌 API Endpoints
+# 🔌 API Endpoints
 
-NetShield AI provides REST API endpoints through the FastAPI backend.
+## Authentication
 
-### 🔐 Authentication
-
-| Method | Endpoint    | Description         |
+| Method | Endpoint    | Purpose             |
 | ------ | ----------- | ------------------- |
 | POST   | `/register` | Register a new user |
 | POST   | `/login`    | Authenticate a user |
 
-### 🚨 Alerts
+## Alerts
 
-| Method | Endpoint                         | Description               |
+| Method | Endpoint                         | Purpose                   |
 | ------ | -------------------------------- | ------------------------- |
-| GET    | `/alerts/`                       | Retrieve security alerts  |
+| GET    | `/alerts/`                       | Retrieve alerts           |
 | GET    | `/alerts/{alert_id}`             | Retrieve a specific alert |
-| PATCH  | `/alerts/{alert_id}/workflow`    | Update alert workflow     |
-| PATCH  | `/alerts/{alert_id}/acknowledge` | Acknowledge an alert      |
+| PATCH  | `/alerts/{alert_id}/workflow`    | Update workflow           |
+| PATCH  | `/alerts/{alert_id}/acknowledge` | Acknowledge alert         |
 | POST   | `/alerts/{alert_id}/notes`       | Add investigation notes   |
-| GET    | `/alerts/report/{alert_id}`      | Generate an alert report  |
+| GET    | `/alerts/report/{alert_id}`      | Generate alert report     |
 
-### 📡 Network Monitoring
+## Monitoring
 
-| Method | Endpoint                             | Description                        |
-| ------ | ------------------------------------ | ---------------------------------- |
-| GET    | `/monitoring/generate`               | Generate network monitoring events |
-| GET    | `/monitoring/live-alerts`            | Retrieve live security alerts      |
-| GET    | `/monitoring/status`                 | Retrieve monitoring status         |
-| GET    | `/monitoring/investigate/{alert_id}` | Investigate a security alert       |
-| GET    | `/monitoring/report/{alert_id}`      | Generate a security report         |
+| Method | Endpoint                             | Purpose                     |
+| ------ | ------------------------------------ | --------------------------- |
+| GET    | `/monitoring/live-alerts`            | Retrieve live alerts        |
+| GET    | `/monitoring/status`                 | Retrieve monitoring status  |
+| GET    | `/monitoring/investigate/{alert_id}` | Investigate an alert        |
+| GET    | `/monitoring/report/{alert_id}`      | Generate security report    |
+| POST   | `/monitoring/generate`               | Generate monitoring traffic |
 
-### 🤖 AI Predictions
+## AI Predictions
 
-| Method | Endpoint        | Description                    |
-| ------ | --------------- | ------------------------------ |
-| GET    | `/predictions/` | Retrieve AI threat predictions |
+| Method | Endpoint        | Purpose                 |
+| ------ | --------------- | ----------------------- |
+| GET    | `/predictions/` | Retrieve AI predictions |
 
-### 📊 Analytics
+## Analytics
 
-| Method | Endpoint      | Description                 |
+| Method | Endpoint      | Purpose                     |
 | ------ | ------------- | --------------------------- |
 | GET    | `/analytics/` | Retrieve security analytics |
 
-### ◷ Threat Timeline
+## Threat Timeline
 
-| Method | Endpoint     | Description                     |
-| ------ | ------------ | ------------------------------- |
-| GET    | `/timeline/` | Retrieve threat timeline events |
+| Method | Endpoint     | Purpose                  |
+| ------ | ------------ | ------------------------ |
+| GET    | `/timeline/` | Retrieve threat timeline |
 
-### 📖 API Documentation
+## API Documentation
 
-FastAPI automatically provides interactive API documentation.
-
-Open:
+FastAPI automatically provides interactive API documentation:
 
 ```text
 http://localhost:8000/docs
 ```
 
-The Swagger interface can be used to view and test the available API endpoints.
+---
 
+# 🧪 Testing & Validation
 
-## 🧪 Testing & Performance Results
+Milestone 4 included functional, API, database, performance, and Docker deployment testing.
 
-Testing was performed as part of **Milestone 4 — Testing, Deployment & Documentation**.
+## Functional Testing
 
-The application was tested for functionality, API availability, database connectivity, performance, and Docker deployment.
-
-### ✅ Functional Testing
-
-| Test Case               | Result   |
+| Module                  | Result   |
 | ----------------------- | -------- |
 | User Registration       | ✅ Passed |
 | User Login              | ✅ Passed |
@@ -534,132 +575,213 @@ The application was tested for functionality, API availability, database connect
 | Security Analytics      | ✅ Passed |
 | AI Predictions          | ✅ Passed |
 | Threat Timeline         | ✅ Passed |
+| Incident Investigation  | ✅ Passed |
 | Sidebar Navigation      | ✅ Passed |
 | Docker Deployment       | ✅ Passed |
 
-### 🔌 API Testing
+---
 
-| Test                      |      Result |
+# 🔌 API Testing
+
+The following APIs were tested successfully:
+
+| Endpoint                  | HTTP Status |
 | ------------------------- | ----------: |
-| FastAPI Root Endpoint     |  Successful |
-| `/monitoring/live-alerts` |    HTTP 200 |
-| `/predictions/`           |    HTTP 200 |
-| `/timeline/`              |    HTTP 200 |
-| MongoDB Health Check      | `{ ok: 1 }` |
-| Stored Alert Records      |       1,438 |
+| `/`                       |         200 |
+| `/monitoring/live-alerts` |         200 |
+| `/predictions/`           |         200 |
+| `/timeline/`              |         200 |
 
-### ⚡ Performance Testing
+---
 
-| Component / Test               |    Result |
-| ------------------------------ | --------: |
-| Frontend Response Time         |  81.17 ms |
-| Initial Backend Response       | 656.86 ms |
-| Live Monitoring API            | 142.23 ms |
-| Average of 10 Backend Requests |  ~64.3 ms |
-| Fastest Backend Request        |  31.58 ms |
-| Slowest Backend Request        | 228.02 ms |
+# 🗄️ Database Testing
 
-### 🐳 Docker Resource Usage
+MongoDB connectivity was verified successfully.
 
-| Container | CPU Usage | Memory Usage |
-| --------- | --------: | -----------: |
-| Frontend  |     0.00% |      9.01 MB |
-| Backend   |     0.49% |    302.10 MB |
-| MongoDB   |     1.78% |    164.90 MB |
+```text
+MongoDB Ping Result:
+{ ok: 1 }
+```
 
-### 📋 Testing Conclusion
+The database contained:
 
-The NetShield AI platform successfully completed functional, API, database, performance, and Docker deployment testing.
+```text
+1,438 alert records
+```
 
-All major application modules operated successfully. The tested APIs returned successful responses, MongoDB was connected successfully, and the database contained 1,438 security alert records.
+---
 
-The frontend demonstrated an 81.17 ms response time, while the live monitoring API responded in 142.23 ms. Docker resource utilization remained within the observed system limits during testing.
+# ⚡ Performance Testing
 
+## Frontend Response
 
-## 🖥️ Application Screenshots
+```text
+81.17 ms
+```
+
+## Initial Backend Response
+
+```text
+656.86 ms
+```
+
+## Live Monitoring API
+
+```text
+142.23 ms
+```
+
+## Repeated Backend Requests
+
+10 repeated requests were tested.
+
+```text
+Average: 64.3 ms
+Fastest: 31.58 ms
+Slowest: 228.02 ms
+```
+
+These results indicate that the application remained responsive during local testing.
+
+---
+
+# 📊 Docker Resource Usage
+
+The deployed containers were monitored using Docker statistics.
+
+| Container |   CPU |   Memory |
+| --------- | ----: | -------: |
+| Frontend  | 0.00% |  9.01 MB |
+| Backend   | 0.49% | 302.1 MB |
+| MongoDB   | 1.78% | 164.9 MB |
+
+Total observed memory usage was approximately:
+
+```text
+476 MB
+```
+
+---
+
+# 📸 Application Screenshots
 
 The following screenshots demonstrate the main modules and functionality of the NetShield AI platform.
 
-### 🔐 Login
+---
+
+## 🔐 Authentication
+
+### Login
 
 The login page provides authenticated access to the NetShield AI security platform.
 
-> 📷 *Add Login page screenshot here*
+![Login](screenshots/login.png)
 
----
-
-### 📝 User Registration
+### User Registration
 
 The registration page allows new users to create an account.
 
-> 📷 *Add Registration page screenshot here*
+![User Registration](screenshots/register.png)
 
 ---
 
-### 📊 Security Dashboard
+## 📊 Security Dashboard
 
 The main dashboard provides an overview of network security activity, detected threats, risk levels, and system status.
 
-> 📷 *Add Dashboard screenshot here*
+![Dashboard Overview](screenshots/dashboard_overview.png)
+
+![Dashboard Details](screenshots/dashboard_details.png)
 
 ---
 
-### 📡 Live Network Monitoring
+## 📡 Live Network Monitoring
 
-The Live Network page displays real-time network events, detected threats, risk information, and monitoring status.
+The Live Network page displays real-time network events, detected threats, risk information, charts, and continuous monitoring status.
 
-> 📷 *Add Live Network screenshot here*
+![Live Network Overview](screenshots/livenetwork_overview.png)
 
----
+![Live Network Charts](screenshots/livenetwork_charts.png)
 
-### 🚨 Threat Alerts
+![Live Network Events](screenshots/livenetwork_events.png)
 
-The Threat Alerts module allows security analysts to review and manage detected security incidents.
-
-> 📷 *Add Threat Alerts screenshot here*
+![Live Network Monitoring](screenshots/livenetwork_monitoring.png)
 
 ---
 
-### 📈 Security Analytics
+## 🚨 Threat Alerts
 
-The Security Analytics page provides detailed security metrics, threat distributions, risk analysis, and attack patterns.
+The Threat Alerts module allows security analysts to review, investigate, acknowledge, and manage detected security incidents.
 
-> 📷 *Add Security Analytics screenshot here*
+![Threat Alerts Overview](screenshots/threatalerts_overview.png)
 
----
-
-### 🤖 AI Predictions
-
-The AI Predictions page displays machine learning predictions, threat classifications, confidence levels, severity, and risk scores.
-
-> 📷 *Add AI Predictions screenshot here*
+![Threat Alerts Table](screenshots/threatalerts_table.png)
 
 ---
 
-### ◷ Threat Timeline
+## 📈 Security Analytics
 
-The Threat Timeline provides a chronological view of detected security events.
+The Security Analytics page provides detailed security metrics, threat distributions, risk analysis, AI performance, attack patterns, active threats, and recent security events.
 
-> 📷 *Add Threat Timeline screenshot here*
+![Analytics Overview](screenshots/analytics_overview.png)
+
+![Analytics Activity](screenshots/analytics_activity.png)
+
+![AI Performance Analytics](screenshots/analytics_ai_performance.png)
+
+![Attack Pattern Analytics](screenshots/analytics_patterns.png)
+
+![Active Threats Analytics](screenshots/analytics_threats.png)
+
+![Recent Security Events](screenshots/analytics_events.png)
 
 ---
 
-### 🔍 Incident Investigation
+## 🤖 AI Predictions
 
-The Investigation page provides detailed information about individual security incidents and allows analysts to manage their investigation workflow.
+The AI Predictions page displays machine learning predictions, threat classifications, confidence levels, severity, risk scores, and recent AI decisions.
 
-> 📷 *Add Investigation screenshot here*
+![AI Predictions Overview](screenshots/predictions_overview.png)
+
+![Prediction Distribution](screenshots/predictions_distribution.png)
+
+![Recent AI Decisions](screenshots/predictions_decisions.png)
 
 ---
 
-### 📄 Security Report
+## ◷ Threat Timeline
 
-NetShield AI can generate PDF reports containing information about investigated security incidents.
+The Threat Timeline provides a chronological view of detected security events and their associated threat information.
 
-> 📷 *Add Security Report screenshot here*
+![Threat Timeline Overview](screenshots/timeline_overview.png)
 
+![Threat Timeline Events](screenshots/timeline_events.png)
 
-## 🔮 Future Enhancements
+---
+
+## 🔍 Incident Investigation
+
+The Investigation page provides detailed information about individual security incidents and allows analysts to manage the investigation workflow.
+
+![Investigation Overview](screenshots/investigation_overview.png)
+
+![Investigation Information](screenshots/investigation_info.png)
+
+![Investigation Management](screenshots/investigation_management.png)
+
+![Investigation Details](screenshots/investigation_details.png)
+
+---
+
+## 📄 Security Report
+
+NetShield AI can generate PDF security reports containing information about investigated security incidents.
+
+Security reports are generated dynamically by the application using the ReportLab library.
+
+---
+
+# 🔮 Future Enhancements
 
 The following enhancements can be considered for future versions of NetShield AI:
 
@@ -675,7 +797,7 @@ The following enhancements can be considered for future versions of NetShield AI
 
 ---
 
-## 🎯 Project Outcomes
+# 🎯 Project Outcomes
 
 NetShield AI demonstrates the integration of:
 
@@ -688,40 +810,46 @@ NetShield AI demonstrates the integration of:
 * Incident investigation
 * Automated security reporting
 * REST API development
+* MongoDB database management
 * Docker-based deployment
 
 The project provides a complete foundation for an AI-assisted network security monitoring system.
 
 ---
 
-## 📌 Milestone 4
+# 📌 Milestone 4
 
-**Milestone 4 — Testing, Deployment & Documentation**
+## Testing, Deployment & Documentation
 
-The project was tested across its major functional modules and deployed successfully using Docker Compose.
+Milestone 4 focused on validating and preparing the complete NetShield AI platform for deployment.
 
-The milestone focused on:
+The milestone included:
 
-* Functional testing
-* API testing
-* Database validation
-* Performance testing
-* Docker deployment
-* Application documentation
-* Preparation for cloud deployment using AWS/Azure
+* ✅ Functional testing
+* ✅ API testing
+* ✅ Database validation
+* ✅ Performance testing
+* ✅ Docker deployment
+* ✅ Application documentation
+* ✅ Screenshot documentation
+* 🔄 Preparation for cloud deployment using AWS/Azure or other suitable platforms
 
----
-
-## 👩‍💻 Project
-
-**NetShield AI — Network Anomaly Detection & Threat Monitoring System**
-
-Built using **React, FastAPI, MongoDB, Machine Learning, and Docker**.
+The application was successfully containerized using Docker Compose and tested across its major modules.
 
 ---
 
-## 📄 License
+# 👩‍💻 Project
+
+## NetShield AI
+
+### Network Anomaly Detection & Threat Monitoring System
+
+Built using:
+
+**React + FastAPI + MongoDB + Machine Learning + Docker**
+
+---
+
+# 📄 License
 
 This project was developed for educational and academic purposes.
-
-
