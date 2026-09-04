@@ -13,16 +13,16 @@ import Analytics from "./pages/Analytics";
 import Predictions from "./pages/Predictions";
 import LiveNetwork from "./pages/LiveNetwork";
 import ThreatAlerts from "./pages/ThreatAlerts";
+import ThreatTimeline from "./pages/ThreatTimeline";
 import Investigation from "./pages/Investigation";
 
 function App() {
   return (
     <BrowserRouter>
+
       <Routes>
 
-        {/* =====================================================
-            AUTHENTICATION
-        ====================================================== */}
+        {/* AUTHENTICATION */}
 
         <Route
           path="/login"
@@ -34,84 +34,63 @@ function App() {
           element={<Register />}
         />
 
-
-        {/* =====================================================
-            MAIN DASHBOARD
-        ====================================================== */}
+        {/* DASHBOARD */}
 
         <Route
           path="/dashboard"
           element={<Dashboard />}
         />
 
-
-        {/* =====================================================
-            ANALYTICS
-        ====================================================== */}
+        {/* ANALYTICS */}
 
         <Route
           path="/analytics"
           element={<Analytics />}
         />
 
-
-        {/* =====================================================
-            PREDICTIONS
-        ====================================================== */}
+        {/* PREDICTIONS */}
 
         <Route
           path="/predictions"
           element={<Predictions />}
         />
 
-
-        {/* =====================================================
-            LIVE NETWORK MONITOR
-        ====================================================== */}
+        {/* LIVE NETWORK */}
 
         <Route
           path="/live-network"
           element={<LiveNetwork />}
         />
 
-
-        {/* =====================================================
-            THREAT ALERTS
-        ====================================================== */}
+        {/* THREAT ALERTS */}
 
         <Route
           path="/threat-alerts"
           element={<ThreatAlerts />}
         />
 
+        {/* THREAT TIMELINE */}
 
-        {/* =====================================================
-            INCIDENT INVESTIGATION
-            IMPORTANT:
-            This must match ThreatAlerts.js:
-            navigate(`/investigation/${id}`)
-        ====================================================== */}
+        <Route
+          path="/threat-timeline"
+          element={<ThreatTimeline />}
+        />
+
+        {/* INVESTIGATION */}
 
         <Route
           path="/investigation/:alertId"
           element={<Investigation />}
         />
 
-
-        {/* =====================================================
-            OPTIONAL OLD INVESTIGATION URL
-            Keeps old links working if you have any.
-        ====================================================== */}
+        {/* OLD INVESTIGATION URL */}
 
         <Route
           path="/investigate/:id"
           element={<Investigation />}
         />
 
-
-        {/* =====================================================
-            DEFAULT ROUTE
-        ====================================================== */}
+        {/* DEFAULT */}
 
         <Route
           path="/"
@@ -123,10 +102,7 @@ function App() {
           }
         />
 
-
-        {/* =====================================================
-            UNKNOWN URL
-        ====================================================== */}
+        {/* UNKNOWN URL */}
 
         <Route
           path="*"
@@ -139,6 +115,7 @@ function App() {
         />
 
       </Routes>
+
     </BrowserRouter>
   );
 }

@@ -7,8 +7,7 @@ from app.routes.monitoring import router as monitoring_router
 from app.routes.analytics import router as analytics_router
 from app.services.live_monitor import start_monitor
 from app.routes.predictions import router as predictions_router
-
-# ============================================================
+from app.routes.timeline import router as timeline_router
 # FASTAPI APPLICATION
 # ============================================================
 
@@ -120,4 +119,7 @@ app.include_router(
     predictions_router,
     prefix="/predictions",
     tags=["AI Predictions"]
+)
+app.include_router(
+    timeline_router
 )

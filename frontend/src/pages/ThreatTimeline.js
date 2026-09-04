@@ -1,11 +1,18 @@
-import React, { useEffect, useState } from "react";
+
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import "./ThreatTimeline.css";
 
 const API_URL = "http://127.0.0.1:8000";
 
 function ThreatTimeline() {
+  const navigate = useNavigate();
+
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState("ALL");
 
   const fetchAlerts = async () => {
     try {
@@ -15,11 +22,13 @@ function ThreatTimeline() {
 
       if (Array.isArray(response.data?.alerts)) {
         setAlerts(response.data.alerts);
+        setError("");
       } else {
         setAlerts([]);
       }
-    } catch (error) {
-      console.error("Timeline error:", error);
+    } catch (err) {
+      console.error("Threat Timeline error:", err);
+      setError("Unable to load live security events.");
     } finally {
       setLoading(false);
     }
@@ -28,22 +37,57 @@ function ThreatTimeline() {
   useEffect(() => {
     fetchAlerts();
 
-    const interval = setInterval(
-      fetchAlerts,
-      5000
-    );
+    const interval = setInterval(fetchAlerts, 5000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const timelineAlerts = [...alerts]
-    .sort((a, b) => {
+  /* =====================================================
+     SORT ALERTS
+  ===================================================== */
+
+  const sortedAlerts = useMemo(() => {
+    return [...alerts].sort((a, b) => {
       return (
         new Date(b?.timestamp || 0) -
         new Date(a?.timestamp || 0)
       );
-    })
-    .slice(0, 20);
+    });
+  }, [alerts]);
+
+  /* =====================================================
+     FILTER ALERTS
+  ===================================================== */
+
+  const filteredAlerts = useMemo(() => {
+    switch (filter) {
+      case "THREATS":
+        return sortedAlerts.filter(
+          (alert) =>
+            alert?.status === "Threat Detected"
+        );
+
+      case "NORMAL":
+        return sortedAlerts.filter(
+          (alert) =>
+            alert?.status === "Normal"
+        );
+
+      case "CRITICAL":
+        return sortedAlerts.filter(
+          (alert) =>
+            alert?.severity?.toLowerCase() === "critical"
+        );
+
+      case "ALL":
+      default:
+        return sortedAlerts;
+    }
+  }, [sortedAlerts, filter]);
+
+  /* =====================================================
+     STATISTICS
+  ===================================================== */
 
   const totalEvents = alerts.length;
 
@@ -57,476 +101,559 @@ function ThreatTimeline() {
       alert?.status === "Normal"
   ).length;
 
+  const critical = alerts.filter(
+    (alert) =>
+      alert?.severity?.toLowerCase() === "critical"
+  ).length;
+
   const highRisk = alerts.filter(
     (alert) =>
       Number(alert?.risk_score || 0) >= 60
   ).length;
 
+  /* =====================================================
+     LOADING
+  ===================================================== */
+
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#0f172a",
-          color: "white",
-          padding: "40px",
-        }}
-      >
-        Loading threat timeline...
+      <div className="timeline-loading">
+        <div className="timeline-loading-icon">
+          🛡️
+        </div>
+
+        <h2>Loading Threat Timeline</h2>
+
+        <p>
+          Connecting to NetShield AI monitoring engine...
+        </p>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#0f172a",
-        color: "white",
-        padding: "30px",
-      }}
-    >
+    <div className="timeline-page">
 
-      {/* HEADER */}
+      {/* =================================================
+          SIDEBAR
+      ================================================= */}
 
-      <div
-        style={{
-          marginBottom: "30px",
-        }}
-      >
+      <aside className="timeline-sidebar">
 
-        <div
-          style={{
-            color: "#64748b",
-            fontSize: "13px",
-            letterSpacing: "2px",
-            marginBottom: "8px",
-          }}
-        >
-          SECURITY / TIMELINE
-        </div>
-
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "36px",
-          }}
-        >
-          Threat Timeline
-        </h1>
-
-        <p
-          style={{
-            color: "#94a3b8",
-            fontSize: "16px",
-          }}
-        >
-          Real-time visualization of detected
-          network security events.
-        </p>
-
-      </div>
-
-      {/* LIVE STATUS */}
-
-      <div
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "8px",
-          background: "#172033",
-          padding: "10px 16px",
-          borderRadius: "20px",
-          marginBottom: "25px",
-          color: "#22c55e",
-        }}
-      >
-        <span>●</span>
-        LIVE MONITORING
-      </div>
-
-      {/* STATISTICS */}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(4, 1fr)",
-          gap: "15px",
-          marginBottom: "30px",
-        }}
-      >
-
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "12px",
-            border: "1px solid #334155",
-          }}
-        >
-          <div
-            style={{
-              color: "#94a3b8",
-            }}
-          >
-            TOTAL EVENTS
-          </div>
-
-          <strong
-            style={{
-              fontSize: "30px",
-            }}
-          >
-            {totalEvents}
-          </strong>
-        </div>
-
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "12px",
-            border: "1px solid #334155",
-          }}
-        >
-          <div
-            style={{
-              color: "#94a3b8",
-            }}
-          >
-            THREATS
-          </div>
-
-          <strong
-            style={{
-              fontSize: "30px",
-              color: "#ef4444",
-            }}
-          >
-            {threats}
-          </strong>
-        </div>
-
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "12px",
-            border: "1px solid #334155",
-          }}
-        >
-          <div
-            style={{
-              color: "#94a3b8",
-            }}
-          >
-            NORMAL
-          </div>
-
-          <strong
-            style={{
-              fontSize: "30px",
-              color: "#22c55e",
-            }}
-          >
-            {normal}
-          </strong>
-        </div>
-
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "12px",
-            border: "1px solid #334155",
-          }}
-        >
-          <div
-            style={{
-              color: "#94a3b8",
-            }}
-          >
-            HIGH RISK
-          </div>
-
-          <strong
-            style={{
-              fontSize: "30px",
-              color: "#f97316",
-            }}
-          >
-            {highRisk}
-          </strong>
-        </div>
-
-      </div>
-
-      {/* TIMELINE */}
-
-      <div
-        style={{
-          background: "#111827",
-          padding: "25px",
-          borderRadius: "15px",
-          border: "1px solid #334155",
-        }}
-      >
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "25px",
-          }}
-        >
+        <div className="timeline-sidebar-logo">
+          <span>🛡️</span>
 
           <div>
-
-            <div
-              style={{
-                color: "#64748b",
-                fontSize: "12px",
-                letterSpacing: "2px",
-              }}
-            >
-              SECURITY EVENTS
-            </div>
-
-            <h2>
-              Network Threat Timeline
-            </h2>
-
+            <strong>NetShield</strong>
+            <small>AI SECURITY</small>
           </div>
-
-          <span
-            style={{
-              color: "#94a3b8",
-            }}
-          >
-            Auto refresh: 5s
-          </span>
-
         </div>
 
-        {timelineAlerts.length === 0 ? (
+        <nav className="timeline-sidebar-nav">
 
-          <div
-            style={{
-              padding: "50px",
-              textAlign: "center",
-              color: "#94a3b8",
-            }}
+          <button
+            onClick={() => navigate("/dashboard")}
           >
-            No security events available.
+            <span>▣</span>
+            Dashboard
+          </button>
+
+          <button
+            onClick={() => navigate("/live-network")}
+          >
+            <span>◉</span>
+            Live Monitor
+          </button>
+
+          <button
+            onClick={() => navigate("/threat-alerts")}
+          >
+            <span>⚠</span>
+            Threat Alerts
+          </button>
+
+          <button
+            onClick={() => navigate("/analytics")}
+          >
+            <span>▤</span>
+            Analytics
+          </button>
+
+          <button
+            onClick={() => navigate("/predictions")}
+          >
+            <span>✦</span>
+            AI Predictions
+          </button>
+
+          <button className="active">
+            <span>◷</span>
+            Threat Timeline
+          </button>
+
+          <button
+            onClick={() => navigate("/threat-alerts")}
+          >
+            <span>⌕</span>
+            Investigations
+          </button>
+
+        </nav>
+
+      </aside>
+
+      {/* =================================================
+          MAIN CONTENT
+      ================================================= */}
+
+      <main className="timeline-main">
+
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
+        <header className="timeline-header">
+
+          <div>
+            <div className="timeline-label">
+              SECURITY / TIMELINE
+            </div>
+
+            <h1>
+              Threat Timeline
+            </h1>
+
+            <p>
+              Real-time visualization of detected
+              network security events.
+            </p>
           </div>
 
-        ) : (
-
-          <div
-            style={{
-              display: "grid",
-              gap: "15px",
-            }}
-          >
-
-            {timelineAlerts.map(
-              (alert, index) => {
-
-                const isThreat =
-                  alert?.status ===
-                  "Threat Detected";
-
-                const risk =
-                  Number(
-                    alert?.risk_score || 0
-                  );
-
-                return (
-
-                  <div
-                    key={
-                      alert?._id ||
-                      alert?.timestamp ||
-                      index
-                    }
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "130px 1fr",
-                      gap: "20px",
-                      padding: "18px",
-                      background: "#1e293b",
-                      borderRadius: "10px",
-                      borderLeft:
-                        isThreat
-                          ? "4px solid #ef4444"
-                          : "4px solid #22c55e",
-                    }}
-                  >
-
-                    {/* TIME */}
-
-                    <div>
-
-                      <strong>
-                        {alert?.timestamp
-                          ? new Date(
-                              alert.timestamp
-                            ).toLocaleTimeString()
-                          : "--"}
-                      </strong>
-
-                      <div
-                        style={{
-                          color: "#64748b",
-                          marginTop: "5px",
-                          fontSize: "12px",
-                        }}
-                      >
-                        {alert?.timestamp
-                          ? new Date(
-                              alert.timestamp
-                            ).toLocaleDateString()
-                          : "--"}
-                      </div>
-
-                    </div>
-
-                    {/* EVENT */}
-
-                    <div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent:
-                            "space-between",
-                          alignItems: "center",
-                          marginBottom: "8px",
-                        }}
-                      >
-
-                        <strong
-                          style={{
-                            fontSize: "18px",
-                          }}
-                        >
-                          {alert?.threat_type ||
-                            "Network Event"}
-                        </strong>
-
-                        <span
-                          style={{
-                            padding:
-                              "5px 10px",
-                            borderRadius: "15px",
-                            background:
-                              isThreat
-                                ? "#451a1a"
-                                : "#14351f",
-                            color:
-                              isThreat
-                                ? "#f87171"
-                                : "#4ade80",
-                            fontSize: "12px",
-                          }}
-                        >
-                          {alert?.severity ||
-                            "Low"}
-                        </span>
-
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "25px",
-                          flexWrap: "wrap",
-                          color: "#94a3b8",
-                          fontSize: "14px",
-                        }}
-                      >
-
-                        <span>
-                          Risk Score:{" "}
-                          <strong
-                            style={{
-                              color:
-                                risk >= 60
-                                  ? "#f87171"
-                                  : "#4ade80",
-                            }}
-                          >
-                            {risk}/100
-                          </strong>
-                        </span>
-
-                        <span>
-                          Confidence:{" "}
-                          <strong>
-                            {alert?.confidence ||
-                              `${alert?.confidence_value || 0}%`}
-                          </strong>
-                        </span>
-
-                        <span>
-                          Status:{" "}
-                          <strong>
-                            {alert?.status ||
-                              "Unknown"}
-                          </strong>
-                        </span>
-
-                        <span>
-                          Protocol:{" "}
-                          <strong>
-                            {alert?.protocol_type ||
-                              "Unknown"}
-                          </strong>
-                        </span>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                );
-              }
-            )}
-
+          <div className="timeline-live">
+            <span></span>
+            LIVE MONITORING
           </div>
 
+        </header>
+
+        {/* =================================================
+            ERROR
+        ================================================= */}
+
+        {error && (
+          <div className="timeline-error">
+            ⚠️ {error}
+          </div>
         )}
 
-      </div>
+        {/* =================================================
+            SUMMARY CARDS
+        ================================================= */}
 
-      {/* FOOTER */}
+        <section className="timeline-summary">
 
-      <footer
-        style={{
-          marginTop: "30px",
-          padding: "20px 0",
-          color: "#64748b",
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
+          <div className="timeline-summary-card">
+            <span>TOTAL EVENTS</span>
 
-        <strong>
-          🛡️ NetShield AI
-        </strong>
+            <strong>
+              {totalEvents}
+            </strong>
+          </div>
 
-        <span>
-          Milestone 3 • Threat Timeline
-        </span>
+          <div className="timeline-summary-card threat">
+            <span>THREATS</span>
 
-      </footer>
+            <strong>
+              {threats}
+            </strong>
+          </div>
+
+          <div className="timeline-summary-card normal">
+            <span>NORMAL</span>
+
+            <strong>
+              {normal}
+            </strong>
+          </div>
+
+          <div className="timeline-summary-card risk">
+            <span>HIGH RISK</span>
+
+            <strong>
+              {highRisk}
+            </strong>
+          </div>
+
+        </section>
+
+        {/* =================================================
+            MAIN PANEL
+        ================================================= */}
+
+        <section className="timeline-panel">
+
+          <div className="timeline-panel-header">
+
+            <div>
+              <span>
+                SECURITY EVENTS
+              </span>
+
+              <h2>
+                Network Threat Timeline
+              </h2>
+            </div>
+
+            <div className="refresh-label">
+              Auto refresh: 5s
+            </div>
+
+          </div>
+
+          {/* =================================================
+              FILTERS
+          ================================================= */}
+
+          <div className="timeline-filters">
+
+            <button
+              className={
+                filter === "ALL"
+                  ? "timeline-filter active"
+                  : "timeline-filter"
+              }
+              onClick={() => setFilter("ALL")}
+            >
+              ALL
+              <span>{totalEvents}</span>
+            </button>
+
+            <button
+              className={
+                filter === "THREATS"
+                  ? "timeline-filter active threat-filter"
+                  : "timeline-filter"
+              }
+              onClick={() => setFilter("THREATS")}
+            >
+              THREATS
+              <span>{threats}</span>
+            </button>
+
+            <button
+              className={
+                filter === "NORMAL"
+                  ? "timeline-filter active normal-filter"
+                  : "timeline-filter"
+              }
+              onClick={() => setFilter("NORMAL")}
+            >
+              NORMAL
+              <span>{normal}</span>
+            </button>
+
+            <button
+              className={
+                filter === "CRITICAL"
+                  ? "timeline-filter active critical-filter"
+                  : "timeline-filter"
+              }
+              onClick={() => setFilter("CRITICAL")}
+            >
+              CRITICAL
+              <span>{critical}</span>
+            </button>
+
+          </div>
+
+          {/* =================================================
+              ACTIVE FILTER
+          ================================================= */}
+
+          <div className="timeline-filter-status">
+            Showing{" "}
+            <strong>
+              {filteredAlerts.length}
+            </strong>{" "}
+            {filter.toLowerCase()} event
+            {filteredAlerts.length !== 1 ? "s" : ""}
+          </div>
+
+          {/* =================================================
+              EMPTY STATE
+          ================================================= */}
+
+          {filteredAlerts.length === 0 ? (
+
+            <div className="timeline-empty">
+
+              <div>🛡️</div>
+
+              <h3>
+                No Security Events
+              </h3>
+
+              <p>
+                No network security events match
+                the selected filter.
+              </p>
+
+            </div>
+
+          ) : (
+
+            /* =================================================
+               TIMELINE
+            ================================================= */
+
+            <div className="timeline">
+
+              {filteredAlerts.map(
+                (alert, index) => {
+
+                  const isThreat =
+                    alert?.status ===
+                    "Threat Detected";
+
+                  const severity =
+                    (
+                      alert?.severity ||
+                      "Low"
+                    ).toLowerCase();
+
+                  const risk =
+                    Number(
+                      alert?.risk_score || 0
+                    );
+
+                  return (
+
+                    <div
+                      className="timeline-item"
+                      key={
+                        alert?._id ||
+                        alert?.timestamp ||
+                        index
+                      }
+                    >
+
+                      {/* TIME */}
+
+                      <div className="timeline-time">
+
+                        <strong>
+                          {alert?.timestamp
+                            ? new Date(
+                                alert.timestamp
+                              ).toLocaleTimeString()
+                            : "--"}
+                        </strong>
+
+                        <span>
+                          {alert?.timestamp
+                            ? new Date(
+                                alert.timestamp
+                              ).toLocaleDateString()
+                            : "--"}
+                        </span>
+
+                      </div>
+
+                      {/* LINE */}
+
+                      <div className="timeline-line">
+
+                        <div
+                          className={
+                            isThreat
+                              ? "timeline-dot threat-dot"
+                              : "timeline-dot normal-dot"
+                          }
+                        ></div>
+
+                      </div>
+
+                      {/* EVENT */}
+
+                      <div
+                        className={
+                          isThreat
+                            ? "timeline-event threat-event"
+                            : "timeline-event normal-event"
+                        }
+                      >
+
+                        {/* TOP */}
+
+                        <div className="timeline-event-top">
+
+                          <div>
+
+                            <span
+                              className={
+                                isThreat
+                                  ? "event-indicator threat-indicator"
+                                  : "event-indicator normal-indicator"
+                              }
+                            ></span>
+
+                            <strong>
+                              {alert?.threat_type ||
+                                "Network Event"}
+                            </strong>
+
+                          </div>
+
+                          <span
+                            className={`timeline-severity ${severity}`}
+                          >
+                            {alert?.severity ||
+                              "Low"}
+                          </span>
+
+                        </div>
+
+                        {/* DETAILS */}
+
+                        <div className="timeline-details">
+
+                          <div>
+                            <span>
+                              Risk Score
+                            </span>
+
+                            <strong
+                              className={
+                                risk >= 60
+                                  ? "risk-high"
+                                  : "risk-normal"
+                              }
+                            >
+                              {risk}/100
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span>
+                              Confidence
+                            </span>
+
+                            <strong>
+                              {alert?.confidence ||
+                                `${alert?.confidence_value || 0}%`}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span>
+                              Status
+                            </span>
+
+                            <strong>
+                              {alert?.status ||
+                                "Unknown"}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span>
+                              Protocol
+                            </span>
+
+                            <strong>
+                              {(
+                                alert?.protocol_type ||
+                                "Unknown"
+                              ).toUpperCase()}
+                            </strong>
+                          </div>
+
+                        </div>
+
+                        {/* NETWORK DETAILS */}
+
+                        <div className="timeline-network-details">
+
+                          <div>
+                            <span>
+                              Service
+                            </span>
+
+                            <strong>
+                              {alert?.service ||
+                                "Unknown"}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span>
+                              Source Port
+                            </span>
+
+                            <strong>
+                              {alert?.source_port ?? "--"}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span>
+                              Destination Port
+                            </span>
+
+                            <strong>
+                              {alert?.destination_port ?? "--"}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span>
+                              Connections
+                            </span>
+
+                            <strong>
+                              {alert?.connection_count ?? "--"}
+                            </strong>
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+                  );
+                }
+              )}
+
+            </div>
+          )}
+
+        </section>
+
+        {/* =================================================
+            FOOTER
+        ================================================= */}
+
+        <footer className="timeline-footer">
+
+          <div>
+            <span>🛡️</span>
+
+            <strong>
+              NetShield AI
+            </strong>
+          </div>
+
+          <span>
+            Milestone 4 • Testing & Performance
+          </span>
+
+        </footer>
+
+      </main>
 
     </div>
   );
 }
 
 export default ThreatTimeline;
+

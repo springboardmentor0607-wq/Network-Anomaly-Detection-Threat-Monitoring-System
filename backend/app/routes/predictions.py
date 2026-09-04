@@ -147,10 +147,13 @@ def get_predictions():
                     "Unknown"
                 ),
 
-                "protocol": alert.get(
-                    "protocol_type",
-                    "Unknown"
-                ),
+             "protocol": alert.get(
+    "protocol_type",
+    alert.get(
+        "protocol",
+        "Unknown"
+    )
+),
 
                 "source_ip": alert.get(
                     "source_ip",
