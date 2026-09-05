@@ -15,21 +15,49 @@ function ModelTesting() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileResult, setFileResult] = useState(null);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState("");
 
+  // ==============================
+  // HANDLE INPUT CHANGE
+  // ==============================
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+
+    setError("");
   };
 
+  // ==============================
+  // TEST SINGLE TRAFFIC
+  // ==============================
   const testTraffic = async () => {
     setError("");
     setResult(null);
+
+    // Basic validation
+    const fields = [
+      "duration",
+      "src_packets",
+      "dst_packets",
+      "src_bytes",
+      "dst_bytes",
+      "protocol"
+    ];
+
+    const missingField = fields.some(
+      (field) => formData[field] === ""
+    );
+
+    if (missingField) {
+      setError("Please fill in all traffic features before testing.");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -62,319 +90,465 @@ function ModelTesting() {
     }
   };
 
+  // ==============================
+  // CSV FILE SELECTION
+  // ==============================
   const handleFileChange = (event) => {
-  const file = event.target.files[0];
+    const file = event.target.files[0];
 
-  if (!file) {
-    return;
-  }
+    if (!file) {
+      return;
+    }
 
-  if (!file.name.toLowerCase().endsWith(".csv")) {
-    setFileError("Please select a CSV file.");
-    setSelectedFile(null);
-    return;
-  }
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setFileError("Please select a CSV file.");
+      setSelectedFile(null);
+      setFileResult(null);
+      return;
+    }
 
-  setSelectedFile(file);
-  setFileResult(null);
-  setFileError("");
-};
+    setSelectedFile(file);
+    setFileResult(null);
+    setFileError("");
+  };
 
+  // ==============================
+  // TEST CSV FILE
+  // ==============================
+  const testCSVFile = async () => {
+    if (!selectedFile) {
+      setFileError("Please select a CSV file first.");
+      return;
+    }
 
-const testCSVFile = async () => {
+    setFileLoading(true);
+    setFileError("");
+    setFileResult(null);
 
-  if (!selectedFile) {
-    setFileError("Please select a CSV file first.");
-    return;
-  }
+    try {
+      const uploadData = new FormData();
 
-  setFileLoading(true);
-  setFileError("");
-  setFileResult(null);
+      uploadData.append(
+        "file",
+        selectedFile
+      );
 
-  try {
+      const response = await API.post(
+        "/model-testing/upload",
+        uploadData
+      );
 
-    const formData = new FormData();
+      console.log(
+        "CSV test result:",
+        response.data
+      );
 
-    formData.append(
-      "file",
-      selectedFile
-    );
+      setFileResult(response.data);
 
-    const response = await API.post(
-      "/model-testing/upload",
-      formData
-    );
+    } catch (error) {
+      console.error(
+        "CSV testing error:",
+        error.response?.data || error.message
+      );
 
-    console.log(
-      "CSV test result:",
-      response.data
-    );
+      const message =
+        error.response?.data?.detail?.message ||
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.message ||
+        "Unable to test CSV file.";
 
-    setFileResult(
-      response.data
-    );
+      setFileError(String(message));
 
-  } catch (error) {
-  console.error(
-    "CSV testing error:",
-    error.response?.data || error.message
-  );
-
-  const message =
-    error.response?.data?.detail?.message ||
-    error.response?.data?.detail ||
-    error.response?.data?.message ||
-    error.message ||
-    "Unable to test CSV file.";
-
-  setFileError(String(message));
-} finally {
-  setFileLoading(false);
-}
-};
+    } finally {
+      setFileLoading(false);
+    }
+  };
 
   return (
-    <div className="result-box">
+    <div className="model-testing-page">
 
-      <h2>🧪 AI Model Testing</h2>
+      {/* =====================================
+          AI MODEL TESTING
+      ====================================== */}
 
-      <p>
-        Enter network traffic features and test the
-        trained Random Forest model in real time.
-      </p>
+      <div className="result-box model-testing-card">
 
-      <div className="testing-form">
+        <div className="model-testing-header">
+          <h2>🧪 AI Model Testing</h2>
 
-        <label>
-          Duration
-          <input
-            type="number"
-            step="any"
-            name="duration"
-            value={formData.duration}
-            onChange={handleChange}
-            placeholder="Example: 0.5"
-          />
-        </label>
+          <p>
+            Enter network traffic features and test the
+            trained Random Forest model in real time.
+          </p>
+        </div>
 
-        <label>
-          Source Packets
-          <input
-            type="number"
-            name="src_packets"
-            value={formData.src_packets}
-            onChange={handleChange}
-            placeholder="Example: 10"
-          />
-        </label>
+        <div className="testing-form">
 
-        <label>
-          Destination Packets
-          <input
-            type="number"
-            name="dst_packets"
-            value={formData.dst_packets}
-            onChange={handleChange}
-            placeholder="Example: 8"
-          />
-        </label>
+          {/* Duration */}
+          <div className="testing-field">
+            <label htmlFor="duration">
+              Duration
+            </label>
 
-        <label>
-          Source Bytes
-          <input
-            type="number"
-            name="src_bytes"
-            value={formData.src_bytes}
-            onChange={handleChange}
-            placeholder="Example: 500"
-          />
-        </label>
+            <input
+              id="duration"
+              type="number"
+              step="any"
+              min="0"
+              name="duration"
+              value={formData.duration}
+              onChange={handleChange}
+              placeholder="Example: 0.5"
+            />
+          </div>
 
-        <label>
-          Destination Bytes
-          <input
-            type="number"
-            name="dst_bytes"
-            value={formData.dst_bytes}
-            onChange={handleChange}
-            placeholder="Example: 1200"
-          />
-        </label>
+          {/* Source Packets */}
+          <div className="testing-field">
+            <label htmlFor="src_packets">
+              Source Packets
+            </label>
 
-        <label>
-          Protocol
-          <input
-            type="text"
-            name="protocol"
-            value={formData.protocol}
-            onChange={handleChange}
-            placeholder="Example: 80"
-          />
-        </label>
+            <input
+              id="src_packets"
+              type="number"
+              min="0"
+              name="src_packets"
+              value={formData.src_packets}
+              onChange={handleChange}
+              placeholder="Example: 10"
+            />
+          </div>
+
+          {/* Destination Packets */}
+          <div className="testing-field">
+            <label htmlFor="dst_packets">
+              Destination Packets
+            </label>
+
+            <input
+              id="dst_packets"
+              type="number"
+              min="0"
+              name="dst_packets"
+              value={formData.dst_packets}
+              onChange={handleChange}
+              placeholder="Example: 8"
+            />
+          </div>
+
+          {/* Source Bytes */}
+          <div className="testing-field">
+            <label htmlFor="src_bytes">
+              Source Bytes
+            </label>
+
+            <input
+              id="src_bytes"
+              type="number"
+              min="0"
+              name="src_bytes"
+              value={formData.src_bytes}
+              onChange={handleChange}
+              placeholder="Example: 500"
+            />
+          </div>
+
+          {/* Destination Bytes */}
+          <div className="testing-field">
+            <label htmlFor="dst_bytes">
+              Destination Bytes
+            </label>
+
+            <input
+              id="dst_bytes"
+              type="number"
+              min="0"
+              name="dst_bytes"
+              value={formData.dst_bytes}
+              onChange={handleChange}
+              placeholder="Example: 1200"
+            />
+          </div>
+
+          {/* Protocol */}
+          <div className="testing-field">
+            <label htmlFor="protocol">
+              Protocol
+            </label>
+
+            <input
+              id="protocol"
+              type="text"
+              name="protocol"
+              value={formData.protocol}
+              onChange={handleChange}
+              placeholder="Example: 80"
+            />
+
+            <small>
+              Enter the protocol value used by the trained model.
+            </small>
+          </div>
+
+        </div>
+
+        {/* Test Button */}
+        <button
+          className="model-test-button"
+          onClick={testTraffic}
+          disabled={loading}
+        >
+          {loading
+            ? "🔄 Testing..."
+            : "🔍 Test Traffic"}
+        </button>
 
       </div>
 
-      <button
-        onClick={testTraffic}
-        disabled={loading}
-      >
-        {loading
-          ? "🔄 Testing..."
-          : "🔍 Test Traffic"}
-      </button>
+
+      {/* =====================================
+          MANUAL TEST ERROR
+      ====================================== */}
 
       {error && (
-        <div className="result-box">
+        <div className="result-box model-error-box">
           <h3>❌ Testing Error</h3>
           <p>{error}</p>
         </div>
       )}
 
+
+      {/* =====================================
+          MANUAL TEST RESULT
+      ====================================== */}
+
       {result && (
-        <div className="result-box">
+        <div className="result-box model-result-card">
 
           <h2>📊 Model Test Result</h2>
 
-          <p>
-            <strong>Prediction:</strong>{" "}
-            <span
-              className={
-                result.prediction === "Attack"
-                  ? "status attack"
-                  : "status normal"
-              }
-            >
-              {result.prediction === "Attack"
-                ? "🔴 ATTACK"
-                : "🟢 NORMAL"}
-            </span>
-          </p>
+          <div className="model-result-grid">
 
-          <p>
-            <strong>Confidence:</strong>{" "}
-            {result.confidence || "N/A"}
-          </p>
+            <div className="model-result-item">
+              <span>Prediction</span>
 
-          <p>
-            <strong>Attack Type:</strong>{" "}
-            {result.attack_type || "None"}
-          </p>
+              <strong
+                className={
+                  result.prediction === "Attack"
+                    ? "prediction-attack"
+                    : "prediction-normal"
+                }
+              >
+                {result.prediction === "Attack"
+                  ? "🔴 ATTACK"
+                  : "🟢 NORMAL"}
+              </strong>
+            </div>
 
-          <p>
-            <strong>Severity:</strong>{" "}
-            {result.severity || "LOW"}
-          </p>
+            <div className="model-result-item">
+              <span>Confidence</span>
+
+              <strong>
+                {result.confidence || "N/A"}
+              </strong>
+            </div>
+
+            <div className="model-result-item">
+              <span>Attack Type</span>
+
+              <strong>
+                {result.attack_type || "None"}
+              </strong>
+            </div>
+
+            <div className="model-result-item">
+              <span>Severity</span>
+
+              <strong>
+                {result.severity || "LOW"}
+              </strong>
+            </div>
+
+            {result.risk_score !== undefined && (
+              <div className="model-result-item">
+                <span>Risk Score</span>
+
+                <strong>
+                  {result.risk_score}
+                </strong>
+              </div>
+            )}
+
+            {result.risk_level && (
+              <div className="model-result-item">
+                <span>Risk Level</span>
+
+                <strong>
+                  {result.risk_level}
+                </strong>
+              </div>
+            )}
+
+          </div>
 
         </div>
       )}
 
-<div className="result-box">
 
-  <h2>📁 Upload Test Dataset</h2>
+      {/* =====================================
+          CSV UPLOAD
+      ====================================== */}
 
-  <p>
-    Upload a CSV file containing network
-    traffic features to test the trained
-    Random Forest model.
-  </p>
+      <div className="result-box csv-testing-card">
 
-  <input
-    type="file"
-    accept=".csv"
-    onChange={handleFileChange}
-  />
-
-  {selectedFile && (
-    <p>
-      Selected file:
-      <strong> {selectedFile.name}</strong>
-    </p>
-  )}
-
-  <button
-    onClick={testCSVFile}
-    disabled={!selectedFile || fileLoading}
-  >
-    {fileLoading
-      ? "Testing..."
-      : "🔍 Test CSV File"}
-  </button>
-
-  {fileError && (
-    <p className="error">
-      ❌ {fileError}
-    </p>
-  )}
-
-</div>
-
-{fileResult && (
-  <div className="result-box">
-
-    <h2>📊 CSV Model Test Result</h2>
-
-    <p>
-      <strong>File:</strong>{" "}
-      {fileResult.filename}
-    </p>
-
-    <p>
-      <strong>Total Records:</strong>{" "}
-      {fileResult.total_records}
-    </p>
-
-    <p>
-      <strong>Normal Records:</strong>{" "}
-      {fileResult.normal_records}
-    </p>
-
-    <p>
-      <strong>Attack Records:</strong>{" "}
-      {fileResult.attack_records}
-    </p>
-
-    <p>
-      <strong>Attack Percentage:</strong>{" "}
-      {fileResult.attack_percentage}%
-    </p>
-
-    {fileResult.evaluation && (
-      <>
-        <hr />
-
-        <h3>📈 Evaluation Metrics</h3>
+        <h2>📁 Upload Test Dataset</h2>
 
         <p>
-          <strong>Accuracy:</strong>{" "}
-          {fileResult.evaluation.accuracy}%
+          Upload a CSV file containing network traffic
+          features to test the trained Random Forest model.
         </p>
 
-        <p>
-          <strong>Precision:</strong>{" "}
-          {fileResult.evaluation.precision}%
-        </p>
+        <div className="csv-upload-area">
 
-        <p>
-          <strong>Recall:</strong>{" "}
-          {fileResult.evaluation.recall}%
-        </p>
+          <label className="csv-file-label">
+            📂 Choose CSV File
 
-        <p>
-          <strong>F1 Score:</strong>{" "}
-          {fileResult.evaluation.f1_score}%
-        </p>
-      </>
-    )}
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+            />
+          </label>
 
-  </div>
-)}
+          {selectedFile && (
+            <div className="selected-file">
+              <span>Selected file:</span>
+
+              <strong>
+                {selectedFile.name}
+              </strong>
+            </div>
+          )}
+
+        </div>
+
+        <button
+          className="csv-test-button"
+          onClick={testCSVFile}
+          disabled={!selectedFile || fileLoading}
+        >
+          {fileLoading
+            ? "🔄 Testing CSV..."
+            : "🔍 Test CSV File"}
+        </button>
+
+        {fileError && (
+          <div className="model-error-box">
+            ❌ {fileError}
+          </div>
+        )}
+
+      </div>
+
+
+      {/* =====================================
+          CSV RESULT
+      ====================================== */}
+
+      {fileResult && (
+        <div className="result-box csv-result-card">
+
+          <h2>📊 CSV Model Test Result</h2>
+
+          <div className="csv-summary-grid">
+
+            <div className="csv-stat">
+              <span>File</span>
+              <strong>
+                {fileResult.filename}
+              </strong>
+            </div>
+
+            <div className="csv-stat">
+              <span>Total Records</span>
+              <strong>
+                {fileResult.total_records}
+              </strong>
+            </div>
+
+            <div className="csv-stat">
+              <span>Normal Records</span>
+              <strong>
+                {fileResult.normal_records}
+              </strong>
+            </div>
+
+            <div className="csv-stat">
+              <span>Attack Records</span>
+              <strong>
+                {fileResult.attack_records}
+              </strong>
+            </div>
+
+            <div className="csv-stat">
+              <span>Attack Percentage</span>
+              <strong>
+                {fileResult.attack_percentage}%
+              </strong>
+            </div>
+
+          </div>
+
+
+          {/* Evaluation */}
+          {fileResult.evaluation && (
+            <div className="evaluation-section">
+
+              <hr />
+
+              <h3>📈 Evaluation Metrics</h3>
+
+              <div className="evaluation-grid">
+
+                <div className="evaluation-item">
+                  <span>Accuracy</span>
+                  <strong>
+                    {fileResult.evaluation.accuracy}%
+                  </strong>
+                </div>
+
+                <div className="evaluation-item">
+                  <span>Precision</span>
+                  <strong>
+                    {fileResult.evaluation.precision}%
+                  </strong>
+                </div>
+
+                <div className="evaluation-item">
+                  <span>Recall</span>
+                  <strong>
+                    {fileResult.evaluation.recall}%
+                  </strong>
+                </div>
+
+                <div className="evaluation-item">
+                  <span>F1 Score</span>
+                  <strong>
+                    {fileResult.evaluation.f1_score}%
+                  </strong>
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+        </div>
+      )}
 
     </div>
-
-    
   );
 }
 
 export default ModelTesting;
-

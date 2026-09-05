@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import API from "./api/api";
 import "./Dashboard.css";
 import ModelTesting from "./ModelTesting";
-import Reports from "./Reports";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 
@@ -116,6 +115,56 @@ const [incidentAssignee, setIncidentAssignee] = useState(
       value: protocolStats.OTHER
     }
   ];
+
+// ==============================
+// ANALYTICS HELPERS
+// ==============================
+
+const getProtocolCategory = (data, dataset) => {
+  const protocol = String(data?.protocol ?? data?.proto ?? "").trim().toLowerCase();
+  const service = String(data?.service ?? "").trim().toLowerCase();
+  const port = Number(data?.destination_port ?? data?.dport ?? 0);
+
+  if (
+    service.includes("https") ||
+    protocol === "https" ||
+    port === 443
+  ) {
+    return "HTTPS";
+  }
+
+  if (
+    service.includes("http") ||
+    protocol === "http" ||
+    port === 80
+  ) {
+    return "HTTP";
+  }
+
+  if (
+    service.includes("dns") ||
+    protocol === "dns" ||
+    port === 53
+  ) {
+    return "DNS";
+  }
+
+  return "OTHER";
+};
+
+const getTrafficVolume = (data, dataset) => {
+  if (dataset === "UNSW-NB15") {
+    return Math.max(
+      1,
+      Number(data?.spkts ?? 0) + Number(data?.dpkts ?? 0)
+    );
+  }
+
+  return Math.max(
+    1,
+    Number(data?.src_packets ?? 0) + Number(data?.dst_packets ?? 0)
+  );
+};
 
 // ==============================
 // GET SECURITY ANALYTICS
@@ -497,125 +546,318 @@ const getTraffic = async () => {
 
     const newTraffic = {
 
-      id: Date.now(),
+      id:
+    Date.now(),
 
-      dataset:
-        selectedDataset,
+  detectedAt:
+    new Date().toISOString(),
 
-      source:
-        data.source ||
-        "Unknown",
+  dataset:
+    selectedDataset,
 
-      destination:
-        data.destination ||
-        "Unknown",
+  source:
+    data.source ||
+    "Unknown",
 
-
-      // -------------------------------
-      // CICIDS FIELDS
-      // -------------------------------
-
-      protocol:
-        data.protocol ||
-        "Unknown",
-
-      destination_port:
-        Number(
-          data.destination_port ||
-          0
-        ),
-
-      duration:
-        Number(
-          data.duration ||
-          0
-        ),
-
-      src_packets:
-        Number(
-          data.src_packets ||
-          0
-        ),
-
-      dst_packets:
-        Number(
-          data.dst_packets ||
-          0
-        ),
-
-      src_bytes:
-        Number(
-          data.src_bytes ||
-          0
-        ),
-
-      dst_bytes:
-        Number(
-          data.dst_bytes ||
-          0
-        ),
+  destination:
+    data.destination ||
+    "Unknown",
 
 
-      // -------------------------------
-      // UNSW FIELDS
-      // -------------------------------
+  // =================================
+  // CICIDS2017 FIELDS
+  // =================================
 
-      proto:
-        data.proto ||
-        "Unknown",
+  protocol:
+    data.protocol ||
+    "Unknown",
 
-      service:
-        data.service ||
-        "Unknown",
+  destination_port:
+    Number(
+      data.destination_port ||
+      0
+    ),
 
-      state:
-        data.state ||
-        "Unknown",
+  duration:
+    Number(
+      data.duration ||
+      0
+    ),
 
-      spkts:
-        Number(
-          data.spkts ||
-          0
-        ),
+  src_packets:
+    Number(
+      data.src_packets ||
+      0
+    ),
 
-      dpkts:
-        Number(
-          data.dpkts ||
-          0
-        ),
+  dst_packets:
+    Number(
+      data.dst_packets ||
+      0
+    ),
 
-      sbytes:
-        Number(
-          data.sbytes ||
-          0
-        ),
+  src_bytes:
+    Number(
+      data.src_bytes ||
+      0
+    ),
 
-      dbytes:
-        Number(
-          data.dbytes ||
-          0
-        ),
+  dst_bytes:
+    Number(
+      data.dst_bytes ||
+      0
+    ),
+
+  flow_bytes_per_sec:
+    Number(
+      data.flow_bytes_per_sec ||
+      0
+    ),
+
+  flow_packets_per_sec:
+    Number(
+      data.flow_packets_per_sec ||
+      0
+    ),
 
 
-      // -------------------------------
-      // AI RESULT
-      // -------------------------------
+  // =================================
+  // UNSW-NB15 FIELDS
+  // =================================
 
-      status:
-        prediction.prediction ||
-        "Unknown",
+  proto:
+    data.proto ||
+    "Unknown",
 
-      confidence:
-        prediction.confidence ||
-        "0%",
+  service:
+    data.service ||
+    "Unknown",
 
-      attack_type:
-        prediction.attack_type ||
-        "None",
+  state:
+    data.state ||
+    "Unknown",
 
-      severity:
-        prediction.severity ||
-        "LOW"
+  dur:
+    Number(
+      data.dur ||
+      0
+    ),
+
+  spkts:
+    Number(
+      data.spkts ||
+      0
+    ),
+
+  dpkts:
+    Number(
+      data.dpkts ||
+      0
+    ),
+
+  sbytes:
+    Number(
+      data.sbytes ||
+      0
+    ),
+
+  dbytes:
+    Number(
+      data.dbytes ||
+      0
+    ),
+
+  rate:
+    Number(
+      data.rate ||
+      0
+    ),
+
+  sload:
+    Number(
+      data.sload ||
+      0
+    ),
+
+  dload:
+    Number(
+      data.dload ||
+      0
+    ),
+
+  sloss:
+    Number(
+      data.sloss ||
+      0
+    ),
+
+  dloss:
+    Number(
+      data.dloss ||
+      0
+    ),
+
+  sinpkt:
+    Number(
+      data.sinpkt ||
+      0
+    ),
+
+  dinpkt:
+    Number(
+      data.dinpkt ||
+      0
+    ),
+
+  sjit:
+    Number(
+      data.sjit ||
+      0
+    ),
+
+  djit:
+    Number(
+      data.djit ||
+      0
+    ),
+
+  swin:
+    Number(
+      data.swin ||
+      0
+    ),
+
+  stcpb:
+    Number(
+      data.stcpb ||
+      0
+    ),
+
+  dtcpb:
+    Number(
+      data.dtcpb ||
+      0
+    ),
+
+  dwin:
+    Number(
+      data.dwin ||
+      0
+    ),
+
+  tcprtt:
+    Number(
+      data.tcprtt ||
+      0
+    ),
+
+  synack:
+    Number(
+      data.synack ||
+      0
+    ),
+
+  ackdat:
+    Number(
+      data.ackdat ||
+      0
+    ),
+
+  smean:
+    Number(
+      data.smean ||
+      0
+    ),
+
+  dmean:
+    Number(
+      data.dmean ||
+      0
+    ),
+
+  trans_depth:
+    Number(
+      data.trans_depth ||
+      0
+    ),
+
+  response_body_len:
+    Number(
+      data.response_body_len ||
+      0
+    ),
+
+  ct_src_dport_ltm:
+    Number(
+      data.ct_src_dport_ltm ||
+      0
+    ),
+
+  ct_dst_sport_ltm:
+    Number(
+      data.ct_dst_sport_ltm ||
+      0
+    ),
+
+  is_ftp_login:
+    Number(
+      data.is_ftp_login ||
+      0
+    ),
+
+  ct_ftp_cmd:
+    Number(
+      data.ct_ftp_cmd ||
+      0
+    ),
+
+  ct_flw_http_mthd:
+    Number(
+      data.ct_flw_http_mthd ||
+      0
+    ),
+
+  is_sm_ips_ports:
+    Number(
+      data.is_sm_ips_ports ||
+      0
+    ),
+
+
+  // =================================
+  // AI RESULT
+  // =================================
+
+  status:
+    prediction.prediction ||
+    "Unknown",
+
+  confidence:
+    prediction.confidence ||
+    "0%",
+
+  attack_type:
+    prediction.attack_type ||
+    "None",
+
+  severity:
+    prediction.severity ||
+    "LOW",
+
+  risk_score:
+    Number(
+      prediction.risk_score ||
+      0
+    ),
+
+  risk_level:
+    prediction.risk_level ||
+    "LOW",
+
+  alert_id:
+    prediction.alert_id ||
+    null
+
 
     };
 
@@ -639,20 +881,36 @@ const getTraffic = async () => {
 
 
     // =================================
-    // TRAFFIC TREND
+    // PROTOCOL ANALYTICS
     // =================================
 
-    setTrafficTrend(
-      (previous) => [
-        ...previous.slice(-9),
-        {
-          time:
-            new Date().toLocaleTimeString(),
-
-          value: 1
-        }
-      ]
+    const protocolCategory = getProtocolCategory(
+      data,
+      selectedDataset
     );
+
+    setProtocolStats((previous) => ({
+      ...previous,
+      [protocolCategory]: previous[protocolCategory] + 1
+    }));
+
+    // =================================
+    // LIVE TRAFFIC TREND
+    // =================================
+
+    const trafficVolume = getTrafficVolume(
+      data,
+      selectedDataset
+    );
+
+    setTrafficTrend((previous) => [
+      ...previous.slice(-9),
+      {
+        time: new Date().toLocaleTimeString(),
+        value: trafficVolume,
+        dataset: selectedDataset
+      }
+    ]);
 
 
     // =================================
@@ -782,372 +1040,20 @@ const getReportData = async () => {
   // ==============================
 // MANUAL ANALYZE TRAFFIC
 // ==============================
-
-const analyzeTraffic = async (index) => {
-
-  const item = trafficData[index];
-
-  if (!item) {
-    return;
-  }
-
-  try {
-
-    setSelectedTraffic({
-      ...item,
-      analyzing: true
-    });
-
-    let result;
-
-
-    // ==========================================
-    // CICIDS2017 ANALYSIS
-    // ==========================================
-
-    if (selectedDataset === "CICIDS2017") {
-
-      const response = await API.post(
-        "/predict/cicids",
-        {
-          source_ip:
-            item.source || "Unknown",
-
-          destination_ip:
-            item.destination || "Unknown",
-
-          protocol:
-            item.protocol || "TCP",
-
-          destination_port:
-            Number(
-              item.destination_port || 0
-            ),
-
-          duration:
-            Number(
-              item.duration || 0
-            ),
-
-          src_packets:
-            Number(
-              item.src_packets || 0
-            ),
-
-          dst_packets:
-            Number(
-              item.dst_packets || 0
-            ),
-
-          src_bytes:
-            Number(
-              item.src_bytes || 0
-            ),
-
-          dst_bytes:
-            Number(
-              item.dst_bytes || 0
-            ),
-
-          flow_bytes_per_sec:
-            Number(
-              item.flow_bytes_per_sec || 0
-            ),
-
-          flow_packets_per_sec:
-            Number(
-              item.flow_packets_per_sec || 0
-            )
-        }
-      );
-
-      result = response.data;
-
-    }
-
-
-    // ==========================================
-    // UNSW-NB15 ANALYSIS
-    // ==========================================
-
-    else if (selectedDataset === "UNSW-NB15") {
-
-      const response = await API.post(
-        "/predict/unsw",
-        {
-          source_ip:
-            item.source || "Unknown",
-
-          destination_ip:
-            item.destination || "Unknown",
-
-          proto:
-            String(
-              item.proto || ""
-            ),
-
-          service:
-            String(
-              item.service || ""
-            ),
-
-          state:
-            String(
-              item.state || ""
-            ),
-
-          dur:
-            Number(
-              item.dur || 0
-            ),
-
-          spkts:
-            Number(
-              item.spkts || 0
-            ),
-
-          dpkts:
-            Number(
-              item.dpkts || 0
-            ),
-
-          sbytes:
-            Number(
-              item.sbytes || 0
-            ),
-
-          dbytes:
-            Number(
-              item.dbytes || 0
-            ),
-
-          rate:
-            Number(
-              item.rate || 0
-            ),
-
-          sload:
-            Number(
-              item.sload || 0
-            ),
-
-          dload:
-            Number(
-              item.dload || 0
-            ),
-
-          sloss:
-            Number(
-              item.sloss || 0
-            ),
-
-          dloss:
-            Number(
-              item.dloss || 0
-            ),
-
-          sinpkt:
-            Number(
-              item.sinpkt || 0
-            ),
-
-          dinpkt:
-            Number(
-              item.dinpkt || 0
-            ),
-
-          sjit:
-            Number(
-              item.sjit || 0
-            ),
-
-          djit:
-            Number(
-              item.djit || 0
-            ),
-
-          swin:
-            Number(
-              item.swin || 0
-            ),
-
-          stcpb:
-            Number(
-              item.stcpb || 0
-            ),
-
-          dtcpb:
-            Number(
-              item.dtcpb || 0
-            ),
-
-          dwin:
-            Number(
-              item.dwin || 0
-            ),
-
-          tcprtt:
-            Number(
-              item.tcprtt || 0
-            ),
-
-          synack:
-            Number(
-              item.synack || 0
-            ),
-
-          ackdat:
-            Number(
-              item.ackdat || 0
-            ),
-
-          smean:
-            Number(
-              item.smean || 0
-            ),
-
-          dmean:
-            Number(
-              item.dmean || 0
-            ),
-
-          trans_depth:
-            Number(
-              item.trans_depth || 0
-            ),
-
-          response_body_len:
-            Number(
-              item.response_body_len || 0
-            ),
-
-          ct_src_dport_ltm:
-            Number(
-              item.ct_src_dport_ltm || 0
-            ),
-
-          ct_dst_sport_ltm:
-            Number(
-              item.ct_dst_sport_ltm || 0
-            ),
-
-          is_ftp_login:
-            Number(
-              item.is_ftp_login || 0
-            ),
-
-          ct_ftp_cmd:
-            Number(
-              item.ct_ftp_cmd || 0
-            ),
-
-          ct_flw_http_mthd:
-            Number(
-              item.ct_flw_http_mthd || 0
-            ),
-
-          is_sm_ips_ports:
-            Number(
-              item.is_sm_ips_ports || 0
-            )
-        }
-      );
-
-      result = response.data;
-
-    }
-
-
-    // ==========================================
-    // UPDATE TRAFFIC ROW
-    // ==========================================
-
-    setTrafficData((prev) =>
-      prev.map((traffic, i) =>
-        i === index
-          ? {
-              ...traffic,
-
-              status:
-                result.prediction ||
-                traffic.status,
-
-              confidence:
-                result.confidence ||
-                traffic.confidence,
-
-              attack_type:
-                result.attack_type ||
-                "None",
-
-              severity:
-                result.severity ||
-                "LOW"
-            }
-          : traffic
-      )
-    );
-
-
-    // ==========================================
-    // INVESTIGATION RESULT
-    // ==========================================
-
-    setSelectedTraffic({
-
-      ...item,
-
-      prediction:
-        result.prediction,
-
-      confidence:
-        result.confidence ||
-        item.confidence,
-
-      attack_type:
-        result.attack_type ||
-        "None",
-
-      severity:
-        result.severity ||
-        "LOW",
-
-      risk_score:
-        result.risk_score ?? 0,
-
-      risk_level:
-        result.risk_level ||
-        "LOW",
-
-      alert_id:
-        result.alert_id ||
-        null,
-
-      analyzing: false
-
-    });
-
-  } catch (error) {
-
-    console.error(
-      "Investigation error:",
-      error.response?.data ||
-      error.message
-    );
-
-    setSelectedTraffic({
-
-      ...item,
-
-      error:
-        error.response?.data?.detail ||
-        "Unable to analyze traffic.",
-
-      analyzing: false
-
-    });
-
-  }
+// The row has already been classified by the AI when it entered
+// the live table. Analyze opens the stored result instead of running
+// the model a second time. This prevents the classification/confidence
+// from changing when the analyst clicks Analyze.
+
+const analyzeTraffic = (item) => {
+  if (!item) return;
+
+  setSelectedTraffic({
+    ...item,
+    prediction: item.status || "Unknown",
+    analyzing: false,
+    error: null
+  });
 };
 
   // ==============================
@@ -1673,34 +1579,33 @@ const getSecurityReport = async () => {
   // ==============================
 
  useEffect(() => {
+  // Reset live, dataset-specific UI immediately when switching datasets.
+  setTrafficData([]);
+  setTrafficTrend([]);
+  setProtocolStats({
+    HTTP: 0,
+    HTTPS: 0,
+    DNS: 0,
+    OTHER: 0
+  });
+  setSelectedTraffic(null);
 
   getTraffic();
   getDashboardStats();
   getReportData();
   getSecurityReport();
   getSecurityAnalytics();
-
-  // Milestone 3 database data
   getAlerts();
   getIncidents();
 
   const timer = setInterval(() => {
-
     getTraffic();
     getDashboardStats();
-
-    // Refresh database-backed security data
     getAlerts();
     getIncidents();
-
   }, 10000);
 
   return () => clearInterval(timer);
-
-  setTrafficData([]);
-
-  setSelectedTraffic(null);
-
 }, [selectedDataset]);
 
 
@@ -2404,15 +2309,10 @@ const enableNotifications = async () => {
   <tbody>
 
     {trafficData
+      .filter((item) => item.dataset === selectedDataset)
       .slice()
       .reverse()
-      .map(
-        (item, index) => {
-
-          const realIndex =
-            trafficData.length -
-            1 -
-            index;
+      .map((item) => {
 
 
           return (
@@ -2549,9 +2449,7 @@ const enableNotifications = async () => {
 
                 <button
                   onClick={() =>
-                    analyzeTraffic(
-                      realIndex
-                    )
+                    analyzeTraffic(item)
                   }
                 >
                   Analyze
@@ -2607,7 +2505,9 @@ const enableNotifications = async () => {
 
         <p>
           <strong>Protocol:</strong>{" "}
-          {selectedTraffic.protocol}
+          {selectedTraffic.dataset === "UNSW-NB15"
+            ? selectedTraffic.proto
+            : selectedTraffic.protocol}
         </p>
 
         <h3>📊 Traffic Features</h3>
@@ -3665,28 +3565,28 @@ const enableNotifications = async () => {
 
       <div className="card">
         <h2>
-          {securityAnalytics.summary.total_alerts}
+          {securityAnalytics.summary?.total_alerts ?? 0}
         </h2>
         <p>Total Alerts</p>
       </div>
 
       <div className="card">
         <h2>
-          {securityAnalytics.summary.critical_alerts}
+          {securityAnalytics.summary?.critical_alerts ?? 0}
         </h2>
         <p>Critical Alerts</p>
       </div>
 
       <div className="card">
         <h2>
-          {securityAnalytics.summary.high_alerts}
+          {securityAnalytics.summary?.high_alerts ?? 0}
         </h2>
         <p>High Alerts</p>
       </div>
 
       <div className="card">
         <h2>
-          {securityAnalytics.summary.medium_alerts}
+          {securityAnalytics.summary?.medium_alerts ?? 0}
         </h2>
         <p>Medium Alerts</p>
       </div>
@@ -3719,7 +3619,7 @@ const enableNotifications = async () => {
 
             <Pie
               data={
-                securityAnalytics.attack_distribution
+                securityAnalytics.attack_distribution || []
               }
               dataKey="value"
               nameKey="name"
@@ -3775,7 +3675,7 @@ const enableNotifications = async () => {
 
         <BarChart
           data={
-            securityAnalytics.severity_distribution
+            securityAnalytics.severity_distribution || []
           }
         >
 
@@ -3822,7 +3722,7 @@ const enableNotifications = async () => {
 
         <BarChart
           data={
-            securityAnalytics.dataset_distribution
+            securityAnalytics.dataset_distribution || []
           }
         >
 
@@ -3869,7 +3769,7 @@ const enableNotifications = async () => {
 
         <LineChart
           data={
-            securityAnalytics.daily_trend
+            securityAnalytics.daily_trend || []
           }
         >
 
@@ -3918,7 +3818,7 @@ const enableNotifications = async () => {
 
         <LineChart
           data={
-            securityAnalytics.weekly_trend
+            securityAnalytics.weekly_trend || []
           }
         >
 
