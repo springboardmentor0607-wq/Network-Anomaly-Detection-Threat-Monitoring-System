@@ -27,7 +27,7 @@ export default function DashboardStatsCharts({ dataset }: { dataset?: string }) 
           
           if (isDataEmpty) {
             // Generate different mock data depending on the selected dataset
-            if (dataset === 'unsw-nb15') {
+            if (dataset?.includes('UNSW-NB15')) {
               setData({
                 attack_categories: [
                   { name: "Fuzzers", value: 3820 },
@@ -57,7 +57,7 @@ export default function DashboardStatsCharts({ dataset }: { dataset?: string }) 
                   ingested_rows: 2540043
                 }
               });
-            } else if (dataset === 'live-capture') {
+            } else if (dataset?.includes('Live Capture')) {
               setData({
                 attack_categories: [
                   { name: "Port Scan", value: 120 },
@@ -122,7 +122,7 @@ export default function DashboardStatsCharts({ dataset }: { dataset?: string }) 
       } catch (err) {
         console.error(err);
         // Fallback on fetch failure with dataset awareness
-        if (dataset === 'unsw-nb15') {
+        if (dataset?.includes('UNSW-NB15')) {
           setData({
             attack_categories: [
               { name: "Fuzzers", value: 3820 },
@@ -152,7 +152,7 @@ export default function DashboardStatsCharts({ dataset }: { dataset?: string }) 
               ingested_rows: 2540043
             }
           });
-        } else if (dataset === 'live-capture') {
+        } else if (dataset?.includes('Live Capture')) {
           setData({
             attack_categories: [
               { name: "Port Scan", value: 120 },
