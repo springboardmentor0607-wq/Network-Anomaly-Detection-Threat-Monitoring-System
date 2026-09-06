@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+venv
+.venv
+
+# Environment files
+.env
+*.env
+
+# Node
+node_modules
+frontend/node_modules
+
+# React build
+frontend/build
+frontend/.cache
+
+# Runtime data
+backend/uploads
+backend/logs
+backend/reports
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
