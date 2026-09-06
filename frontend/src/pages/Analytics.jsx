@@ -5,44 +5,60 @@ import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import HeaderNav from '../components/HeaderNav';
 
+import { useTheme } from '../context/ThemeContext';
+
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom',
-      labels: {
-        color: '#cbd5e1',
-        font: { size: 11 },
-      },
-    },
-  },
-  scales: {
-    x: {
-      ticks: { color: '#94a3b8' },
-      grid: { color: 'rgba(148, 163, 184, 0.15)' },
-    },
-    y: {
-      ticks: { color: '#94a3b8' },
-      grid: { color: 'rgba(148, 163, 184, 0.15)' },
-    },
-  },
-};
-
-const pieChartOptions = {
-  ...chartOptions,
-  scales: {
-    x: { display: false },
-    y: { display: false },
-  },
-};
-
 export default function Analytics() {
+  const { isDark } = useTheme();
   const [analytics, setAnalytics] = useState(null);
   const [threatIntelligence, setThreatIntelligence] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const chartOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: isDark ? '#cbd5e1' : '#0f172a',
+            font: { size: 11, weight: '600' },
+          },
+        },
+        tooltip: {
+          backgroundColor: isDark ? '#0f172a' : '#ffffff',
+          titleColor: isDark ? '#ffffff' : '#020617',
+          bodyColor: isDark ? '#cbd5e1' : '#0f172a',
+          borderColor: isDark ? '#334155' : '#cbd5e1',
+          borderWidth: 1,
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: isDark ? '#94a3b8' : '#1e293b', font: { weight: '600' } },
+          grid: { color: isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15, 23, 42, 0.08)' },
+        },
+        y: {
+          ticks: { color: isDark ? '#94a3b8' : '#1e293b', font: { weight: '600' } },
+          grid: { color: isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15, 23, 42, 0.08)' },
+        },
+      },
+    }),
+    [isDark]
+  );
+
+  const pieChartOptions = useMemo(
+    () => ({
+      ...chartOptions,
+      scales: {
+        x: { display: false },
+        y: { display: false },
+      },
+    }),
+    [chartOptions]
+  );
   const [error, setError] = useState('');
 
   const loadData = async () => {
@@ -188,27 +204,27 @@ export default function Analytics() {
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 mb-6">
               <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 backdrop-blur">
                 <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Total Traffic</p>
-                <p className="mt-2 text-2xl font-bold text-white">{totalTraffic}</p>
+                <p className="mt-2 text-2xl font-bold text-white stat-value-default">{totalTraffic}</p>
               </div>
               <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 backdrop-blur">
                 <p className="text-[10px] uppercase tracking-wider text-rose-400 font-semibold">Attack Count</p>
-                <p className="mt-2 text-2xl font-bold text-rose-300">{attackCount}</p>
+                <p className="mt-2 text-2xl font-bold text-rose-300 stat-value-rose">{attackCount}</p>
               </div>
               <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 backdrop-blur">
                 <p className="text-[10px] uppercase tracking-wider text-emerald-400 font-semibold">Benign Count</p>
-                <p className="mt-2 text-2xl font-bold text-emerald-300">{benignCount}</p>
+                <p className="mt-2 text-2xl font-bold text-emerald-300 stat-value-emerald">{benignCount}</p>
               </div>
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 backdrop-blur">
                 <p className="text-[10px] uppercase tracking-wider text-amber-400 font-semibold">Attack %</p>
-                <p className="mt-2 text-2xl font-bold text-amber-300">{attackPercentage}%</p>
+                <p className="mt-2 text-2xl font-bold text-amber-300 stat-value-amber">{attackPercentage}%</p>
               </div>
               <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-5 backdrop-blur">
                 <p className="text-[10px] uppercase tracking-wider text-blue-400 font-semibold">Unique Src IPs</p>
-                <p className="mt-2 text-2xl font-bold text-blue-300">{uniqueSrcIPs}</p>
+                <p className="mt-2 text-2xl font-bold text-blue-300 stat-value-blue">{uniqueSrcIPs}</p>
               </div>
               <div className="rounded-2xl border border-purple-500/30 bg-purple-500/10 p-5 backdrop-blur">
                 <p className="text-[10px] uppercase tracking-wider text-purple-400 font-semibold">Unique Dst IPs</p>
-                <p className="mt-2 text-2xl font-bold text-purple-300">{uniqueDstIPs}</p>
+                <p className="mt-2 text-2xl font-bold text-purple-300 stat-value-purple">{uniqueDstIPs}</p>
               </div>
             </div>
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import HeaderNav from '../components/HeaderNav';
 import LoadingSpinner from '../components/LoadingSpinner';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const PRIORITY_BADGES = {
   Critical: 'bg-red-500/20 text-red-400 border-red-500/40',
@@ -19,9 +20,15 @@ const STATUS_BADGES = {
 };
 
 export default function Incidents() {
+  const { user } = useAuth();
+  const isAdmin = useMemo(() => user?.role === 'Security Administrator', [user?.role]);
+
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Available analysts for Admin assignment
+  const [analystsList, setAnalystsList] = useState([]);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -32,17 +39,32 @@ export default function Incidents() {
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [noteText, setNoteText] = useState('');
   const [submittingNote, setSubmittingNote] = useState(false);
-  const [analystInput, setAnalystInput] = useState('');
+  const [selectedAnalystId, setSelectedAnalystId] = useState('');
+  const [assigningLoading, setAssigningLoading] = useState(false);
+
+  // Create Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newPriority, setNewPriority] = useState('High');
   const [newAlertId, setNewAlertId] = useState('');
+  const [newAssignedAnalystId, setNewAssignedAnalystId] = useState('');
+
+  // Fetch available analysts for admin dropdown
+  useEffect(() => {
+    if (isAdmin) {
+      api.get('/incidents/analysts')
+        .then((res) => setAnalystsList(res.data || []))
+        .catch((err) => console.warn('Could not load analysts list:', err));
+    }
+  }, [isAdmin]);
 
   const fetchIncidents = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get('/incidents', { params: { limit: 100 } });
+      // Security Analyst fetches ONLY their assigned incidents; Administrator fetches all
+      const endpoint = isAdmin ? '/incidents' : '/incidents/my-assigned';
+      const response = await api.get(endpoint, { params: { limit: 100 } });
       setIncidents(response.data || []);
     } catch (err) {
       console.error('Failed to fetch incidents:', err);
@@ -50,7 +72,7 @@ export default function Incidents() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     fetchIncidents();
@@ -73,6 +95,7 @@ export default function Incidents() {
         !q ||
         (item.incident_id && item.incident_id.toLowerCase().includes(q)) ||
         (item.title && item.title.toLowerCase().includes(q)) ||
+        (item.assigned_analyst_name && item.assigned_analyst_name.toLowerCase().includes(q)) ||
         (item.assigned_analyst && item.assigned_analyst.toLowerCase().includes(q)) ||
         (item.alert_id && item.alert_id.toLowerCase().includes(q));
 
@@ -96,6 +119,39 @@ export default function Incidents() {
     }
   };
 
+  // Handle Admin assigning an analyst
+  const handleAssignAnalyst = async () => {
+    if (!selectedIncident) return;
+    setAssigningLoading(true);
+    try {
+      let payload = {};
+      if (!selectedAnalystId) {
+        payload = {
+          assigned_analyst_id: null,
+          assigned_analyst_name: null,
+          assigned_analyst: 'Unassigned',
+        };
+      } else {
+        const found = analystsList.find((a) => a.id === selectedAnalystId);
+        if (found) {
+          payload = {
+            assigned_analyst_id: found.id,
+            assigned_analyst_name: found.full_name,
+            assigned_analyst: found.email,
+          };
+        }
+      }
+      const res = await api.patch(`/incidents/${selectedIncident.incident_id}`, payload);
+      setIncidents((prev) => prev.map((inc) => (inc.incident_id === selectedIncident.incident_id ? res.data : inc)));
+      setSelectedIncident(res.data);
+      alert('Analyst assignment updated successfully.');
+    } catch (err) {
+      alert(err?.response?.data?.detail || 'Failed to assign analyst.');
+    } finally {
+      setAssigningLoading(false);
+    }
+  };
+
   // Handle adding investigation notes
   const handleAddNote = async (e) => {
     e.preventDefault();
@@ -104,6 +160,7 @@ export default function Incidents() {
     try {
       const res = await api.post(`/incidents/${selectedIncident.incident_id}/notes`, {
         text: noteText.trim(),
+        author: user?.full_name || user?.email || 'Security Analyst',
       });
       setIncidents((prev) => prev.map((inc) => (inc.incident_id === selectedIncident.incident_id ? res.data : inc)));
       setSelectedIncident(res.data);
@@ -120,20 +177,39 @@ export default function Incidents() {
     e.preventDefault();
     try {
       let res;
+      let assignedPayload = {};
+      if (isAdmin && newAssignedAnalystId) {
+        const chosen = analystsList.find((a) => a.id === newAssignedAnalystId);
+        if (chosen) {
+          assignedPayload = {
+            assigned_analyst_id: chosen.id,
+            assigned_analyst_name: chosen.full_name,
+            assigned_analyst: chosen.email,
+          };
+        }
+      }
+
       if (newAlertId.trim()) {
         res = await api.post(`/incidents/from-alert/${newAlertId.trim()}`, null, {
-          params: { priority: newPriority },
+          params: {
+            priority: newPriority,
+            assigned_analyst_id: assignedPayload.assigned_analyst_id,
+            assigned_analyst_name: assignedPayload.assigned_analyst_name,
+            assigned_analyst: assignedPayload.assigned_analyst,
+          },
         });
       } else {
         res = await api.post('/incidents', {
           title: newTitle.trim() || 'Manual Security Incident',
           priority: newPriority,
+          ...assignedPayload,
         });
       }
       setIncidents((prev) => [res.data, ...prev]);
       setShowCreateModal(false);
       setNewTitle('');
       setNewAlertId('');
+      setNewAssignedAnalystId('');
     } catch (err) {
       alert(err?.response?.data?.detail || 'Failed to create incident.');
     }
@@ -143,28 +219,52 @@ export default function Incidents() {
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6">
       <div className="mx-auto max-w-7xl">
         <HeaderNav
-          title="Incident Management"
-          subtitle="Track, assign, investigate, and resolve security threat incidents in real time."
+          title={isAdmin ? "Incident Management & Assignment" : "Security Analyst Incident Dashboard"}
+          subtitle={
+            isAdmin
+              ? "Oversee, assign, triage, and track organization-wide security threats."
+              : `Security cases assigned to ${user?.full_name || user?.email || 'your account'}.`
+          }
           onRefresh={fetchIncidents}
         />
+
+        {/* Visibility Scope Banner */}
+        <div className="mb-6 flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className={`inline-block h-2.5 w-2.5 rounded-full ${isAdmin ? 'bg-purple-400 animate-pulse' : 'bg-emerald-400 animate-pulse'}`} />
+            <span className="font-semibold text-slate-200">
+              {isAdmin ? 'Administrator Scope:' : 'Analyst Scoped Feed:'}
+            </span>
+            <span className="text-slate-400">
+              {isAdmin
+                ? 'Full access enabled. Viewing and managing all incidents across all analysts.'
+                : `Active filter enforced: Showing only incidents assigned to ${user?.full_name || user?.email} (User ID: ${user?.id || '—'}).`}
+            </span>
+          </div>
+          <div className="hidden sm:block font-mono text-[11px] text-slate-500">
+            Endpoint: {isAdmin ? '/api/v1/incidents' : '/api/v1/incidents/my-assigned'}
+          </div>
+        </div>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
           <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 backdrop-blur">
-            <p className="text-xs uppercase tracking-wider text-slate-400">Total Incidents</p>
-            <p className="mt-2 text-3xl font-bold text-white">{stats.total}</p>
+            <p className="text-xs uppercase tracking-wider text-slate-400">
+              {isAdmin ? 'Total Incidents' : 'My Assigned Incidents'}
+            </p>
+            <p className="mt-2 text-3xl font-bold text-white stat-value-default">{stats.total}</p>
           </div>
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 backdrop-blur">
             <p className="text-xs uppercase tracking-wider text-amber-400">Active Investigations</p>
-            <p className="mt-2 text-3xl font-bold text-amber-300">{stats.active}</p>
+            <p className="mt-2 text-3xl font-bold text-amber-300 stat-value-amber">{stats.active}</p>
           </div>
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 backdrop-blur">
             <p className="text-xs uppercase tracking-wider text-rose-400">Critical / High Priority</p>
-            <p className="mt-2 text-3xl font-bold text-rose-300">{stats.critical}</p>
+            <p className="mt-2 text-3xl font-bold text-rose-300 stat-value-rose">{stats.critical}</p>
           </div>
           <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 backdrop-blur">
             <p className="text-xs uppercase tracking-wider text-emerald-400">Resolved / Closed</p>
-            <p className="mt-2 text-3xl font-bold text-emerald-300">{stats.resolved}</p>
+            <p className="mt-2 text-3xl font-bold text-emerald-300 stat-value-emerald">{stats.resolved}</p>
           </div>
         </div>
 
@@ -223,7 +323,9 @@ export default function Incidents() {
             <div className="p-8 text-center text-rose-400 text-sm">{error}</div>
           ) : filteredIncidents.length === 0 ? (
             <div className="p-12 text-center text-slate-400 text-sm">
-              No incidents found matching current filters.
+              {isAdmin
+                ? 'No incidents found matching current filters.'
+                : 'No incidents currently assigned to your account.'}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -236,7 +338,7 @@ export default function Incidents() {
                     <th className="px-4 py-3">Priority</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Assigned Analyst</th>
-                    <th className="px-4 py-3">Created At</th>
+                    <th className="px-4 py-3">Assigned Date</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -244,6 +346,7 @@ export default function Incidents() {
                   {filteredIncidents.map((inc) => {
                     const priorityClass = PRIORITY_BADGES[inc.priority] || 'bg-slate-800 text-slate-300';
                     const statusClass = STATUS_BADGES[inc.status] || 'bg-slate-800 text-slate-300';
+                    const analystDisplayName = inc.assigned_analyst_name || inc.assigned_analyst || 'Unassigned';
 
                     return (
                       <tr key={inc.incident_id} className="hover:bg-slate-800/40 transition">
@@ -260,16 +363,27 @@ export default function Incidents() {
                             {inc.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-slate-200">{inc.assigned_analyst || 'Unassigned'}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col">
+                            <span className="text-slate-200 font-medium">
+                              {analystDisplayName}
+                            </span>
+                            {inc.assigned_analyst && inc.assigned_analyst !== analystDisplayName && (
+                              <span className="font-mono text-[10px] text-slate-500">{inc.assigned_analyst}</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-4 py-3 font-mono text-slate-400">
-                          {new Date(inc.created_at).toLocaleString()}
+                          {inc.assigned_at
+                            ? new Date(inc.assigned_at).toLocaleDateString()
+                            : new Date(inc.created_at).toLocaleDateString()}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedIncident(inc);
-                              setAnalystInput(inc.assigned_analyst || '');
+                              setSelectedAnalystId(inc.assigned_analyst_id || '');
                             }}
                             className="rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 px-3 py-1 text-[11px] font-semibold hover:bg-blue-600/40 transition"
                           >
@@ -332,26 +446,51 @@ export default function Incidents() {
                 </div>
               </div>
 
+              {/* Assignment Controls */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Assigned Analyst</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={analystInput}
-                    onChange={(e) => setAnalystInput(e.target.value)}
-                    placeholder="analyst@netshield.ai"
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-white focus:border-blue-500 focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleUpdateIncident(selectedIncident.incident_id, { assigned_analyst: analystInput })
-                    }
-                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition"
-                  >
-                    Assign
-                  </button>
-                </div>
+                {isAdmin ? (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">
+                      Assign to Security Analyst
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={selectedAnalystId}
+                        onChange={(e) => setSelectedAnalystId(e.target.value)}
+                        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-white focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="">Unassigned</option>
+                        {analystsList.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.full_name} ({a.email})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={assigningLoading}
+                        onClick={handleAssignAnalyst}
+                        className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50 transition whitespace-nowrap"
+                      >
+                        {assigningLoading ? 'Saving...' : 'Assign'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Assignment Information</label>
+                    <div className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-300">
+                      <p className="font-semibold text-emerald-400">
+                        Assigned to: {selectedIncident.assigned_analyst_name || selectedIncident.assigned_analyst || 'You'}
+                      </p>
+                      {selectedIncident.assigned_at && (
+                        <p className="text-[10px] text-slate-400 mt-1 font-mono">
+                          Assigned: {new Date(selectedIncident.assigned_at).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -447,6 +586,24 @@ export default function Incidents() {
                   <option value="Low">Low</option>
                 </select>
               </div>
+
+              {isAdmin && (
+                <div>
+                  <label className="block text-slate-400 mb-1 font-semibold">Assign Analyst</label>
+                  <select
+                    value={newAssignedAnalystId}
+                    onChange={(e) => setNewAssignedAnalystId(e.target.value)}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="">Unassigned</option>
+                    {analystsList.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.full_name} ({a.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="flex justify-end gap-2 mt-2">
                 <button

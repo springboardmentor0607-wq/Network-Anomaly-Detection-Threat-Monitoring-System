@@ -383,10 +383,24 @@ async def compute_threat_intelligence_analytics(
 
     risk_heatmap = []
     for cat in categories:
-        row_values = []
+        slots = []
         for slot in time_slots:
-                threat_trend = [
+            scores = risk_scores_by_cat_slot[cat][slot]
+            intensity = round(sum(scores) / len(scores)) if scores else 0
+            slots.append({"time": slot, "intensity": intensity})
+        risk_heatmap.append({"category": cat, "slots": slots})
+
+    threat_trend = [
         {"time": time_key, "count": cnt}
+        for time_key, cnt in trend_dict.items()
+    ]
+
+    traffic_flow = [
+        {
+            "time": time_key,
+            "bandwidth_mbps": round(cnt * 1.25, 2) if cnt > 0 else 0.5,
+            "packet_count": cnt * 120
+        }
         for time_key, cnt in trend_dict.items()
     ]
 

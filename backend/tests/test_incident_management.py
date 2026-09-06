@@ -21,20 +21,26 @@ def test_incident_document_model():
     inc = IncidentDocument(
         title="DDoS Traffic Surge Investigation",
         priority=IncidentPriority.CRITICAL,
-        assigned_analyst="analyst@netshield.ai"
+        assigned_analyst_id="507f1f77bcf86cd799439012",
+        assigned_analyst_name="Farhath Suraiya",
+        assigned_analyst="farhath@netshield.ai"
     )
 
     assert inc.incident_id.startswith("INC-")
     assert inc.title == "DDoS Traffic Surge Investigation"
     assert inc.priority == IncidentPriority.CRITICAL
     assert inc.status == IncidentStatus.NEW
-    assert inc.assigned_analyst == "analyst@netshield.ai"
+    assert inc.assigned_analyst_id == "507f1f77bcf86cd799439012"
+    assert inc.assigned_analyst_name == "Farhath Suraiya"
+    assert inc.assigned_analyst == "farhath@netshield.ai"
     assert inc.resolved_at is None
 
     dict_repr = inc.to_db_dict()
     assert dict_repr["incident_id"] == inc.incident_id
     assert dict_repr["priority"] == "Critical"
     assert dict_repr["status"] == "New"
+    assert dict_repr["assigned_analyst_id"] == "507f1f77bcf86cd799439012"
+    assert dict_repr["assigned_analyst_name"] == "Farhath Suraiya"
 
 
 def test_incidents_api_endpoints():

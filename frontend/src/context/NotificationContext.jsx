@@ -24,20 +24,54 @@ export function NotificationProvider({ children }) {
   }, []);
 
   const connectWebSocket = useCallback(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = import.meta.env.VITE_WS_HOST || 'localhost:8000';
-    const wsUrl = `${protocol}//${host}/api/v1/ws/alerts`;
+    // Clear any existing reconnect timeout first
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    // If there is already an active socket, do not create another one
+    if (socketRef.current) {
+      if (socketRef.current.readyState === WebSocket.CONNECTING || socketRef.current.readyState === WebSocket.OPEN) {
+        return;
+      }
+      try {
+        socketRef.current.close();
+      } catch (e) {}
+      socketRef.current = null;
+    }
+
+    let wsHost = import.meta.env.VITE_WS_HOST;
+    let protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+    if (!wsHost && import.meta.env.VITE_API_URL) {
+      try {
+        const parsedUrl = new URL(import.meta.env.VITE_API_URL);
+        wsHost = parsedUrl.host;
+        protocol = parsedUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+      } catch (e) {
+        wsHost = 'localhost:8000';
+      }
+    }
+    if (!wsHost) {
+      wsHost = 'localhost:8000';
+    }
+
+    const wsUrl = `${protocol}//${wsHost}/api/v1/ws/alerts`;
 
     try {
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
 
       ws.onopen = () => {
-        setIsConnected(true);
-        console.log('Real-Time Threat Notifications WebSocket connected.');
+        if (ws === socketRef.current) {
+          setIsConnected(true);
+          console.log('Real-Time Threat Notifications WebSocket connected.');
+        }
       };
 
       ws.onmessage = (event) => {
+        if (ws !== socketRef.current) return;
         try {
           const payload = JSON.parse(event.data);
           if (payload.type === 'LIVE_PACKET' && payload.data) {
@@ -70,18 +104,27 @@ export function NotificationProvider({ children }) {
         }
       };
 
-      ws.onclose = () => {
-        setIsConnected(false);
-        // Auto-reconnect after 3 seconds without spamming poll requests
-        reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000);
+      ws.onclose = (event) => {
+        if (ws === socketRef.current) {
+          setIsConnected(false);
+          socketRef.current = null;
+          console.log('WebSocket connection closed. Reconnecting in 3s...');
+          reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000);
+        }
       };
 
       ws.onerror = (err) => {
-        console.warn('WebSocket connection error:', err);
-        ws.close();
+        if (ws !== socketRef.current) return;
+        if (ws.readyState === WebSocket.OPEN) {
+          console.warn('WebSocket connection error:', err);
+        }
+        try {
+          ws.close();
+        } catch (e) {}
       };
     } catch (err) {
       console.error('WebSocket connection setup failed:', err);
+      reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000);
     }
   }, [dismissToast]);
 
@@ -89,10 +132,19 @@ export function NotificationProvider({ children }) {
     connectWebSocket();
     return () => {
       if (socketRef.current) {
-        socketRef.current.close();
+        const ws = socketRef.current;
+        socketRef.current = null; // Clear reference BEFORE closing to prevent onclose reconnect timer
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        try {
+          ws.close();
+        } catch (e) {}
       }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
       }
     };
   }, [connectWebSocket]);

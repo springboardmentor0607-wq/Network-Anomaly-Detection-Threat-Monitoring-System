@@ -220,10 +220,18 @@ __marimo__/
 # NetShield AI large datasets
 backend/app/data/
 backend/ml/*.csv
-backend/models/*.pkl
 backend/models/*.csv
 backend/reports/*.csv
 
 # Frontend dependencies
 frontend/node_modules/
 frontend/dist/
+
+# Large ML datasets
+backend/models/*.csv
+
+# Local scratch/debug scripts
+backend/scratch/
+
+# Local verification scripts
+backend/verify_analyst_filtering.py

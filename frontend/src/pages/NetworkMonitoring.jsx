@@ -86,31 +86,70 @@ export default function NetworkMonitoring() {
   const [alertStates, setAlertStates] = useState({}); // stateKey -> 'created' | 'duplicate' | 'error: <msg>'
 
   const getAlertStateKey = useCallback((row) => {
-    return `${row.source_ip}_${row.destination_ip}_${row.traffic_label || row.attack_type}_${row.flow_duration || row.timestamp}`;
+    return `${row.source_ip}_${row.destination_ip}_${row.prediction || row.traffic_label || "Attack"}_${row.flow_duration || row.timestamp}`;
   }, []);
 
   const handleCreateDatasetAlert = useCallback(async (row, idx) => {
     setCreatingAlertIdx(idx);
     const stateKey = getAlertStateKey(row);
     
-    // Normalize confidence to 0-1 scale
-    const confVal = row.confidence != null ? Number(row.confidence) : 0.95;
+    // Normalize confidence to 0-1 scale, parsing safely to prevent NaN
+    let confVal = 0.95;
+    if (row.confidence != null) {
+      const parsed = parseFloat(String(row.confidence).replace('%', ''));
+      if (!isNaN(parsed)) {
+        confVal = parsed;
+      }
+    }
     const normConf = confVal > 1.0 ? confVal / 100.0 : confVal;
+    
+    // Parse risk_score safely to prevent NaN
+    let riskScoreVal = 85;
+    if (row.risk_score != null) {
+      const parsed = parseInt(String(row.risk_score), 10);
+      if (!isNaN(parsed)) {
+        riskScoreVal = parsed;
+      }
+    }
 
-    // Build payload using actual row values
+    // Parse ports safely to prevent NaN
+    let srcPortVal = 80;
+    if (row.source_port != null) {
+      const parsed = parseInt(String(row.source_port), 10);
+      if (!isNaN(parsed)) {
+        srcPortVal = parsed;
+      }
+    }
+    let dstPortVal = 80;
+    if (row.destination_port != null) {
+      const parsed = parseInt(String(row.destination_port), 10);
+      if (!isNaN(parsed)) {
+        dstPortVal = parsed;
+      }
+    }
+    
+    // Extract real attack label from row
+    const attackTypeVal = row.traffic_label || row.attack_type || row.prediction || "Attack";
+
+    // Build payload using actual row values, matching backend Pydantic schema
+    const nowIso = new Date().toISOString();
     const payload = {
       source: "Dataset",
       source_ip: row.source_ip || "192.168.1.100",
       destination_ip: row.destination_ip || "10.0.0.1",
-      src_port: row.source_port != null ? Number(row.source_port) : 80,
-      dst_port: row.destination_port != null ? Number(row.destination_port) : 80,
+      src_port: srcPortVal,
+      dst_port: dstPortVal,
       protocol: row.protocol || "TCP",
-      attack_type: row.traffic_label || "Attack",
+      attack_type: attackTypeVal,
       prediction: "Attack",
       confidence: normConf,
-      risk_score: row.risk_score != null ? Number(row.risk_score) : 85,
-      severity: row.threat_level || "High",
-      timestamp: row.timestamp || new Date().toISOString()
+      risk_score: riskScoreVal,
+      severity: row.threat_level || row.severity || "High",
+      timestamp: nowIso,
+      created_at: nowIso,
+      detection_details: {
+        dataset_timestamp: row.timestamp || null,
+      }
     };
 
     try {
@@ -123,7 +162,12 @@ export default function NetworkMonitoring() {
       if (status === 409) {
         setAlertStates(prev => ({ ...prev, [stateKey]: 'duplicate' }));
       } else {
-        setAlertStates(prev => ({ ...prev, [stateKey]: `error: ${detail || err.message}` }));
+        const errorMsg = typeof detail === 'string' 
+          ? detail 
+          : (Array.isArray(detail) && detail.length > 0 && detail[0].msg) 
+            ? `${detail[0].loc.join('.')}: ${detail[0].msg}` 
+            : err.message;
+        setAlertStates(prev => ({ ...prev, [stateKey]: `error: ${errorMsg}` }));
       }
     } finally {
       setCreatingAlertIdx(null);

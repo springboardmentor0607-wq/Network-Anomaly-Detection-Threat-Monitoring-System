@@ -39,9 +39,9 @@ export default function AppRouter() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/threat-reports" element={<Reports />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<Settings />} />
 
           <Route element={<RoleProtectedRoute allowedRoles={['Security Administrator']} />}>
-            <Route path="/settings" element={<Settings />} />
             <Route path="/user-management" element={<UserManagement title="User Management" />} />
             <Route path="/audit-logs" element={<AuditLogs />} />
             <Route path="/system-logs" element={<SystemLogs />} />

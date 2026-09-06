@@ -35,6 +35,7 @@ async def register_user(request: Request, user: UserRegister, db: AsyncIOMotorDa
             email=normalized_email,
             hashed_password=hashed_password,
             role=user.role.value,
+            gender=user.gender,
         )
 
         result = await db["users"].insert_one(user_dict)
@@ -113,6 +114,77 @@ async def logout_user(request: Request, current_user: dict = Depends(get_current
 async def get_current_user_profile(current_user: dict = Depends(get_current_user)):
     """Retrieve the profile of the currently authenticated user."""
     safe_user = {key: value for key, value in current_user.items() if key != "hashed_password"}
-    safe_user["id"] = str(safe_user["_id"])
+    safe_user["id"] = str(safe_user.get("id") or safe_user.get("_id", ""))
     safe_user.pop("_id", None)
     return safe_user
+
+
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+async def change_password(
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Change the authenticated user's password.
+    Verifies the current password before updating to the new hashed password.
+    Accepts JSON body: { current_password, new_password, confirm_password }
+    """
+    # Parse body manually to give clear validation errors
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request body")
+
+    current_password = body.get("current_password", "")
+    new_password = body.get("new_password", "")
+    confirm_password = body.get("confirm_password", "")
+
+    # Validate inputs
+    if not current_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is required")
+    if not new_password or len(new_password) < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password must be at least 8 characters")
+    if new_password != confirm_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password and confirmation do not match")
+
+    # Cannot use the same password
+    if current_password == new_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password must differ from current password")
+
+    user_id = str(current_user.get("id") or current_user.get("_id") or "")
+
+    try:
+        # Re-fetch user from DB to get the hashed_password (safe_user strips it)
+        db_user = None
+        if ObjectId.is_valid(user_id):
+            db_user = await db["users"].find_one({"_id": ObjectId(user_id)})
+        if not db_user:
+            db_user = await db["users"].find_one({"email": current_user.get("email", "")})
+
+        if not db_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found")
+
+        # Verify the current password against the stored hash
+        stored_hash = db_user.get("hashed_password", "")
+        if not verify_password(current_password, stored_hash):
+            await log_audit_event(request, current_user, "Password Change Failed (Wrong Current Password)", "Auth", "Failure")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password is incorrect")
+
+        # Hash the new password and update
+        new_hashed = get_password_hash(new_password)
+        update_filter = {"_id": db_user["_id"]}
+        await db["users"].update_one(update_filter, {"$set": {"hashed_password": new_hashed}})
+
+        logger.info("Password changed successfully for user: %s", current_user.get("email"))
+        await log_audit_event(request, current_user, "Password Changed Successfully", "Auth", "Success")
+        return {"message": "Password updated successfully. Please log in again with your new password."}
+
+    except HTTPException:
+        raise
+    except PyMongoError as exc:
+        logger.exception("MongoDB error during password change for user %s", user_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unable to update password") from exc
+    except Exception as exc:
+        logger.exception("Unexpected error during password change for user %s", user_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unable to update password") from exc

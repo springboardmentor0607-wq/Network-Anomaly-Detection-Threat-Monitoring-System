@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import pymongo
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -20,6 +20,7 @@ class UserDocument(BaseModel):
     email: EmailStr
     hashed_password: str
     role: Role
+    gender: Optional[str] = None
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -27,12 +28,13 @@ class UserDocument(BaseModel):
         return self.model_dump(mode="json", exclude_none=True)
 
 
-def build_user_document(full_name: str, email: str, hashed_password: str, role: str) -> Dict[str, Any]:
+def build_user_document(full_name: str, email: str, hashed_password: str, role: str, gender: Optional[str] = None) -> Dict[str, Any]:
     return UserDocument(
         full_name=full_name,
         email=email,
         hashed_password=hashed_password,
         role=role,
+        gender=gender,
     ).to_db_dict()
 
 

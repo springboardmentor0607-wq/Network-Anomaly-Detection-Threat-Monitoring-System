@@ -119,20 +119,28 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db = Depends(get
     if user_id is None:
         raise credentials_exception
 
-    if user_id == "default_admin" or user_id == "507f1f77bcf86cd799439011":
-        return DEFAULT_ADMIN_USER
-        
+    if user_id in ("default_admin", "507f1f77bcf86cd799439011"):
+        admin_user = dict(DEFAULT_ADMIN_USER)
+        admin_user["id"] = str(admin_user.get("id") or admin_user.get("_id"))
+        return admin_user
+
     try:
-        obj_id = ObjectId(user_id)
         if db is not None:
-            user = await db["users"].find_one({"_id": obj_id})
+            user = None
+            if ObjectId.is_valid(user_id):
+                user = await db["users"].find_one({"_id": ObjectId(user_id)})
+            if not user:
+                user = await db["users"].find_one({"_id": user_id})
+            if not user:
+                user = await db["users"].find_one({"email": user_id})
+
             if user:
                 user["id"] = str(user["_id"])
                 return user
-    except Exception:
-        pass
-        
-    return DEFAULT_ADMIN_USER
+    except Exception as exc:
+        logger.warning("Error fetching user from database: %s", exc)
+
+    raise credentials_exception
 
 class RoleChecker:
     def __init__(self, allowed_roles: list[str]):

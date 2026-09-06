@@ -210,7 +210,7 @@ async def create_alert_from_dataset(
             detail="Only attack predictions can generate security alerts."
         )
 
-    # 2. Prevent duplicates: stable check based on source, IPs, attack type, and timestamp
+    # 2. Prevent duplicate alerts: if matching alert exists, return formatted existing alert directly
     duplicate_query = {
         "source": "Dataset",
         "source_ip": alert_in.source_ip,
@@ -220,16 +220,16 @@ async def create_alert_from_dataset(
     }
     existing = await db["alerts"].find_one(duplicate_query)
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Alert already exists"
-        )
+        return format_alert_doc(existing)
 
     try:
         # Convert Pydantic model to dictionary
         alert_dict = alert_in.model_dump(exclude_none=False)
-        # Ensure correct source label
+        # Ensure correct source label and port mappings
         alert_dict["source"] = "Dataset"
+        alert_dict["source_port"] = alert_dict.get("source_port") or alert_dict.get("src_port") or 80
+        alert_dict["destination_port"] = alert_dict.get("destination_port") or alert_dict.get("dst_port") or 80
+        alert_dict["protocol"] = alert_dict.get("protocol") or "TCP"
         
         # Calculate risk score & severity using modular risk scoring service
         risk_data = RiskScoringService.calculate_risk(alert_in.attack_type, alert_in.confidence)

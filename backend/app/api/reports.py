@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.auth.handler import get_current_user
@@ -10,6 +10,10 @@ from app.services.report_generator import (
     generate_report_data,
     generate_threat_report_csv,
     generate_threat_report_pdf,
+    generate_executive_summary,
+    generate_threat_intelligence_report,
+    generate_incident_report,
+    generate_security_trends,
 )
 
 router = APIRouter()
@@ -68,33 +72,106 @@ async def download_threat_report_csv(
         ) from exc
 
 
-@router.get("/feature-importance")
-async def get_feature_importance(current_user: dict = Depends(get_current_user)):
-    """Fetch feature importance data from the model reports."""
-    import csv
-    import os
-    from fastapi.responses import JSONResponse
-
-    file_path = os.path.join(os.getcwd(), "reports", "feature_importance.csv")
-    if not os.path.exists(file_path):
-        return JSONResponse(status_code=200, content=[])
-
-    data = []
+@router.get("/executive-summary")
+async def get_executive_summary(
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Executive Summary report — total alerts, attacks, severity breakdown, incident overview.
+    Only Security Administrators can access the full executive summary.
+    """
+    user_role = str(current_user.get("role", "")).strip().lower().replace(" ", "_")
+    if user_role != "security_administrator":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Executive Summary is only available to Security Administrators"
+        )
+    await log_audit_event(request, current_user, "Executive Summary Report Viewed", "Reports")
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                data.append({
-                    "rank": int(row.get("rank", 0)),
-                    "feature": row.get("feature", ""),
-                    "importance": float(row.get("importance", 0.0))
-                })
-        return JSONResponse(status_code=200, content=data)
+        data = await generate_executive_summary(db=db)
+        return data
     except Exception as exc:
-        logger.exception("Failed to read feature importance CSV")
+        logger.exception("Failed to generate executive summary report")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to read feature importance data"
+            detail="Failed to generate executive summary"
+        ) from exc
+
+
+@router.get("/threat-intelligence")
+async def get_threat_intelligence_report(
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    limit: int = Query(default=200, ge=1, le=1000),
+):
+    """
+    Threat Intelligence Report — per-alert details.
+    Administrators see all alerts; Analysts see only alerts linked to their assigned incidents.
+    """
+    await log_audit_event(request, current_user, "Threat Intelligence Report Viewed", "Reports")
+    try:
+        data = await generate_threat_intelligence_report(db=db, user=current_user, limit=limit)
+        return data
+    except Exception as exc:
+        logger.exception("Failed to generate threat intelligence report")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate threat intelligence report"
+        ) from exc
+
+
+@router.get("/incidents")
+async def get_incident_report(
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    limit: int = Query(default=200, ge=1, le=1000),
+):
+    """
+    Incident Report — full incident details with notes, status, and analyst info.
+    Administrators see all incidents; Analysts see only their assigned incidents.
+    """
+    await log_audit_event(request, current_user, "Incident Report Viewed", "Reports")
+    try:
+        data = await generate_incident_report(db=db, user=current_user, limit=limit)
+        return data
+    except Exception as exc:
+        logger.exception("Failed to generate incident report")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate incident report"
+        ) from exc
+
+
+@router.get("/security-trends")
+async def get_security_trends(
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    days: int = Query(default=30, ge=7, le=365),
+):
+    """
+    Security Trends Report — daily and weekly attack counts, severity and type trends.
+    Only Security Administrators can access trends.
+    """
+    user_role = str(current_user.get("role", "")).strip().lower().replace(" ", "_")
+    if user_role != "security_administrator":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Security Trends report is only available to Security Administrators"
+        )
+    await log_audit_event(request, current_user, "Security Trends Report Viewed", "Reports")
+    try:
+        data = await generate_security_trends(db=db, days=days)
+        return data
+    except Exception as exc:
+        logger.exception("Failed to generate security trends report")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate security trends report"
         ) from exc
 
 

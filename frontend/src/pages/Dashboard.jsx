@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -61,6 +62,7 @@ export default function Dashboard() {
   const [datasetStatus, setDatasetStatus] = useState('loading');
   const pollRef = useRef(null);
   const { user, logout } = useAuth();
+  const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
 
   const handleDownloadReport = async (type) => {
@@ -281,12 +283,13 @@ export default function Dashboard() {
 
   const loadIncidents = useCallback(async () => {
     try {
-      const response = await api.get('/incidents');
+      const endpoint = isAdmin ? '/incidents' : '/incidents/my-assigned';
+      const response = await api.get(endpoint);
       setIncidentsData(response.data || []);
     } catch (err) {
       setIncidentsData([]);
     }
-  }, []);
+  }, [isAdmin]);
 
   const refreshDashboard = useCallback(async () => {
     const tasks = [
@@ -434,6 +437,109 @@ export default function Dashboard() {
     };
   }, [analyticsData, livePps]);
 
+  // Analyst Personal Assigned Incident Workload Metrics & Charts
+  const analystWorkloadKpis = useMemo(() => {
+    const totalAssigned = incidentsData.length;
+    const openIncidents = incidentsData.filter((i) => String(i.status || '').toLowerCase() === 'open').length;
+    const investigatingIncidents = incidentsData.filter((i) => String(i.status || '').toLowerCase() === 'investigating').length;
+    const resolvedIncidents = incidentsData.filter((i) => ['resolved', 'closed'].includes(String(i.status || '').toLowerCase())).length;
+    const criticalHighAssigned = incidentsData.filter((i) => ['critical', 'high'].includes(String(i.severity || i.threat_level || '').toLowerCase())).length;
+
+    let statusLabel = 'ALL CLEAR';
+    let statusColor = 'text-emerald-400';
+    let statusBg = 'bg-emerald-500/10 border-emerald-500/20';
+
+    if (openIncidents > 5) {
+      statusLabel = 'HEAVY LOAD';
+      statusColor = 'text-rose-400';
+      statusBg = 'bg-rose-500/10 border-rose-500/20 animate-pulse';
+    } else if (openIncidents > 0 || investigatingIncidents > 0) {
+      statusLabel = 'ACTIVE CASES';
+      statusColor = 'text-amber-400';
+      statusBg = 'bg-amber-500/10 border-amber-500/20';
+    }
+
+    return {
+      totalAssigned: totalAssigned.toLocaleString(),
+      openIncidents: openIncidents.toLocaleString(),
+      investigatingIncidents: investigatingIncidents.toLocaleString(),
+      resolvedIncidents: resolvedIncidents.toLocaleString(),
+      criticalHighAssigned: criticalHighAssigned.toLocaleString(),
+      statusLabel,
+      statusColor,
+      statusBg,
+    };
+  }, [incidentsData]);
+
+  const assignedSeverityChartData = useMemo(() => {
+    const normalizeSev = (val) => {
+      const s = String(val || '').trim().toLowerCase();
+      if (s.includes('critical')) return 'Critical';
+      if (s.includes('high')) return 'High';
+      if (s.includes('medium')) return 'Medium';
+      if (s.includes('low')) return 'Low';
+      return null;
+    };
+
+    const critical = incidentsData.filter((i) => normalizeSev(i.priority || i.severity || i.threat_level) === 'Critical').length;
+    const high = incidentsData.filter((i) => normalizeSev(i.priority || i.severity || i.threat_level) === 'High').length;
+    const medium = incidentsData.filter((i) => normalizeSev(i.priority || i.severity || i.threat_level) === 'Medium').length;
+    const low = incidentsData.filter((i) => normalizeSev(i.priority || i.severity || i.threat_level) === 'Low').length;
+    const totalCount = critical + high + medium + low;
+
+    return {
+      totalCount,
+      chartData: {
+        labels: ['Critical', 'High', 'Medium', 'Low'],
+        datasets: [
+          {
+            data: [critical, high, medium, low],
+            backgroundColor: ['#ef4444', '#f43f5e', '#f59e0b', '#10b981'],
+            borderColor: isDark ? '#0f172a' : '#ffffff',
+            borderWidth: 2,
+            hoverOffset: 8,
+          },
+        ],
+      },
+    };
+  }, [incidentsData, isDark]);
+
+  const assignedStatusChartData = useMemo(() => {
+    const normalizeStat = (val) => {
+      const s = String(val || '').trim().toLowerCase();
+      if (['open', 'new'].includes(s)) return 'Open';
+      if (['acknowledged', 'ack'].includes(s)) return 'Acknowledged';
+      if (['investigating', 'investigation', 'in progress', 'in_progress', 'under investigation', 'under_investigation'].includes(s)) return 'Investigating';
+      if (['resolved', 'resolve'].includes(s)) return 'Resolved';
+      if (['closed', 'close'].includes(s)) return 'Closed';
+      return 'Open';
+    };
+
+    const open = incidentsData.filter((i) => normalizeStat(i.status) === 'Open').length;
+    const acknowledged = incidentsData.filter((i) => normalizeStat(i.status) === 'Acknowledged').length;
+    const investigating = incidentsData.filter((i) => normalizeStat(i.status) === 'Investigating').length;
+    const resolved = incidentsData.filter((i) => normalizeStat(i.status) === 'Resolved').length;
+    const closed = incidentsData.filter((i) => normalizeStat(i.status) === 'Closed').length;
+    const totalCount = open + acknowledged + investigating + resolved + closed;
+
+    return {
+      totalCount,
+      chartData: {
+        labels: ['Open', 'Acknowledged', 'Investigating', 'Resolved', 'Closed'],
+        datasets: [
+          {
+            label: 'Assigned Cases Status',
+            data: [open, acknowledged, investigating, resolved, closed],
+            backgroundColor: ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#64748b'],
+            borderColor: isDark ? '#0f172a' : '#ffffff',
+            borderWidth: 1,
+            borderRadius: 4,
+          },
+        ],
+      },
+    };
+  }, [incidentsData, isDark]);
+
   const trendChartData = useMemo(() => {
     const sizes = trafficRows.slice(0, 10).map((row) => Number(row.packet_size) || 0).reverse();
     const labels = trafficRows.slice(0, 10).map((row) => (row.timestamp ? row.timestamp.split(' ')[1] || row.timestamp : '')).reverse();
@@ -458,25 +564,7 @@ export default function Dashboard() {
     };
   }, [trafficRows]);
 
-  const threatChartData = useMemo(() => {
-    const dist = analyticsData?.threat_level_distribution || [];
-    const low = dist.find((d) => String(d.name).toLowerCase() === 'low')?.count || 0;
-    const medium = dist.find((d) => String(d.name).toLowerCase() === 'medium')?.count || 0;
-    const high = dist.find((d) => String(d.name).toLowerCase() === 'high')?.count || 0;
 
-    return {
-      labels: ['Low Risk', 'Medium Risk', 'High Critical'],
-      datasets: [
-        {
-          data: [low, medium, high],
-          backgroundColor: ['#10b981', '#f59e0b', '#f43f5e'],
-          borderColor: '#0f172a',
-          borderWidth: 2,
-          hoverOffset: 8,
-        },
-      ],
-    };
-  }, [analyticsData]);
 
   const attackChartData = useMemo(() => {
     const dist = analyticsData?.traffic_label_distribution || [];
@@ -674,8 +762,13 @@ export default function Dashboard() {
     const analysts = usersData.filter((u) => u.role === 'Security Analyst');
     return analysts.map((analyst) => {
       // Dynamic mapping: count incidents assigned to this analyst in MongoDB
+      const analystId = String(analyst.id || analyst._id || '');
       const assignedCount = incidentsData.filter(
-        (inc) => inc.assigned_analyst === analyst.email || inc.assigned_analyst === analyst.full_name
+        (inc) =>
+          (inc.assigned_analyst_id && String(inc.assigned_analyst_id) === analystId) ||
+          inc.assigned_analyst === analyst.email ||
+          inc.assigned_analyst === analyst.full_name ||
+          inc.assigned_analyst_name === analyst.full_name
       ).length;
       return {
         ...analyst,
@@ -714,66 +807,89 @@ export default function Dashboard() {
     return Array.from(values).sort();
   }, [analyticsData]);
 
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: '#cbd5e1',
-          boxWidth: 12,
-          font: { size: 11 },
+  const chartOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: isDark ? '#cbd5e1' : '#0f172a',
+            boxWidth: 12,
+            font: { size: 11, weight: '600' },
+          },
+        },
+        tooltip: {
+          backgroundColor: isDark ? '#0f172a' : '#ffffff',
+          titleColor: isDark ? '#ffffff' : '#020617',
+          bodyColor: isDark ? '#cbd5e1' : '#0f172a',
+          borderColor: isDark ? '#334155' : '#cbd5e1',
+          borderWidth: 1,
         },
       },
-    },
-    scales: {
-      x: {
-        ticks: { color: '#94a3b8', font: { size: 10 } },
-        grid: { color: 'rgba(148, 163, 184, 0.08)' },
+      scales: {
+        x: {
+          ticks: { color: isDark ? '#94a3b8' : '#1e293b', font: { size: 10, weight: '600' } },
+          grid: { color: isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(15, 23, 42, 0.08)' },
+        },
+        y: {
+          ticks: { color: isDark ? '#94a3b8' : '#1e293b', font: { size: 10, weight: '600' } },
+          grid: { color: isDark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(15, 23, 42, 0.08)' },
+        },
       },
-      y: {
-        ticks: { color: '#94a3b8', font: { size: 10 } },
-        grid: { color: 'rgba(148, 163, 184, 0.08)' },
-      },
-    },
-  };
+    }),
+    [isDark]
+  );
 
-  const pieChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'right',
-        labels: {
-          color: '#cbd5e1',
-          boxWidth: 12,
-          font: { size: 10 },
+  const pieChartOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            color: isDark ? '#cbd5e1' : '#0f172a',
+            boxWidth: 12,
+            font: { size: 10, weight: '600' },
+          },
+        },
+        tooltip: {
+          backgroundColor: isDark ? '#0f172a' : '#ffffff',
+          titleColor: isDark ? '#ffffff' : '#020617',
+          bodyColor: isDark ? '#cbd5e1' : '#0f172a',
+          borderColor: isDark ? '#334155' : '#cbd5e1',
+          borderWidth: 1,
         },
       },
-    },
-  };
+    }),
+    [isDark]
+  );
 
   // =========================================================================
   // Dashboard JSX Render Block
   // =========================================================================
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+    <div className="min-h-screen font-sans" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <div className="flex min-h-screen flex-col lg:flex-row">
         {/* Sidebar */}
-        <aside className="w-full border-b border-slate-900 bg-slate-950/80 p-5 lg:w-72 lg:border-b-0 lg:border-r lg:border-slate-900 lg:px-6 lg:py-8 backdrop-blur">
+        <aside
+          className="w-full border-b p-5 lg:w-72 lg:border-b-0 lg:border-r lg:px-6 lg:py-8 backdrop-blur"
+          style={{ backgroundColor: 'var(--bg-sidebar)', borderColor: 'var(--border-primary)' }}
+        >
           <div className="mb-8 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-semibold text-white shadow-[0_0_25px_rgba(37,99,235,0.45)]">
               N
             </div>
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-blue-400 font-bold">NetShield</p>
-              <p className="text-xs text-slate-400">SOC Security Console</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>SOC Security Console</p>
             </div>
           </div>
 
-          <nav className="space-y-2">
+          <nav className="space-y-1">
             {navigationItems.map((item) => (
               <button
                 key={item.label}
@@ -783,11 +899,11 @@ export default function Dashboard() {
                     navigate(item.path);
                   }
                 }}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
-                  item.label === 'Dashboard'
-                    ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
-                    : 'text-slate-400 hover:bg-slate-900/60 hover:text-white'
-                }`}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition"
+                style={item.label === 'Dashboard'
+                  ? { backgroundColor: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', border: '1px solid var(--border-accent)', fontWeight: 700 }
+                  : { color: 'var(--text-secondary)' }
+                }
               >
                 <span className="text-base">{item.icon}</span>
                 {item.label}
@@ -795,16 +911,35 @@ export default function Dashboard() {
             ))}
           </nav>
 
-          <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+          {/* Theme Toggle */}
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="theme-toggle-btn w-full justify-center"
+              id="dashboard-theme-toggle"
+            >
+              <span>{isDark ? '☀️' : '🌙'}</span>
+              <span>{isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+            </button>
+          </div>
+
+          <div
+            className="mt-4 rounded-2xl border p-4"
+            style={{ borderColor: 'var(--border-primary)', backgroundColor: 'var(--bg-card)' }}
+          >
+            <p className="text-xs uppercase tracking-[0.3em]" style={{ color: 'var(--text-muted)' }}>
               {isAdmin ? 'System Administrator' : 'Security Analyst'}
             </p>
-            <p className="mt-2 text-sm font-medium text-white">{user?.full_name || 'Security Operator'}</p>
-            <p className="text-xs text-slate-500">{user?.role || 'SOC Level 1'}</p>
+            <p className="mt-2 text-sm font-medium" style={{ color: 'var(--text-heading)' }}>
+              {user?.full_name || 'Security Operator'}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{user?.role || 'SOC Level 1'}</p>
             <button
               type="button"
               onClick={logout}
-              className="mt-4 w-full rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-400 transition hover:border-slate-600 hover:text-white"
+              className="mt-4 w-full rounded-lg border px-3 py-2 text-sm transition hover:bg-rose-600 hover:text-white hover:border-rose-600"
+              style={{ borderColor: 'var(--border-secondary)', color: 'var(--text-label)' }}
             >
               Terminate Session
             </button>
@@ -878,15 +1013,15 @@ export default function Dashboard() {
           <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4">
               <p className="text-xs text-slate-400 font-medium uppercase">Datasets Loaded</p>
-              <p className="mt-2 text-2xl font-bold text-white">{statisticsData?.datasets_loaded ?? '—'}</p>
+              <p className="mt-2 text-2xl font-bold text-white stat-value-default">{statisticsData?.datasets_loaded ?? '—'}</p>
             </div>
             <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4">
               <p className="text-xs text-slate-400 font-medium uppercase">Total Rows Ingested</p>
-              <p className="mt-2 text-2xl font-bold text-white">{statisticsData?.rows_loaded?.toLocaleString?.() ?? statisticsData?.rows_loaded ?? '—'}</p>
+              <p className="mt-2 text-2xl font-bold text-white stat-value-default">{statisticsData?.rows_loaded?.toLocaleString?.() ?? statisticsData?.rows_loaded ?? '—'}</p>
             </div>
             <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4">
               <p className="text-xs text-slate-400 font-medium uppercase">Rows After Preprocessing</p>
-              <p className="mt-2 text-2xl font-bold text-white">{statisticsData?.rows_after_preprocessing?.toLocaleString?.() ?? statisticsData?.rows_after_preprocessing ?? '—'}</p>
+              <p className="mt-2 text-2xl font-bold text-white stat-value-default">{statisticsData?.rows_after_preprocessing?.toLocaleString?.() ?? statisticsData?.rows_after_preprocessing ?? '—'}</p>
             </div>
           </section>
 
@@ -904,31 +1039,31 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
                 <p className="text-[10px] uppercase font-bold text-slate-400">Model Accuracy</p>
-                <p className="mt-1 text-xl font-bold text-blue-400">
+                <p className="mt-1 text-xl font-bold text-blue-400 stat-value-blue">
                   {modelMetrics?.accuracy !== undefined && modelMetrics?.accuracy !== null ? `${(modelMetrics.accuracy * 100).toFixed(4)}%` : 'N/A'}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
                 <p className="text-[10px] uppercase font-bold text-slate-400">Precision</p>
-                <p className="mt-1 text-xl font-bold text-indigo-400">
+                <p className="mt-1 text-xl font-bold text-indigo-400 stat-value-indigo">
                   {modelMetrics?.precision !== undefined && modelMetrics?.precision !== null ? `${(modelMetrics.precision * 100).toFixed(4)}%` : 'N/A'}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
                 <p className="text-[10px] uppercase font-bold text-slate-400">Recall</p>
-                <p className="mt-1 text-xl font-bold text-emerald-400">
+                <p className="mt-1 text-xl font-bold text-emerald-400 stat-value-emerald">
                   {modelMetrics?.recall !== undefined && modelMetrics?.recall !== null ? `${(modelMetrics.recall * 100).toFixed(4)}%` : 'N/A'}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
                 <p className="text-[10px] uppercase font-bold text-slate-400">F1 Score</p>
-                <p className="mt-1 text-xl font-bold text-purple-400">
+                <p className="mt-1 text-xl font-bold text-purple-400 stat-value-purple">
                   {modelMetrics?.f1_score !== undefined && modelMetrics?.f1_score !== null ? `${(modelMetrics.f1_score * 100).toFixed(4)}%` : 'N/A'}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
                 <p className="text-[10px] uppercase font-bold text-slate-400">ROC-AUC</p>
-                <p className="mt-1 text-xl font-bold text-amber-400">
+                <p className="mt-1 text-xl font-bold text-amber-400 stat-value-amber">
                   {modelMetrics?.roc_auc !== undefined && modelMetrics?.roc_auc !== null ? `${(modelMetrics.roc_auc * 100).toFixed(4)}%` : 'N/A'}
                 </p>
               </div>
@@ -954,46 +1089,46 @@ export default function Dashboard() {
               <section className="grid gap-4 grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
                 <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Users</p>
-                  <p className="mt-2 text-2xl font-bold text-white tracking-tight">{adminKpis.totalUsers}</p>
+                  <p className="mt-2 text-2xl font-bold text-white tracking-tight stat-value-default">{adminKpis.totalUsers}</p>
                   <p className="mt-1 text-slate-500 text-[10px]">Registered accounts</p>
                 </div>
                 <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Active Analysts</p>
-                  <p className="mt-2 text-2xl font-bold text-violet-400 tracking-tight">{adminKpis.activeAnalysts}</p>
+                  <p className="mt-2 text-2xl font-bold text-violet-400 tracking-tight stat-value-purple">{adminKpis.activeAnalysts}</p>
                   <p className="mt-1 text-slate-500 text-[10px]">SOC operators active</p>
                 </div>
                 <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Critical Alerts</p>
-                  <p className="mt-2 text-2xl font-bold text-rose-500 tracking-tight">{adminKpis.criticalAlerts}</p>
+                  <p className="mt-2 text-2xl font-bold text-rose-500 tracking-tight stat-value-rose">{adminKpis.criticalAlerts}</p>
                   <p className="mt-1 text-slate-500 text-[10px]">High risk packets</p>
                 </div>
                 <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Active Threats</p>
-                  <p className="mt-2 text-2xl font-bold text-rose-400 tracking-tight">{adminKpis.activeThreats}</p>
+                  <p className="mt-2 text-2xl font-bold text-rose-400 tracking-tight stat-value-rose">{adminKpis.activeThreats}</p>
                   <p className="mt-1 text-slate-500 text-[10px]">Incidents currently open</p>
                 </div>
                 <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">System Health</p>
-                  <p className={`mt-2 text-2xl font-bold ${adminKpis.systemHealth === 'Healthy' ? 'text-emerald-400' : 'text-amber-500'} tracking-tight`}>
+                  <p className={`mt-2 text-2xl font-bold ${adminKpis.systemHealth === 'Healthy' ? 'text-emerald-400 stat-value-emerald' : 'text-amber-500 stat-value-amber'} tracking-tight`}>
                     {adminKpis.systemHealth}
                   </p>
                   <p className="mt-1 text-slate-500 text-[10px]">Overall status state</p>
                 </div>
                 <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Network Status</p>
-                  <p className="mt-2 text-2xl font-bold text-blue-400 tracking-tight">{adminKpis.networkStatus}</p>
+                  <p className="mt-2 text-2xl font-bold text-blue-400 tracking-tight stat-value-blue">{adminKpis.networkStatus}</p>
                   <p className="mt-1 text-slate-500 text-[10px]">Ingest engine state</p>
                 </div>
                 <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Database Status</p>
-                  <p className={`mt-2 text-2xl font-bold ${adminKpis.databaseStatus === 'Connected' ? 'text-emerald-400' : 'text-rose-500'} tracking-tight`}>
+                  <p className={`mt-2 text-2xl font-bold ${adminKpis.databaseStatus === 'Connected' ? 'text-emerald-400 stat-value-emerald' : 'text-rose-500 stat-value-rose'} tracking-tight`}>
                     {adminKpis.databaseStatus}
                   </p>
                   <p className="mt-1 text-slate-500 text-[10px]">MongoDB client feed</p>
                 </div>
                 <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">API Status</p>
-                  <p className="mt-2 text-2xl font-bold text-cyan-400 tracking-tight">{adminKpis.apiStatus}</p>
+                  <p className="mt-2 text-2xl font-bold text-cyan-400 tracking-tight stat-value-blue">{adminKpis.apiStatus}</p>
                   <p className="mt-1 text-slate-500 text-[10px]">Gateway status</p>
                 </div>
               </section>
@@ -1208,110 +1343,205 @@ export default function Dashboard() {
             </div>
           ) : (
             // =================================================================
-            // SECURITY ANALYST DASHBOARD (EXISTING)
+            // SECURITY ANALYST DASHBOARD — ENHANCED & DATA ISOLATED
             // =================================================================
             <div className="space-y-6">
-              {/* KPI Cards Grid */}
+              {/* Analyst Workload KPI Cards Grid */}
               <section className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Traffic</p>
-                  <p className="mt-2 text-2xl font-bold text-white tracking-tight">{analystKpis.totalTraffic}</p>
-                  <p className="mt-1 text-xs text-slate-500">Ingested Telemetry</p>
+                <div className="rounded-2xl border p-4 shadow-lg backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Assigned Incidents</p>
+                  <p className="mt-2 text-2xl font-bold tracking-tight" style={{ color: 'var(--text-heading)' }}>{analystWorkloadKpis.totalAssigned}</p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>My Queue Cases</p>
                 </div>
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur relative overflow-hidden">
-                  <div className="absolute top-0 right-0 h-1.5 w-1.5 bg-blue-500 rounded-full m-3 animate-ping" />
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Live Traffic</p>
-                  <p className="mt-2 text-2xl font-bold text-blue-400 tracking-tight">{analystKpis.liveTraffic}</p>
-                  <p className="mt-1 text-xs text-slate-500">Real-time pps</p>
+                <div className="rounded-2xl border p-4 shadow-lg backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Open Cases</p>
+                  <p className="mt-2 text-2xl font-bold text-rose-500 tracking-tight">{analystWorkloadKpis.openIncidents}</p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>Awaiting Action</p>
                 </div>
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Dataset Alerts</p>
-                  <p className="mt-2 text-2xl font-bold text-blue-400 tracking-tight">{analystKpis.datasetAlerts}</p>
-                  <p className="mt-1 text-xs text-slate-500">12 Datasets ML Detections</p>
+                <div className="rounded-2xl border p-4 shadow-lg backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Investigating</p>
+                  <p className="mt-2 text-2xl font-bold text-amber-500 tracking-tight">{analystWorkloadKpis.investigatingIncidents}</p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>Active Review</p>
                 </div>
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Live Alerts</p>
-                  <p className="mt-2 text-2xl font-bold text-rose-400 tracking-tight">{analystKpis.liveAlerts}</p>
-                  <p className="mt-1 text-xs text-slate-500">Live Network Threat Hits</p>
+                <div className="rounded-2xl border p-4 shadow-lg backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Resolved Cases</p>
+                  <p className="mt-2 text-2xl font-bold text-emerald-600 tracking-tight">{analystWorkloadKpis.resolvedIncidents}</p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>Remediated</p>
                 </div>
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/20 p-4 shadow-lg backdrop-blur">
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Alerts</p>
-                  <p className="mt-2 text-2xl font-bold text-amber-400 tracking-tight">{analystKpis.totalAlerts}</p>
-                  <p className="mt-1 text-xs text-slate-500">Combined Threat Incidents</p>
+                <div className="rounded-2xl border p-4 shadow-lg backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>High Priority</p>
+                  <p className="mt-2 text-2xl font-bold text-rose-600 tracking-tight">{analystWorkloadKpis.criticalHighAssigned}</p>
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>Critical &amp; High Risk</p>
                 </div>
-                <div className={`rounded-2xl border p-4 shadow-lg backdrop-blur transition-all ${analystKpis.securityStatusBg}`}>
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Security Status</p>
-                  <p className={`mt-2 text-xl font-black ${analystKpis.securityStatusColor} tracking-tighter`}>
-                    {analystKpis.securityStatus}
+                <div className={`rounded-2xl border p-4 shadow-lg backdrop-blur transition-all ${analystWorkloadKpis.statusBg}`}>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Workload Posture</p>
+                  <p className={`mt-2 text-xl font-black ${analystWorkloadKpis.statusColor} tracking-tighter`}>
+                    {analystWorkloadKpis.statusLabel}
                   </p>
-                  <p className="mt-1.5 text-xs text-slate-500">System state assessment</p>
+                  <p className="mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>Personal queue status</p>
                 </div>
               </section>
 
-              {/* Charts Section */}
+              {/* Dedicated Table: My Assigned Security Incidents */}
+              <section className="rounded-2xl border p-5 shadow-lg backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 mb-4 gap-2" style={{ borderColor: 'var(--border-primary)' }}>
+                  <div>
+                    <h2 className="text-base font-bold tracking-tight" style={{ color: 'var(--text-heading)' }}>My Assigned Security Incidents</h2>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Security incidents assigned specifically to your analyst account for investigation</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/incidents')}
+                    className="self-start sm:self-auto rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-md hover:bg-blue-500 transition"
+                  >
+                    View All My Incidents &rarr;
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-xs font-sans">
+                    <thead>
+                      <tr className="border-b font-bold uppercase tracking-wider pb-2" style={{ borderColor: 'var(--border-primary)', color: 'var(--text-muted)' }}>
+                        <th className="pb-2">Incident ID</th>
+                        <th className="pb-2">Title / Attack Category</th>
+                        <th className="pb-2">Severity</th>
+                        <th className="pb-2">Status</th>
+                        <th className="pb-2">Connection IPs</th>
+                        <th className="pb-2">Assigned Date</th>
+                        <th className="pb-2 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="font-mono">
+                      {incidentsData.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="py-8 text-center font-sans" style={{ color: 'var(--text-muted)' }}>
+                            <div className="flex flex-col items-center justify-center space-y-1">
+                              <span className="text-2xl">🛡️</span>
+                              <p className="text-sm font-semibold" style={{ color: 'var(--text-heading)' }}>No Incidents Assigned</p>
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>You currently have no open security incidents assigned to your queue.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        incidentsData.slice(0, 5).map((inc, idx) => (
+                          <tr key={inc.id || inc._id || idx} className="border-b transition-colors" style={{ borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}>
+                            <td className="py-3 font-semibold" style={{ color: 'var(--accent-blue)' }}>
+                              #{String(inc.id || inc._id || '').slice(-6)}
+                            </td>
+                            <td className="py-3 font-sans font-semibold" style={{ color: 'var(--text-heading)' }}>
+                              {inc.title || inc.attack_type || inc.traffic_label || 'Security Alert'}
+                            </td>
+                            <td className="py-3 font-sans">
+                              <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${
+                                String(inc.severity || inc.threat_level || '').toLowerCase() === 'critical'
+                                  ? 'bg-red-500/20 text-red-600 border border-red-500/40'
+                                  : String(inc.severity || inc.threat_level || '').toLowerCase() === 'high'
+                                  ? 'bg-rose-500/20 text-rose-600 border border-rose-500/40'
+                                  : String(inc.severity || inc.threat_level || '').toLowerCase() === 'medium'
+                                  ? 'bg-amber-500/20 text-amber-600 border border-amber-500/40'
+                                  : 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/40'
+                              }`}>
+                                {inc.severity || inc.threat_level || 'Medium'}
+                              </span>
+                            </td>
+                            <td className="py-3 font-sans">
+                              <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${
+                                String(inc.status || '').toLowerCase() === 'open'
+                                  ? 'bg-rose-500/20 text-rose-600 border border-rose-500/40 animate-pulse'
+                                  : String(inc.status || '').toLowerCase() === 'investigating'
+                                  ? 'bg-amber-500/20 text-amber-600 border border-amber-500/40'
+                                  : 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/40'
+                              }`}>
+                                {inc.status || 'Open'}
+                              </span>
+                            </td>
+                            <td className="py-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                              {inc.source_ip ? `${inc.source_ip} → ${inc.destination_ip || 'Target'}` : 'Local Infrastructure'}
+                            </td>
+                            <td className="py-3 text-[11px] font-sans" style={{ color: 'var(--text-muted)' }}>
+                              {inc.created_at ? new Date(inc.created_at).toLocaleDateString() : 'Recent'}
+                            </td>
+                            <td className="py-3 text-right font-sans">
+                              <button
+                                type="button"
+                                onClick={() => navigate('/incidents')}
+                                className="rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition"
+                                style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-primary)', color: 'var(--text-primary)' }}
+                              >
+                                Investigate &rarr;
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              {/* Threat & Network Charts Grid */}
               <section className="grid gap-6 md:grid-cols-2">
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/25 p-5 backdrop-blur">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300 mb-3">Traffic Throughput Trend</h2>
+                {/* Chart 1: My Incidents Severity */}
+                <div className="rounded-2xl border p-5 backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>System Threat Level Distribution</h2>
+                  <div className="h-64">
+                    {assignedSeverityChartData.totalCount > 0 ? (
+                      <Doughnut data={assignedSeverityChartData.chartData} options={pieChartOptions} />
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center text-xs font-semibold py-8" style={{ color: 'var(--text-muted)' }}>
+                        <span className="text-2xl mb-1">🛡️</span>
+                        <p>No assigned threat data available</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Chart 2: My Incidents Status Summary */}
+                <div className="rounded-2xl border p-5 backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>Incident Status Summary</h2>
+                  <div className="h-64">
+                    {assignedStatusChartData.totalCount > 0 ? (
+                      <Bar data={assignedStatusChartData.chartData} options={chartOptions} />
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center text-xs font-semibold py-8" style={{ color: 'var(--text-muted)' }}>
+                        <span className="text-2xl mb-1">📊</span>
+                        <p>No assigned incident status data available</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Chart 3: Traffic Throughput Trend (Full Width Spanning 2 Columns) */}
+                <div className="md:col-span-2 rounded-2xl border p-5 backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>Traffic Throughput Trend</h2>
                   <div className="h-64">
                     {trafficRows.length > 0 ? (
                       <Line data={trendChartData} options={chartOptions} />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-slate-500 font-medium pb-8">No traffic throughput data available</div>
+                      <div className="flex h-full items-center justify-center text-xs font-medium pb-8" style={{ color: 'var(--text-muted)' }}>No traffic throughput data available</div>
                     )}
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/25 p-5 backdrop-blur">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300 mb-3">Alerts by Source (Dataset vs Live Network)</h2>
-                  <div className="h-64">
-                    {analyticsData?.alerts_by_source?.length > 0 ? (
-                      <Doughnut data={sourceChartData} options={pieChartOptions} />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-slate-500 font-medium pb-8">No alert source distribution data available</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/25 p-5 backdrop-blur">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300 mb-3">Threat Risk Level Distribution</h2>
-                  <div className="h-64">
-                    {analyticsData?.threat_level_distribution?.some(d => d.count > 0) ? (
-                      <Doughnut data={threatChartData} options={pieChartOptions} />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-slate-500 font-medium pb-8">No threat risk level distribution data available</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/25 p-5 backdrop-blur">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300 mb-3">Attack Category Distribution</h2>
+                {/* Chart 4: Attack Category Distribution */}
+                <div className="rounded-2xl border p-5 backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>Attack Category Distribution</h2>
                   <div className="h-64">
                     {analyticsData?.traffic_label_distribution?.some(d => !['benign', 'normal', '0'].includes(String(d.name).toLowerCase()) && d.count > 0) ? (
                       <Bar data={attackChartData} options={chartOptions} />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-slate-500 font-medium pb-8">No malicious attack categories detected</div>
+                      <div className="flex h-full items-center justify-center text-xs font-medium pb-8" style={{ color: 'var(--text-muted)' }}>No malicious attack categories detected</div>
                     )}
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/25 p-5 backdrop-blur">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300 mb-3">IP Traffic Protocol Distribution</h2>
+                {/* Chart 5: IP Traffic Protocol Distribution */}
+                <div className="rounded-2xl border p-5 backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)' }}>IP Traffic Protocol Distribution</h2>
                   <div className="h-64">
                     {analyticsData?.protocol_distribution?.length > 0 ? (
                       <Doughnut data={protocolChartData} options={pieChartOptions} />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-slate-500 font-medium pb-8">No protocol distribution data available</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/25 p-5 backdrop-blur md:col-span-2">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300 mb-3">Threat Alerts by Dataset (All 12 Datasets)</h2>
-                  <div className="h-64">
-                    {analyticsData?.alerts_by_dataset?.length > 0 ? (
-                      <Bar data={datasetChartData} options={chartOptions} />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-slate-500 font-medium pb-8">No dataset telemetry alerts found</div>
+                      <div className="flex h-full items-center justify-center text-xs font-medium pb-8" style={{ color: 'var(--text-muted)' }}>No protocol distribution data available</div>
                     )}
                   </div>
                 </div>
@@ -1319,53 +1549,53 @@ export default function Dashboard() {
 
               {/* Widgets Section */}
               <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/25 p-5 backdrop-blur space-y-4">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Network & System Health</h3>
+                <div className="rounded-2xl border p-5 backdrop-blur space-y-4" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Network &amp; System Health</h3>
                   <div className="space-y-2 text-xs">
-                    <div className="flex justify-between border-b border-slate-900/60 pb-1.5">
-                      <span className="text-slate-400">Database node</span>
-                      <span className={`font-semibold ${dbStatus === 'Healthy' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <div className="flex justify-between border-b pb-1.5" style={{ borderColor: 'var(--border-primary)' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Database node</span>
+                      <span className={`font-semibold ${dbStatus === 'Healthy' ? 'text-emerald-500' : 'text-rose-500'}`}>
                         {dbStatus === 'Healthy' ? 'CONNECTED' : 'DISCONNECTED'}
                       </span>
                     </div>
-                    <div className="flex justify-between border-b border-slate-900/60 pb-1.5">
-                      <span className="text-slate-400">Pipeline loading</span>
-                      <span className="font-semibold text-blue-400 uppercase">{datasetStatus}</span>
+                    <div className="flex justify-between border-b pb-1.5" style={{ borderColor: 'var(--border-primary)' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Pipeline loading</span>
+                      <span className="font-semibold text-blue-500 uppercase">{datasetStatus}</span>
                     </div>
-                    <div className="flex justify-between border-b border-slate-900/60 pb-1.5">
-                      <span className="text-slate-400">Memory footprint</span>
-                      <span className="font-semibold text-slate-200">
+                    <div className="flex justify-between border-b pb-1.5" style={{ borderColor: 'var(--border-primary)' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Memory footprint</span>
+                      <span className="font-semibold" style={{ color: 'var(--text-heading)' }}>
                         {statisticsData?.memory_usage_mb ? `${statisticsData.memory_usage_mb.toFixed(1)} MB` : '0 MB'}
                       </span>
                     </div>
-                    <div className="flex justify-between border-b border-slate-900/60 pb-1.5">
-                      <span className="text-slate-400">Ingested rows</span>
-                      <span className="font-semibold text-slate-200">
+                    <div className="flex justify-between border-b pb-1.5" style={{ borderColor: 'var(--border-primary)' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Ingested rows</span>
+                      <span className="font-semibold" style={{ color: 'var(--text-heading)' }}>
                         {statisticsData?.rows_loaded?.toLocaleString() || '0'}
                       </span>
                     </div>
                     <div className="flex justify-between pb-1">
-                      <span className="text-slate-400">Server Latency</span>
-                      <span className="font-semibold text-slate-200">
+                      <span style={{ color: 'var(--text-muted)' }}>Server Latency</span>
+                      <span className="font-semibold" style={{ color: 'var(--text-heading)' }}>
                         {statisticsData?.startup_time_seconds ? `${statisticsData.startup_time_seconds}s` : 'N/A'}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/25 p-5 backdrop-blur flex flex-col">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Live Alerts Log</h3>
+                <div className="rounded-2xl border p-5 backdrop-blur flex flex-col" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Live Alerts Log</h3>
                   <div className="flex-1 space-y-2.5 overflow-y-auto max-h-48 text-xs">
                     {liveAlertsLog.length === 0 ? (
-                      <p className="text-slate-500 italic py-4 text-center">No critical incident alerts logged in buffer.</p>
+                      <p className="italic py-4 text-center" style={{ color: 'var(--text-muted)' }}>No critical incident alerts logged in buffer.</p>
                     ) : (
                       liveAlertsLog.map((alert, index) => (
-                        <div key={index} className="border-l-2 border-rose-500 bg-rose-500/5 p-2 rounded-r-md space-y-1">
+                        <div key={index} className="border-l-2 border-rose-500 bg-rose-500/10 p-2 rounded-r-md space-y-1">
                           <div className="flex justify-between font-medium">
-                            <span className="text-rose-300">{alert.traffic_label || 'Malicious Attack'}</span>
-                            <span className="text-[10px] text-slate-500">{alert.timestamp?.split(' ')[1] || alert.timestamp}</span>
+                            <span className="text-rose-600 font-bold">{alert.traffic_label || 'Malicious Attack'}</span>
+                            <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{alert.timestamp?.split(' ')[1] || alert.timestamp}</span>
                           </div>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
                             {alert.source_ip} &rarr; {alert.destination_ip}
                           </p>
                         </div>
@@ -1374,16 +1604,16 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/25 p-5 backdrop-blur">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Top Attack Classes</h3>
+                <div className="rounded-2xl border p-5 backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Top Attack Classes</h3>
                   <div className="space-y-2 text-xs">
                     {topAttackTypes.length === 0 ? (
-                      <p className="text-slate-500 italic py-4 text-center">No attack categories loaded.</p>
+                      <p className="italic py-4 text-center" style={{ color: 'var(--text-muted)' }}>No attack categories loaded.</p>
                     ) : (
                       topAttackTypes.map((type, index) => (
-                        <div key={index} className="flex justify-between items-center border-b border-slate-900/60 pb-1.5 last:border-0 last:pb-0">
-                          <span className="text-slate-300 truncate max-w-[140px] font-medium">{type.name}</span>
-                          <span className="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded font-mono text-[10px] border border-rose-500/20">
+                        <div key={index} className="flex justify-between items-center border-b pb-1.5 last:border-0 last:pb-0" style={{ borderColor: 'var(--border-primary)' }}>
+                          <span className="truncate max-w-[140px] font-medium" style={{ color: 'var(--text-heading)' }}>{type.name}</span>
+                          <span className="bg-rose-500/10 text-rose-600 px-2 py-0.5 rounded font-mono text-[10px] border border-rose-500/20 font-bold">
                             {type.count.toLocaleString()}
                           </span>
                         </div>
@@ -1392,16 +1622,16 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-900 bg-slate-900/25 p-5 backdrop-blur">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Top Targeted IPs</h3>
+                <div className="rounded-2xl border p-5 backdrop-blur" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>Top Targeted IPs</h3>
                   <div className="space-y-2 text-xs">
                     {topAttackedIPs.length === 0 ? (
-                      <p className="text-slate-500 italic py-4 text-center">No victim IP analytics loaded.</p>
+                      <p className="italic py-4 text-center" style={{ color: 'var(--text-muted)' }}>No victim IP analytics loaded.</p>
                     ) : (
                       topAttackedIPs.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center border-b border-slate-900/60 pb-1.5 last:border-0 last:pb-0 font-mono font-medium">
-                          <span className="text-slate-300">{item.ip}</span>
-                          <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">
+                        <div key={index} className="flex justify-between items-center border-b pb-1.5 last:border-0 last:pb-0 font-mono font-medium" style={{ borderColor: 'var(--border-primary)' }}>
+                          <span style={{ color: 'var(--text-heading)' }}>{item.ip}</span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>
                             {item.count.toLocaleString()} hits
                           </span>
                         </div>

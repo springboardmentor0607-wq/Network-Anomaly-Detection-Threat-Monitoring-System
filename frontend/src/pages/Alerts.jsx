@@ -256,8 +256,10 @@ export default function Alerts() {
           return prevRows;
         }
         const formatted = {
+          id: newest.id,
           alert_id: newest.alert_id || newest.id,
           timestamp: newest.timestamp,
+          created_at: newest.created_at || newest.timestamp,
           source_ip: newest.source_ip,
           destination_ip: newest.destination_ip,
           source_port: newest.source_port,
@@ -271,6 +273,8 @@ export default function Alerts() {
           risk_score: newest.risk_score,
           status: newest.status || 'Open',
           assigned_to: newest.assigned_to,
+          source: newest.source || 'Live Network',
+          detection_details: newest.detection_details || {},
         };
         return [formatted, ...prevRows];
       });
@@ -401,7 +405,7 @@ export default function Alerts() {
       const st = resolveStatus(row);
 
       const matchSearch = !q || [
-        row.source_ip, row.destination_ip, row.protocol, atk, sev, st, row.alert_id,
+        row.source_ip, row.destination_ip, row.protocol, atk, sev, st, row.alert_id, row.id,
       ].some((v) => String(v ?? '').toLowerCase().includes(q));
 
       const matchThreat = threatFilter === 'All' || sev.toLowerCase() === threatFilter.toLowerCase();
@@ -420,6 +424,14 @@ export default function Alerts() {
         const aVal = THREAT_ORDER[aSev] ?? 99;
         const bVal = THREAT_ORDER[bSev] ?? 99;
         return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      if (sortKey === 'timestamp' || sortKey === 'created_at') {
+        const aTime = new Date(a.created_at || a.timestamp || 0).getTime();
+        const bTime = new Date(b.created_at || b.timestamp || 0).getTime();
+        if (!isNaN(aTime) && !isNaN(bTime) && aTime !== bTime) {
+          return sortDir === 'asc' ? aTime - bTime : bTime - aTime;
+        }
       }
 
       let aVal = a[sortKey] ?? '';

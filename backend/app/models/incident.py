@@ -41,7 +41,10 @@ class IncidentDocument(BaseModel):
     incident_id: str = Field(default_factory=generate_incident_id)
     alert_id: Optional[str] = None
     title: str = Field(default="Security Incident Investigation")
+    assigned_analyst_id: Optional[str] = None
+    assigned_analyst_name: Optional[str] = None
     assigned_analyst: Optional[str] = Field(default="Unassigned")
+    assigned_at: Optional[str] = None
     priority: IncidentPriority = Field(default=IncidentPriority.HIGH)
     status: IncidentStatus = Field(default=IncidentStatus.NEW)
     notes: List[IncidentNote] = Field(default_factory=list)
@@ -63,6 +66,9 @@ async def create_incident_indexes(db: AsyncIOMotorDatabase) -> None:
         )
         await incidents_collection.create_index(
             "alert_id", name="idx_incidents_alert_id"
+        )
+        await incidents_collection.create_index(
+            "assigned_analyst_id", name="idx_incidents_assigned_analyst_id"
         )
         await incidents_collection.create_index(
             "status", name="idx_incidents_status"

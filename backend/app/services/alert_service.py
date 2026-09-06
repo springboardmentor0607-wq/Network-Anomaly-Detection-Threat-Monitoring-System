@@ -57,12 +57,27 @@ def format_alert_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
     if not doc:
         return {}
     formatted = dict(doc)
-    doc_id = str(formatted.pop("_id")) if "_id" in formatted else None
+    doc_id = str(formatted.pop("_id")) if "_id" in formatted else formatted.get("id")
     
     alert_id = str(formatted.get("alert_id") or doc_id or generate_alert_id())
     timestamp = str(formatted.get("timestamp") or datetime.datetime.now(datetime.timezone.utc).isoformat())
+    created_at = str(formatted.get("created_at") or timestamp)
     source_ip = str(formatted.get("source_ip") or "192.168.1.100")
     destination_ip = str(formatted.get("destination_ip") or "10.0.0.1")
+
+    src_p = formatted.get("source_port") or formatted.get("src_port")
+    dst_p = formatted.get("destination_port") or formatted.get("dst_port")
+    try:
+        source_port = int(src_p) if src_p is not None else None
+    except Exception:
+        source_port = None
+
+    try:
+        destination_port = int(dst_p) if dst_p is not None else None
+    except Exception:
+        destination_port = None
+
+    protocol = str(formatted.get("protocol") or "TCP").upper()
     attack_type = str(formatted.get("attack_type") or formatted.get("traffic_label") or "Attack")
     
     raw_conf = formatted.get("confidence")
@@ -87,8 +102,12 @@ def format_alert_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
         "id": doc_id,
         "alert_id": alert_id,
         "timestamp": timestamp,
+        "created_at": created_at,
         "source_ip": source_ip,
         "destination_ip": destination_ip,
+        "source_port": source_port,
+        "destination_port": destination_port,
+        "protocol": protocol,
         "attack_type": attack_type,
         "confidence": confidence,
         "risk_score": risk_score,
@@ -96,6 +115,7 @@ def format_alert_doc(doc: Dict[str, Any]) -> Dict[str, Any]:
         "status": status_val,
         "assigned_to": formatted.get("assigned_to"),
         "source": formatted.get("source") or "Live Network",
+        "detection_details": formatted.get("detection_details") or {},
     }
 
 
@@ -117,8 +137,23 @@ async def create_alert(
 
     alert_id = data.get("alert_id") or generate_alert_id()
     timestamp = data.get("timestamp") or datetime.datetime.now(datetime.timezone.utc).isoformat()
+    created_at = data.get("created_at") or datetime.datetime.now(datetime.timezone.utc).isoformat()
     source_ip = data.get("source_ip") or "192.168.1.100"
     destination_ip = data.get("destination_ip") or "10.0.0.1"
+
+    src_p = data.get("source_port") or data.get("src_port") or 80
+    dst_p = data.get("destination_port") or data.get("dst_port") or 80
+    try:
+        source_port = int(src_p)
+    except Exception:
+        source_port = 80
+
+    try:
+        destination_port = int(dst_p)
+    except Exception:
+        destination_port = 80
+
+    protocol = str(data.get("protocol") or "TCP").upper()
     attack_type = data.get("attack_type") or "Unknown Attack"
     confidence = float(data.get("confidence", 0.85))
 
@@ -140,8 +175,12 @@ async def create_alert(
     alert_doc = {
         "alert_id": alert_id,
         "timestamp": timestamp,
+        "created_at": created_at,
         "source_ip": source_ip,
         "destination_ip": destination_ip,
+        "source_port": source_port,
+        "destination_port": destination_port,
+        "protocol": protocol,
         "attack_type": attack_type,
         "confidence": confidence,
         "risk_score": risk_score,
@@ -149,14 +188,23 @@ async def create_alert(
         "status": status_val,
         "assigned_to": assigned_to,
         "source": data.get("source") or "Live Network",
+        "detection_details": data.get("detection_details") or {},
     }
 
+    inserted_id_str = None
     if target_db is not None:
         try:
             result = await target_db["alerts"].insert_one(alert_doc)
-            alert_doc["id"] = str(result.inserted_id)
+            inserted_id_str = str(result.inserted_id)
+            alert_doc["id"] = inserted_id_str
+            alert_doc.pop("_id", None)
+            logger.info(f"CREATE ALERT DEBUG: request received for attack_type='{attack_type}' | generated alert data={alert_doc} | MongoDB collection='alerts' | inserted_id='{inserted_id_str}' | saved alert_id='{alert_id}'")
         except Exception as e:
             logger.error(f"Failed to insert alert into MongoDB: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to save alert in database: {e}"
+            )
 
     # Audit logging
     await log_audit_event(
@@ -167,10 +215,9 @@ async def create_alert(
         status="Success"
     )
 
-    # Real-time WebSocket broadcasting
+    # Real-time WebSocket broadcasting using the EXACT saved alert
     try:
-        broadcast_doc = dict(alert_doc)
-        broadcast_doc.pop("_id", None)
+        broadcast_doc = format_alert_doc(alert_doc)
         await ws_manager.broadcast({
             "type": "NEW_ALERT",
             "data": broadcast_doc
@@ -178,7 +225,7 @@ async def create_alert(
     except Exception as exc:
         logger.warning(f"Failed to broadcast WebSocket alert: {exc}")
 
-    return alert_doc
+    return format_alert_doc(alert_doc)
 
 
 def create_alert_from_prediction(
@@ -219,6 +266,7 @@ def create_alert_from_prediction(
     alert_payload = {
         "alert_id": generate_alert_id(),
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "source_ip": source_ip,
         "destination_ip": destination_ip,
         "attack_type": attack_type,
@@ -268,9 +316,12 @@ async def get_alerts(
 
     alerts = []
     try:
-        cursor = db["alerts"].find(query).sort("timestamp", -1).skip(skip).limit(limit)
+        cursor = db["alerts"].find(query).sort([("created_at", -1), ("timestamp", -1), ("_id", -1)]).skip(skip).limit(limit)
         async for doc in cursor:
             alerts.append(format_alert_doc(doc))
+        
+        newest_ids = [a.get("alert_id") for a in alerts[:5]]
+        logger.info(f"GET ALERTS DEBUG: collection='alerts' | query={query} | returned_count={len(alerts)} | newest_alert_ids={newest_ids}")
     except Exception as exc:
         logger.warning(f"Error querying MongoDB alerts collection: {exc}")
 

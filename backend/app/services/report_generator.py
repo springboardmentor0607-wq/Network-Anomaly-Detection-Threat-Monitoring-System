@@ -1,7 +1,7 @@
 import csv
 import io
 import datetime
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from app.services.threat_analytics_service import compute_threat_intelligence_analytics
 
@@ -50,6 +50,308 @@ async def generate_report_data(db=None) -> Dict[str, Any]:
         "risk_score_distribution": analytics.get("risk_score_distribution", []),
         "timeline": timeline
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Milestone 3 Operational Report Generators
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def generate_executive_summary(db) -> Dict[str, Any]:
+    """
+    Generate an executive summary report from live MongoDB data.
+    Includes alert counts, attack distribution, severity breakdown, and incident summary.
+    Admin-only view.
+    """
+    generated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    # --- Alerts stats ---
+    total_alerts = await db["alerts"].count_documents({})
+    total_threats = await db["alerts"].count_documents({"attack_type": {"$ne": "Benign"}})
+
+    # Severity distribution
+    severity_pipeline = [
+        {"$group": {"_id": "$severity", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+    ]
+    severity_cursor = db["alerts"].aggregate(severity_pipeline)
+    severity_distribution = []
+    critical_high_count = 0
+    async for doc in severity_cursor:
+        sev = doc.get("_id") or "Unknown"
+        cnt = doc.get("count", 0)
+        severity_distribution.append({"severity": sev, "count": cnt})
+        if sev in ("Critical", "High"):
+            critical_high_count += cnt
+
+    # Attack type distribution
+    attack_pipeline = [
+        {"$match": {"attack_type": {"$ne": "Benign"}}},
+        {"$group": {"_id": "$attack_type", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10},
+    ]
+    attack_cursor = db["alerts"].aggregate(attack_pipeline)
+    attack_distribution = []
+    async for doc in attack_cursor:
+        attack_distribution.append({"attack_type": doc.get("_id") or "Unknown", "count": doc.get("count", 0)})
+
+    # Average risk score
+    risk_pipeline = [{"$group": {"_id": None, "avg_risk": {"$avg": "$risk_score"}}}]
+    risk_cursor = db["alerts"].aggregate(risk_pipeline)
+    avg_risk_score = 0.0
+    async for doc in risk_cursor:
+        avg_risk_score = round(float(doc.get("avg_risk", 0.0)), 2)
+
+    # Top attack vector
+    top_attack = attack_distribution[0]["attack_type"] if attack_distribution else "N/A"
+
+    # --- Incidents stats ---
+    total_incidents = await db["incidents"].count_documents({})
+    open_incidents = await db["incidents"].count_documents(
+        {"status": {"$in": ["New", "In Progress", "Under Investigation"]}}
+    )
+    resolved_incidents = await db["incidents"].count_documents({"status": {"$in": ["Resolved", "Closed"]}})
+
+    # Status breakdown
+    status_pipeline = [
+        {"$group": {"_id": "$status", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+    ]
+    status_cursor = db["incidents"].aggregate(status_pipeline)
+    incident_status_summary = []
+    async for doc in status_cursor:
+        incident_status_summary.append({"status": doc.get("_id") or "Unknown", "count": doc.get("count", 0)})
+
+    # Recent 5 alerts as recent threat activity
+    recent_alerts_cursor = db["alerts"].find(
+        {"attack_type": {"$ne": "Benign"}},
+        {"_id": 0, "alert_id": 1, "attack_type": 1, "severity": 1, "risk_score": 1,
+         "source_ip": 1, "destination_ip": 1, "timestamp": 1},
+    ).sort("timestamp", -1).limit(10)
+    recent_threats = []
+    async for doc in recent_alerts_cursor:
+        recent_threats.append(doc)
+
+    return {
+        "generated_at": generated_at,
+        "alerts": {
+            "total_alerts": total_alerts,
+            "total_threats_detected": total_threats,
+            "avg_risk_score": avg_risk_score,
+            "critical_high_count": critical_high_count,
+            "top_attack_vector": top_attack,
+        },
+        "severity_distribution": severity_distribution,
+        "attack_distribution": attack_distribution,
+        "incidents": {
+            "total_incidents": total_incidents,
+            "open_incidents": open_incidents,
+            "resolved_incidents": resolved_incidents,
+        },
+        "incident_status_summary": incident_status_summary,
+        "recent_threat_activity": recent_threats,
+    }
+
+
+async def generate_threat_intelligence_report(
+    db,
+    user: Optional[Dict[str, Any]] = None,
+    limit: int = 200,
+) -> Dict[str, Any]:
+    """
+    Generate a threat intelligence report from alerts data.
+    Administrators see all alerts.
+    Analysts see only alerts related to their assigned incidents.
+    """
+    generated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    user_role = str(user.get("role", "")).strip().lower().replace(" ", "_") if user else ""
+    is_analyst = user_role == "security_analyst"
+
+    alert_filter: Dict[str, Any] = {}
+
+    if is_analyst:
+        # Gather alert IDs linked to this analyst's incidents
+        user_id = str(user.get("id") or user.get("_id") or "")
+        user_email = str(user.get("email") or "").strip().lower()
+        user_name = str(user.get("full_name") or "").strip()
+
+        incident_filter: Dict[str, Any] = {
+            "$or": [
+                {"assigned_analyst_id": user_id},
+            ]
+        }
+        if user_email:
+            incident_filter["$or"].append({"assigned_analyst": user_email})
+        if user_name:
+            incident_filter["$or"].append({"assigned_analyst_name": user_name})
+
+        incident_cursor = db["incidents"].find(incident_filter, {"alert_id": 1})
+        alert_ids = []
+        async for inc in incident_cursor:
+            aid = inc.get("alert_id")
+            if aid:
+                alert_ids.append(aid)
+
+        if not alert_ids:
+            return {
+                "generated_at": generated_at,
+                "total_records": 0,
+                "alerts": [],
+                "note": "No alerts found for your assigned incidents.",
+            }
+        alert_filter = {"alert_id": {"$in": alert_ids}}
+
+    cursor = db["alerts"].find(
+        alert_filter,
+        {
+            "_id": 0, "alert_id": 1, "attack_type": 1, "severity": 1,
+            "source_ip": 1, "destination_ip": 1, "risk_score": 1,
+            "confidence": 1, "timestamp": 1, "status": 1, "protocol": 1,
+        },
+    ).sort("timestamp", -1).limit(limit)
+
+    alerts = []
+    async for doc in cursor:
+        alerts.append(doc)
+
+    return {
+        "generated_at": generated_at,
+        "total_records": len(alerts),
+        "alerts": alerts,
+    }
+
+
+async def generate_incident_report(
+    db,
+    user: Optional[Dict[str, Any]] = None,
+    limit: int = 200,
+) -> Dict[str, Any]:
+    """
+    Generate an incident report.
+    Administrators see all incidents.
+    Analysts see only incidents assigned to them.
+    """
+    generated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    user_role = str(user.get("role", "")).strip().lower().replace(" ", "_") if user else ""
+    is_analyst = user_role == "security_analyst"
+
+    incident_filter: Dict[str, Any] = {}
+    if is_analyst and user:
+        user_id = str(user.get("id") or user.get("_id") or "")
+        user_email = str(user.get("email") or "").strip().lower()
+        user_name = str(user.get("full_name") or "").strip()
+        or_conditions: List[Dict[str, Any]] = [{"assigned_analyst_id": user_id}]
+        if user_email:
+            or_conditions.append({"assigned_analyst": user_email})
+        if user_name:
+            or_conditions.append({"assigned_analyst_name": user_name})
+        incident_filter = {"$or": or_conditions}
+
+    cursor = db["incidents"].find(
+        incident_filter,
+        {"hashed_password": 0},
+    ).sort("created_at", -1).limit(limit)
+
+    incidents = []
+    async for doc in cursor:
+        doc["id"] = str(doc.pop("_id", ""))
+        incidents.append(doc)
+
+    return {
+        "generated_at": generated_at,
+        "total_records": len(incidents),
+        "incidents": incidents,
+    }
+
+
+async def generate_security_trends(db, days: int = 30) -> Dict[str, Any]:
+    """
+    Generate security trend data — daily and weekly attack counts.
+    Groups alerts by date to show how threats change over time.
+    """
+    generated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
+    cutoff_iso = cutoff.isoformat()
+
+    # Daily attack counts
+    daily_pipeline = [
+        {"$match": {
+            "attack_type": {"$ne": "Benign"},
+            "timestamp": {"$gte": cutoff_iso},
+        }},
+        {"$addFields": {
+            "date_str": {"$substr": ["$timestamp", 0, 10]},
+        }},
+        {"$group": {"_id": "$date_str", "count": {"$sum": 1}}},
+        {"$sort": {"_id": 1}},
+    ]
+    daily_cursor = db["alerts"].aggregate(daily_pipeline)
+    daily_counts: List[Dict[str, Any]] = []
+    async for doc in daily_cursor:
+        daily_counts.append({"date": doc.get("_id"), "count": doc.get("count", 0)})
+
+    # Weekly attack counts (group by week number of year)
+    weekly: Dict[str, int] = {}
+    for entry in daily_counts:
+        try:
+            dt = datetime.date.fromisoformat(entry["date"])
+            year, week, _ = dt.isocalendar()
+            week_label = f"{year}-W{week:02d}"
+            weekly[week_label] = weekly.get(week_label, 0) + entry["count"]
+        except Exception:
+            pass
+    weekly_counts = [{"week": k, "count": v} for k, v in sorted(weekly.items())]
+
+    # Attack type trends by day
+    type_pipeline = [
+        {"$match": {
+            "attack_type": {"$ne": "Benign"},
+            "timestamp": {"$gte": cutoff_iso},
+        }},
+        {"$addFields": {"date_str": {"$substr": ["$timestamp", 0, 10]}}},
+        {"$group": {
+            "_id": {"date": "$date_str", "attack_type": "$attack_type"},
+            "count": {"$sum": 1},
+        }},
+        {"$sort": {"_id.date": 1}},
+    ]
+    type_cursor = db["alerts"].aggregate(type_pipeline)
+    attack_type_trends: List[Dict[str, Any]] = []
+    async for doc in type_cursor:
+        attack_type_trends.append({
+            "date": doc["_id"]["date"],
+            "attack_type": doc["_id"]["attack_type"],
+            "count": doc.get("count", 0),
+        })
+
+    # Severity trends by day
+    sev_pipeline = [
+        {"$match": {"timestamp": {"$gte": cutoff_iso}}},
+        {"$addFields": {"date_str": {"$substr": ["$timestamp", 0, 10]}}},
+        {"$group": {
+            "_id": {"date": "$date_str", "severity": "$severity"},
+            "count": {"$sum": 1},
+        }},
+        {"$sort": {"_id.date": 1}},
+    ]
+    sev_cursor = db["alerts"].aggregate(sev_pipeline)
+    severity_trends: List[Dict[str, Any]] = []
+    async for doc in sev_cursor:
+        severity_trends.append({
+            "date": doc["_id"]["date"],
+            "severity": doc["_id"]["severity"],
+            "count": doc.get("count", 0),
+        })
+
+    return {
+        "generated_at": generated_at,
+        "period_days": days,
+        "daily_attack_counts": daily_counts,
+        "weekly_attack_counts": weekly_counts,
+        "attack_type_trends": attack_type_trends,
+        "severity_trends": severity_trends,
+    }
+
 
 
 def generate_threat_report_csv(report_data: Dict[str, Any]) -> str:

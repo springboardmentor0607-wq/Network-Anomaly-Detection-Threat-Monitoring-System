@@ -5,53 +5,76 @@ import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import HeaderNav from '../components/HeaderNav';
 
+import { useTheme } from '../context/ThemeContext';
+
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom',
-      labels: {
-        color: '#cbd5e1',
-        font: { size: 11 },
-      },
-    },
-  },
-  scales: {
-    x: {
-      ticks: { color: '#94a3b8' },
-      grid: { color: 'rgba(148, 163, 184, 0.15)' },
-    },
-    y: {
-      ticks: { color: '#94a3b8' },
-      grid: { color: 'rgba(148, 163, 184, 0.15)' },
-    },
-  },
+const getSeverityClass = (sev) => {
+  const normalized = String(sev ?? '').trim().toLowerCase();
+  if (normalized.includes('critical')) {
+    return 'bg-red-500/20 text-red-400 border-red-500/40 font-bold';
+  }
+  if (normalized.includes('high')) {
+    return 'bg-rose-500/20 text-rose-400 border-rose-500/40 font-semibold';
+  }
+  if (normalized.includes('medium') || normalized.includes('moderate')) {
+    return 'bg-amber-500/20 text-amber-400 border-amber-500/40 font-semibold';
+  }
+  if (normalized.includes('low') || normalized.includes('info') || normalized.includes('safe')) {
+    return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-semibold';
+  }
+  return 'bg-slate-700/50 text-slate-300 border-slate-600/50';
 };
 
 const getHeatmapColor = (intensity) => {
-  if (intensity === 0) return 'bg-slate-900/40 text-slate-600 border border-slate-800/50';
-  if (intensity >= 80) return 'bg-red-600/90 text-white shadow-[0_0_12px_rgba(220,38,38,0.5)]';
-  if (intensity >= 60) return 'bg-rose-500/80 text-rose-100';
-  if (intensity >= 40) return 'bg-amber-500/80 text-amber-100';
-  if (intensity >= 20) return 'bg-yellow-500/70 text-yellow-100';
-  return 'bg-emerald-500/60 text-emerald-100';
-};
-
-const getSeverityClass = (sev) => {
-  const s = String(sev || '').toLowerCase();
-  if (s === 'critical') return 'bg-red-500/20 text-red-400 border-red-500/40';
-  if (s === 'high') return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
-  if (s === 'medium') return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
-  return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+  const val = Number(intensity) || 0;
+  if (val >= 80) return 'bg-red-600/90 text-white';
+  if (val >= 60) return 'bg-rose-500/80 text-white';
+  if (val >= 40) return 'bg-amber-500/80 text-slate-900';
+  if (val >= 20) return 'bg-yellow-500/70 text-slate-900';
+  if (val > 0) return 'bg-emerald-500/60 text-slate-900';
+  return 'bg-slate-800/40 text-slate-500';
 };
 
 export default function AttackVisualization() {
+  const { isDark } = useTheme();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const chartOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: isDark ? '#cbd5e1' : '#0f172a',
+            font: { size: 11, weight: '600' },
+          },
+        },
+        tooltip: {
+          backgroundColor: isDark ? '#0f172a' : '#ffffff',
+          titleColor: isDark ? '#ffffff' : '#020617',
+          bodyColor: isDark ? '#cbd5e1' : '#0f172a',
+          borderColor: isDark ? '#334155' : '#cbd5e1',
+          borderWidth: 1,
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: isDark ? '#94a3b8' : '#1e293b', font: { weight: '600' } },
+          grid: { color: isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15, 23, 42, 0.08)' },
+        },
+        y: {
+          ticks: { color: isDark ? '#94a3b8' : '#1e293b', font: { weight: '600' } },
+          grid: { color: isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15, 23, 42, 0.08)' },
+        },
+      },
+    }),
+    [isDark]
+  );
 
   // Interactive Filters
   const [severityFilter, setSeverityFilter] = useState('All');

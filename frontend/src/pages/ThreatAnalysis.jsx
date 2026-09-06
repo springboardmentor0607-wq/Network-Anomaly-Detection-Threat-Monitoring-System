@@ -5,50 +5,63 @@ import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import HeaderNav from '../components/HeaderNav';
 
+import { useTheme } from '../context/ThemeContext';
+
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom',
-      labels: {
-        color: '#cbd5e1',
-        font: { size: 11 },
-      },
-    },
-  },
-  scales: {
-    x: {
-      ticks: { color: '#94a3b8' },
-      grid: { color: 'rgba(148, 163, 184, 0.15)' },
-    },
-    y: {
-      ticks: { color: '#94a3b8' },
-      grid: { color: 'rgba(148, 163, 184, 0.15)' },
-    },
-  },
-};
-
-const getSeverityBadgeClass = (severity) => {
-  const sev = String(severity || '').toLowerCase();
-  switch (sev) {
-    case 'critical':
-      return 'bg-red-500/20 text-red-400 border-red-500/40';
-    case 'high':
-      return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
-    case 'medium':
-      return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
-    default:
-      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
-  }
-};
-
 export default function ThreatAnalysis() {
+  const { isDark } = useTheme();
   const [threatAnalytics, setThreatAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const chartOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: isDark ? '#cbd5e1' : '#0f172a',
+            font: { size: 11, weight: '600' },
+          },
+        },
+        tooltip: {
+          backgroundColor: isDark ? '#0f172a' : '#ffffff',
+          titleColor: isDark ? '#ffffff' : '#020617',
+          bodyColor: isDark ? '#cbd5e1' : '#0f172a',
+          borderColor: isDark ? '#334155' : '#cbd5e1',
+          borderWidth: 1,
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: isDark ? '#94a3b8' : '#1e293b', font: { weight: '600' } },
+          grid: { color: isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15, 23, 42, 0.08)' },
+        },
+        y: {
+          ticks: { color: isDark ? '#94a3b8' : '#1e293b', font: { weight: '600' } },
+          grid: { color: isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(15, 23, 42, 0.08)' },
+        },
+      },
+    }),
+    [isDark]
+  );
+
+  const getSeverityBadgeClass = (severity) => {
+    const sev = String(severity || '').toLowerCase();
+    switch (sev) {
+      case 'critical':
+        return 'bg-red-500/20 text-red-400 border-red-500/40';
+      case 'high':
+        return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+      case 'medium':
+        return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+      default:
+        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -203,31 +216,31 @@ export default function ThreatAnalysis() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-6">
               <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 backdrop-blur">
                 <p className="text-xs uppercase tracking-wider text-slate-400 font-semibold">Total Threats</p>
-                <p className="mt-2 text-3xl font-bold text-white">{kpis.total_threats}</p>
+                <p className="mt-2 text-3xl font-bold text-white stat-value-default">{kpis.total_threats}</p>
                 <span className="text-[11px] text-blue-400 mt-1 block">Recorded in database</span>
               </div>
 
               <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 backdrop-blur">
                 <p className="text-xs uppercase tracking-wider text-rose-400 font-semibold">Critical & High Risk</p>
-                <p className="mt-2 text-3xl font-bold text-rose-300">{kpis.critical_high_count}</p>
+                <p className="mt-2 text-3xl font-bold text-rose-300 stat-value-rose">{kpis.critical_high_count}</p>
                 <span className="text-[11px] text-rose-400/80 mt-1 block">Requires immediate action</span>
               </div>
 
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 backdrop-blur">
                 <p className="text-xs uppercase tracking-wider text-amber-400 font-semibold">Avg Risk Score</p>
-                <p className="mt-2 text-3xl font-bold text-amber-300">{kpis.avg_risk_score} / 100</p>
+                <p className="mt-2 text-3xl font-bold text-amber-300 stat-value-amber">{kpis.avg_risk_score} / 100</p>
                 <span className="text-[11px] text-amber-400/80 mt-1 block">Calculated risk level</span>
               </div>
 
               <div className="rounded-2xl border border-purple-500/30 bg-purple-500/10 p-5 backdrop-blur">
                 <p className="text-xs uppercase tracking-wider text-purple-400 font-semibold">Top Threat Vector</p>
-                <p className="mt-2 text-2xl font-bold text-purple-300 truncate">{kpis.top_attack_vector}</p>
+                <p className="mt-2 text-2xl font-bold text-purple-300 truncate stat-value-purple">{kpis.top_attack_vector}</p>
                 <span className="text-[11px] text-purple-400/80 mt-1 block">Most frequent category</span>
               </div>
 
               <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-5 backdrop-blur">
                 <p className="text-xs uppercase tracking-wider text-blue-400 font-semibold">Active Incidents</p>
-                <p className="mt-2 text-3xl font-bold text-blue-300">{kpis.active_incidents}</p>
+                <p className="mt-2 text-3xl font-bold text-blue-300 stat-value-blue">{kpis.active_incidents}</p>
                 <span className="text-[11px] text-blue-400/80 mt-1 block">Under investigation</span>
               </div>
             </div>
