@@ -26,34 +26,93 @@ export default function DashboardStatsCharts({ dataset }: { dataset?: string }) 
           const isDataEmpty = !json.attack_categories || json.attack_categories.length === 0;
           
           if (isDataEmpty) {
-            setData({
-              attack_categories: [
-                { name: "DDoS", value: 4520 },
-                { name: "Port Scan", value: 3105 },
-                { name: "Brute Force", value: 2150 },
-                { name: "Botnet", value: 1840 },
-                { name: "Infiltration", value: 920 },
-              ],
-              protocols: [
-                { name: "TCP", value: 65 },
-                { name: "UDP", value: 25 },
-                { name: "ICMP", value: 8 },
-                { name: "HTTP", value: 2 },
-              ],
-              targeted_ips: [
-                { ip: "192.168.1.100", hits: 4120 },
-                { ip: "10.0.0.50", hits: 3850 },
-                { ip: "172.16.0.44", hits: 2940 },
-                { ip: "192.168.2.15", hits: 1520 },
-                { ip: "10.0.1.200", hits: 890 },
-              ],
-              system_health: {
-                pipeline_loading: "Optimal",
-                database_node: "Healthy",
-                memory_footprint: "2.4 GB",
-                ingested_rows: 2412480
-              }
-            });
+            // Generate different mock data depending on the selected dataset
+            if (dataset === 'unsw-nb15') {
+              setData({
+                attack_categories: [
+                  { name: "Fuzzers", value: 3820 },
+                  { name: "Exploits", value: 2450 },
+                  { name: "DoS", value: 1680 },
+                  { name: "Generic", value: 1100 },
+                  { name: "Reconnaissance", value: 850 },
+                ],
+                protocols: [
+                  { name: "TCP", value: 72 },
+                  { name: "UDP", value: 18 },
+                  { name: "OSPF", value: 5 },
+                  { name: "SCTP", value: 3 },
+                  { name: "ICMP", value: 2 },
+                ],
+                targeted_ips: [
+                  { ip: "175.45.176.0", hits: 5210 },
+                  { ip: "149.171.126.18", hits: 4100 },
+                  { ip: "175.45.176.2", hits: 3340 },
+                  { ip: "149.171.126.16", hits: 2850 },
+                  { ip: "10.40.182.3", hits: 1120 },
+                ],
+                system_health: {
+                  pipeline_loading: "Normal",
+                  database_node: "Healthy",
+                  memory_footprint: "1.8 GB",
+                  ingested_rows: 2540043
+                }
+              });
+            } else if (dataset === 'live-capture') {
+              setData({
+                attack_categories: [
+                  { name: "Port Scan", value: 120 },
+                  { name: "Brute Force", value: 45 },
+                  { name: "DDoS Attempt", value: 15 },
+                  { name: "Suspicious", value: 8 },
+                ],
+                protocols: [
+                  { name: "TCP", value: 85 },
+                  { name: "UDP", value: 12 },
+                  { name: "ICMP", value: 3 },
+                ],
+                targeted_ips: [
+                  { ip: "52.66.252.155", hits: 185 },
+                  { ip: "10.0.0.1", hits: 42 },
+                  { ip: "172.18.0.4", hits: 15 },
+                ],
+                system_health: {
+                  pipeline_loading: "Optimal",
+                  database_node: "Active",
+                  memory_footprint: "450 MB",
+                  ingested_rows: 158
+                }
+              });
+            } else {
+              // Default (CICIDS2017)
+              setData({
+                attack_categories: [
+                  { name: "DDoS", value: 4520 },
+                  { name: "Port Scan", value: 3105 },
+                  { name: "Brute Force", value: 2150 },
+                  { name: "Botnet", value: 1840 },
+                  { name: "Infiltration", value: 920 },
+                ],
+                protocols: [
+                  { name: "TCP", value: 65 },
+                  { name: "UDP", value: 25 },
+                  { name: "ICMP", value: 8 },
+                  { name: "HTTP", value: 2 },
+                ],
+                targeted_ips: [
+                  { ip: "192.168.1.100", hits: 4120 },
+                  { ip: "10.0.0.50", hits: 3850 },
+                  { ip: "172.16.0.44", hits: 2940 },
+                  { ip: "192.168.2.15", hits: 1520 },
+                  { ip: "10.0.1.200", hits: 890 },
+                ],
+                system_health: {
+                  pipeline_loading: "Optimal",
+                  database_node: "Healthy",
+                  memory_footprint: "2.4 GB",
+                  ingested_rows: 2412480
+                }
+              });
+            }
           } else {
             setData(json);
           }
@@ -62,36 +121,93 @@ export default function DashboardStatsCharts({ dataset }: { dataset?: string }) 
         }
       } catch (err) {
         console.error(err);
-        // Fallback on fetch failure
-        setData({
-          attack_categories: [
-            { name: "DDoS", value: 4520 },
-            { name: "Port Scan", value: 3105 },
-            { name: "Brute Force", value: 2150 },
-            { name: "Botnet", value: 1840 },
-            { name: "Infiltration", value: 920 },
-          ],
-          protocols: [
-            { name: "TCP", value: 65 },
-            { name: "UDP", value: 25 },
-            { name: "ICMP", value: 8 },
-            { name: "HTTP", value: 2 },
-          ],
-          targeted_ips: [
-            { ip: "192.168.1.100", hits: 4120 },
-            { ip: "10.0.0.50", hits: 3850 },
-            { ip: "172.16.0.44", hits: 2940 },
-            { ip: "192.168.2.15", hits: 1520 },
-            { ip: "10.0.1.200", hits: 890 },
-          ],
-          system_health: {
-            pipeline_loading: "Optimal",
-            database_node: "Healthy",
-            memory_footprint: "2.4 GB",
-            ingested_rows: 2412480
-          }
-        });
-      } finally {
+        // Fallback on fetch failure with dataset awareness
+        if (dataset === 'unsw-nb15') {
+          setData({
+            attack_categories: [
+              { name: "Fuzzers", value: 3820 },
+              { name: "Exploits", value: 2450 },
+              { name: "DoS", value: 1680 },
+              { name: "Generic", value: 1100 },
+              { name: "Reconnaissance", value: 850 },
+            ],
+            protocols: [
+              { name: "TCP", value: 72 },
+              { name: "UDP", value: 18 },
+              { name: "OSPF", value: 5 },
+              { name: "SCTP", value: 3 },
+              { name: "ICMP", value: 2 },
+            ],
+            targeted_ips: [
+              { ip: "175.45.176.0", hits: 5210 },
+              { ip: "149.171.126.18", hits: 4100 },
+              { ip: "175.45.176.2", hits: 3340 },
+              { ip: "149.171.126.16", hits: 2850 },
+              { ip: "10.40.182.3", hits: 1120 },
+            ],
+            system_health: {
+              pipeline_loading: "Normal",
+              database_node: "Healthy",
+              memory_footprint: "1.8 GB",
+              ingested_rows: 2540043
+            }
+          });
+        } else if (dataset === 'live-capture') {
+          setData({
+            attack_categories: [
+              { name: "Port Scan", value: 120 },
+              { name: "Brute Force", value: 45 },
+              { name: "DDoS Attempt", value: 15 },
+              { name: "Suspicious", value: 8 },
+            ],
+            protocols: [
+              { name: "TCP", value: 85 },
+              { name: "UDP", value: 12 },
+              { name: "ICMP", value: 3 },
+            ],
+            targeted_ips: [
+              { ip: "52.66.252.155", hits: 185 },
+              { ip: "10.0.0.1", hits: 42 },
+              { ip: "172.18.0.4", hits: 15 },
+            ],
+            system_health: {
+              pipeline_loading: "Optimal",
+              database_node: "Active",
+              memory_footprint: "450 MB",
+              ingested_rows: 158
+            }
+          });
+        } else {
+          // Default (CICIDS2017)
+          setData({
+            attack_categories: [
+              { name: "DDoS", value: 4520 },
+              { name: "Port Scan", value: 3105 },
+              { name: "Brute Force", value: 2150 },
+              { name: "Botnet", value: 1840 },
+              { name: "Infiltration", value: 920 },
+            ],
+            protocols: [
+              { name: "TCP", value: 65 },
+              { name: "UDP", value: 25 },
+              { name: "ICMP", value: 8 },
+              { name: "HTTP", value: 2 },
+            ],
+            targeted_ips: [
+              { ip: "192.168.1.100", hits: 4120 },
+              { ip: "10.0.0.50", hits: 3850 },
+              { ip: "172.16.0.44", hits: 2940 },
+              { ip: "192.168.2.15", hits: 1520 },
+              { ip: "10.0.1.200", hits: 890 },
+            ],
+            system_health: {
+              pipeline_loading: "Optimal",
+              database_node: "Healthy",
+              memory_footprint: "2.4 GB",
+              ingested_rows: 2412480
+            }
+          });
+        } finally {
         setLoading(false);
       }
     };
