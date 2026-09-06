@@ -1,0 +1,95 @@
+services:
+  # 1. PostgreSQL 16 Relational Database Service (Users, Incidents, Alerts, Reports, Metrics)
+  postgresql:
+    image: postgres:16-alpine
+    container_name: netshield-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-netshield_ai}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/complete_postgres_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./database/backup_netshield_ai.sql:/docker-entrypoint-initdb.d/02_backup.sql
+    networks:
+      - netshield-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d netshield_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. MongoDB 7.0 Document Database Service (Raw Packet Security Events, Zeek Logs, Threat Intel Cache)
+  mongodb:
+    image: mongo:7.0
+    container_name: netshield-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - netshield-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 3. FastAPI + Uvicorn + ML Model Engine (Scikit-Learn, XGBoost, TensorFlow, Wireshark/PCAP, Zeek)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: netshield-backend
+    restart: always
+    environment:
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-netshield_ai}
+      MONGO_URI: mongodb://mongodb:27017/netshield_ai
+      MONGO_DB_NAME: netshield_ai
+      JWT_SECRET: ${JWT_SECRET:-netshield_super_secret_jwt_key_2026_soc}
+      JWT_ALGORITHM: HS256
+      PORT: 5000
+      THREAT_INTEL_PROVIDER: Virustotal / AbuseIPDB
+      SIEM_ENABLED: "true"
+      SIEM_WEBHOOK_URL: http://localhost:8088/services/collector
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    networks:
+      - netshield-net
+
+  # 4. React.js Security Analyst SOC Frontend (Tailwind CSS + Chart.js + Recharts)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: netshield-frontend
+    restart: always
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000/api
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - netshield-net
+
+volumes:
+  postgres_data:
+  mongo_data:
+
+networks:
+  netshield-net:
+    driver: bridge

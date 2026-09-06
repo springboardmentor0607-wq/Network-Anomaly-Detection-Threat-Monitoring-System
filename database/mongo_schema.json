@@ -1,0 +1,58 @@
+{
+  "database": "netshield_ai",
+  "collections": [
+    {
+      "name": "users",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": ["name", "email", "password_hash", "role"],
+          "properties": {
+            "name": { "bsonType": "string" },
+            "email": { "bsonType": "string" },
+            "password_hash": { "bsonType": "string" },
+            "role": { "enum": ["ADMIN", "SECURITY_ANALYST", "AUDITOR"] },
+            "status": { "enum": ["ACTIVE", "SUSPENDED"] }
+          }
+        }
+      }
+    },
+    {
+      "name": "network_traffic_flows",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": ["dataset_id", "predicted_label", "confidence", "risk_score", "severity"],
+          "properties": {
+            "dataset_id": { "bsonType": "string" },
+            "source_ip": { "bsonType": "string" },
+            "destination_ip": { "bsonType": "string" },
+            "protocol": { "bsonType": "string" },
+            "flow_duration": { "bsonType": "number" },
+            "features_78": { "bsonType": "object" },
+            "predicted_label": { "enum": ["BENIGN", "DDoS", "FTP-Patator", "SSH-Patator"] },
+            "confidence": { "bsonType": "number" },
+            "risk_score": { "bsonType": "int" },
+            "severity": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+            "timestamp": { "bsonType": "date" }
+          }
+        }
+      }
+    },
+    {
+      "name": "security_alerts",
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": ["title", "severity", "status"],
+          "properties": {
+            "title": { "bsonType": "string" },
+            "description": { "bsonType": "string" },
+            "severity": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+            "status": { "enum": ["NEW", "INVESTIGATING", "RESOLVED", "CLOSED"] }
+          }
+        }
+      }
+    }
+  ]
+}
