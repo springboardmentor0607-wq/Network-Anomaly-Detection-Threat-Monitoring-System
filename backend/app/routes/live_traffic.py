@@ -28,9 +28,32 @@ def get_flow_key(src_ip, src_port, dst_ip, dst_port, protocol):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     
-    tshark_path = r"C:\Program Files\Wireshark\tshark.exe"
+    # Use Linux tshark. Find the first active non-loopback interface automatically.
+    import platform
+    import socket
+    
+    tshark_path = "/usr/bin/tshark"
+    
+    # Detect the primary network interface (eth0 on AWS, or first available)
+    interface = "eth0"
+    try:
+        result = subprocess.run(
+            [tshark_path, "-D"],
+            capture_output=True, text=True, timeout=5
+        )
+        for line in result.stdout.splitlines():
+            # Pick the first non-loopback interface tshark can see
+            if "lo" not in line and "loopback" not in line.lower():
+                # Extract interface name (format: "1. eth0 (Ethernet)")
+                parts = line.strip().split()
+                if len(parts) >= 2:
+                    interface = parts[1].rstrip(".")
+                    break
+    except Exception:
+        interface = "eth0"  # fallback
+    
     args = [
-        "-i", "VMware Network Adapter VMnet8",
+        "-i", interface,
         "-T", "fields",
         "-e", "frame.time_epoch",
         "-e", "ip.src", "-e", "ipv6.src",
@@ -41,6 +64,8 @@ async def websocket_endpoint(websocket: WebSocket):
         "-e", "frame.len",
         "-l"
     ]
+    
+    logger.info(f"Starting tshark on interface: {interface}")
     
     process = None
     active_flows = {}
