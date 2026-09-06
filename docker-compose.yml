@@ -101,7 +101,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_API_URL=http://52.66.252.155:8000
       - PORT=3001
     depends_on:
       backend:
