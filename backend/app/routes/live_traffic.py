@@ -82,9 +82,23 @@ async def websocket_endpoint(websocket: WebSocket):
         t.daemon = True
         t.start()
         
+        # Task to detect if client disconnects
+        async def wait_for_disconnect():
+            try:
+                await websocket.receive_text()
+            except WebSocketDisconnect:
+                pass
+                
+        disconnect_task = asyncio.create_task(wait_for_disconnect())
+        
         while True:
-            while q.empty():
+            if disconnect_task.done():
+                logger.info("Client disconnected, stopping capture.")
+                break
+                
+            if q.empty():
                 await asyncio.sleep(0.05)
+                continue
                 
             line = q.get_nowait()
             if not line:
