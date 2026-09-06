@@ -207,7 +207,8 @@ export default function DashboardStatsCharts({ dataset }: { dataset?: string }) 
               ingested_rows: 2412480
             }
           });
-        } finally {
+        }
+      } finally {
         setLoading(false);
       }
     };
