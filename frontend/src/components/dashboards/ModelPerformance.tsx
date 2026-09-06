@@ -271,7 +271,7 @@ export default function ModelPerformance({ dataset = "CICIDS2017" }: { dataset?:
                 />
                 <Tooltip
                   contentStyle={{ background: '#000', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, color: '#fff' }}
-                  formatter={(val: number) => val.toFixed(4)}
+                  formatter={(val: any) => typeof val === 'number' ? val.toFixed(4) : val}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
                 <Line type="monotone" dataKey="train" stroke="#3b82f6" strokeWidth={2} dot={false} name="Train Log-Loss" />
