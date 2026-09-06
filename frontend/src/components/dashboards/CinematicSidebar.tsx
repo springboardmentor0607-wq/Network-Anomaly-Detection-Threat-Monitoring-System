@@ -84,11 +84,11 @@ export default function CinematicSidebar({ role, activeTab, setActiveTab, onLogo
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
-        {tabs.map((tab) => {
-          if ("subItems" in tab && tab.subItems) {
+        {tabs.map((tab: any) => {
+          if (tab.subItems) {
             const Icon = tab.icon;
             const isExpanded = expandedGroups[tab.id];
-            const hasActiveSub = tab.subItems.some(sub => sub.id === activeTab);
+            const hasActiveSub = tab.subItems.some((sub: any) => sub.id === activeTab);
             return (
               <div key={tab.id} className="space-y-1">
                 <button
@@ -105,7 +105,7 @@ export default function CinematicSidebar({ role, activeTab, setActiveTab, onLogo
                 {isExpanded && (
                   <div className="pl-9 space-y-1 relative">
                     <div className="absolute left-5 top-0 bottom-0 w-px bg-white/10" />
-                    {tab.subItems.map(subTab => {
+                    {tab.subItems.map((subTab: any) => {
                       const SubIcon = subTab.icon;
                       const isSubActive = activeTab === subTab.id;
                       return (
