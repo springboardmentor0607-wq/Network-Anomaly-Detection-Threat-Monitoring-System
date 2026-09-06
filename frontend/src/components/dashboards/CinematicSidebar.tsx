@@ -85,7 +85,7 @@ export default function CinematicSidebar({ role, activeTab, setActiveTab, onLogo
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
         {tabs.map((tab) => {
-          if (tab.subItems) {
+          if ("subItems" in tab && tab.subItems) {
             const Icon = tab.icon;
             const isExpanded = expandedGroups[tab.id];
             const hasActiveSub = tab.subItems.some(sub => sub.id === activeTab);
