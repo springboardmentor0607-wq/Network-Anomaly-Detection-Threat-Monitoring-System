@@ -145,8 +145,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 total_pkts = flow["fwd_pkts"] + flow["bwd_pkts"]
                 
-                # Analyze flow every 5 packets
-                if total_pkts >= 5:
+                # Analyze flow every 2 packets (lowered from 5 for low-traffic servers)
+                if total_pkts >= 2:
                     flow_duration = (flow["last_time"] - flow["start_time"]) * 1000000 # Microseconds as CICIDS usually expects
                     
                     def calc_stats(arr):
