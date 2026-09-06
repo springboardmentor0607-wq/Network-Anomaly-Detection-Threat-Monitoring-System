@@ -26,7 +26,37 @@ export default function RegisterCinematicPage() {
         setError("");
 
         try {
-            login(role as "admin" | "analyst");
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, role })
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.detail || "Registration failed");
+            }
+
+            // Immediately log them in after registration
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
+
+            const loginRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+
+            if (!loginRes.ok) {
+                router.push("/login-cinematic");
+                return;
+            }
+
+            const data = await loginRes.json();
+            localStorage.setItem("netshield_token", data.access_token);
+            
+            login((data.role || role) as "admin" | "analyst");
             router.push("/dashboard-cinematic");
         } catch (err: any) {
             setError(err.message || "Registration failed");

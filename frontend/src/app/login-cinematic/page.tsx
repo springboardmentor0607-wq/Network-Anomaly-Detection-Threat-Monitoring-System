@@ -20,8 +20,27 @@ export default function LoginCinematicPage() {
         setError("");
 
         try {
-            // Mock login for now, role is inferred from earlier session or defaults to analyst
-            login("analyst"); 
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
+
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData.toString()
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.detail || "Authentication failed");
+            }
+
+            const data = await res.json();
+            localStorage.setItem("netshield_token", data.access_token);
+            
+            login(data.role || "analyst"); 
             router.push("/dashboard-cinematic");
         } catch (err: any) {
             setError(err.message || "Authentication failed");
