@@ -19,7 +19,7 @@ export default function AlertFeed({ dataset }: { dataset?: string }) {
     const fetchAlerts = async () => {
       try {
         const queryParam = dataset ? `?dataset=${dataset}` : '';
-        const res = await fetch(`http://localhost:8000/api/network/alerts${queryParam}`);
+        const res = await fetch(`http://52.66.252.155:8000/api/network/alerts${queryParam}`);
         if (res.ok) {
           const data = await res.json();
           setAlerts(data);

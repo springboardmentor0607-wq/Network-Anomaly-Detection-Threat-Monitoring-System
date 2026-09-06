@@ -25,7 +25,7 @@ export default function LogManagement({ dataset, dataSource, telemetryData }: an
       const fetchLogs = async () => {
         try {
           const queryParams = new URLSearchParams({ dataset: dataset || "" }).toString();
-          const res = await fetch(`http://localhost:8000/api/network/traffic-data?${queryParams}&limit=200`);
+          const res = await fetch(`http://52.66.252.155:8000/api/network/traffic-data?${queryParams}&limit=200`);
           if (res.ok) {
             const data = await res.json();
             setLogs(data.data.map((t: any) => ({

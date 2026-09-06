@@ -18,7 +18,7 @@ export default function DashboardStatsCharts({ dataset }: { dataset?: string }) 
     const fetchData = async () => {
       try {
         const queryParam = dataset ? `?dataset=${dataset}` : '';
-        const res = await fetch(`http://localhost:8000/api/network/dashboard-stats${queryParam}`);
+        const res = await fetch(`http://52.66.252.155:8000/api/network/dashboard-stats${queryParam}`);
         if (res.ok) {
           const json = await res.json();
           

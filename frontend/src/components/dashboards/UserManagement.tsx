@@ -19,7 +19,7 @@ export default function UserManagement() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/users");
+      const res = await fetch("http://52.66.252.155:8000/api/users");
       if (res.ok) {
         const data = await res.json();
         setUsers(data);
@@ -44,7 +44,7 @@ export default function UserManagement() {
   const handleRoleChange = async (userId: string, currentRole: string) => {
     const newRole = currentRole === "admin" ? "analyst" : "admin";
     try {
-      const res = await fetch(`http://localhost:8000/api/users/${userId}/role`, {
+      const res = await fetch(`http://52.66.252.155:8000/api/users/${userId}/role`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: newRole })
@@ -65,7 +65,7 @@ export default function UserManagement() {
     if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
     
     try {
-      const res = await fetch(`http://localhost:8000/api/users/${userId}`, {
+      const res = await fetch(`http://52.66.252.155:8000/api/users/${userId}`, {
         method: 'DELETE',
       });
       if (res.ok) {

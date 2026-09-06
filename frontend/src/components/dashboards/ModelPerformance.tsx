@@ -32,10 +32,10 @@ export default function ModelPerformance({ dataset = "CICIDS2017" }: { dataset?:
       setLoading(true);
       try {
         const [metricsRes, cvRes, threatRes, epochRes] = await Promise.all([
-          fetch(`http://localhost:8000/api/ml/reports/metrics?dataset=${dataset}`),
-          fetch(`http://localhost:8000/api/ml/reports/cross-validation?dataset=${dataset}`),
-          fetch(`http://localhost:8000/api/ml/reports/threat-analysis?dataset=${dataset}`),
-          fetch(`http://localhost:8000/api/ml/reports/epoch-metrics?dataset=${dataset}`)
+          fetch(`http://52.66.252.155:8000/api/ml/reports/metrics?dataset=${dataset}`),
+          fetch(`http://52.66.252.155:8000/api/ml/reports/cross-validation?dataset=${dataset}`),
+          fetch(`http://52.66.252.155:8000/api/ml/reports/threat-analysis?dataset=${dataset}`),
+          fetch(`http://52.66.252.155:8000/api/ml/reports/epoch-metrics?dataset=${dataset}`)
         ]);
 
         if (metricsRes.ok) setMetrics(await metricsRes.json());

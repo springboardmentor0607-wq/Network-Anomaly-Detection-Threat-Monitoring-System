@@ -38,10 +38,10 @@ export default function SecurityReports({ dataset = "CICIDS2017" }: { dataset?: 
       setLoading(true);
       try {
         const [rptRes, catRes, tlRes, taRes] = await Promise.all([
-          fetch('http://localhost:8000/api/reports/list'),
-          fetch(`http://localhost:8000/api/network/dashboard-stats?dataset=${dataset}`),
-          fetch(`http://localhost:8000/api/network/attack-timeline?dataset=${dataset}`),
-          fetch(`http://localhost:8000/api/ml/reports/threat-analysis?dataset=${dataset}`),
+          fetch('http://52.66.252.155:8000/api/reports/list'),
+          fetch(`http://52.66.252.155:8000/api/network/dashboard-stats?dataset=${dataset}`),
+          fetch(`http://52.66.252.155:8000/api/network/attack-timeline?dataset=${dataset}`),
+          fetch(`http://52.66.252.155:8000/api/ml/reports/threat-analysis?dataset=${dataset}`),
         ]);
 
         if (rptRes.ok) setReports(await rptRes.json());
@@ -102,7 +102,7 @@ export default function SecurityReports({ dataset = "CICIDS2017" }: { dataset?: 
   };
 
   const handleDownload = (id: string) => {
-    window.open(`http://localhost:8000/api/reports/download/${id}`, '_blank');
+    window.open(`http://52.66.252.155:8000/api/reports/download/${id}`, '_blank');
   };
 
   if (loading) {

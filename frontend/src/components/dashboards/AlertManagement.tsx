@@ -26,7 +26,7 @@ export default function AlertManagement({ dataset, dataSource, telemetryData }: 
       
       try {
         const queryParams = new URLSearchParams({ dataset: dataset || "" }).toString();
-        const res = await fetch(`http://localhost:8000/api/network/alerts?${queryParams}&limit=100`);
+        const res = await fetch(`http://52.66.252.155:8000/api/network/alerts?${queryParams}&limit=100`);
         if (res.ok) {
           const data = await res.json();
           // Assign random statuses for UI demonstration of Incident Response

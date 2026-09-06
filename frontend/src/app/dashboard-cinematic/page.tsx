@@ -101,7 +101,7 @@ export default function DashboardCinematicPage() {
             }
             setIsCapturing(false);
         } else {
-            const ws = new WebSocket("ws://localhost:8000/api/live/ws");
+            const ws = new WebSocket("ws://52.66.252.155:8000/api/live/ws");
             ws.onopen = () => setIsCapturing(true);
             ws.onmessage = (event) => {
                 try {
@@ -229,7 +229,7 @@ export default function DashboardCinematicPage() {
     useEffect(() => {
         const fetchPorts = async () => {
             try {
-                const res = await fetch(`http://localhost:8000/api/network/port-usage?dataset=${selectedDataset}`);
+                const res = await fetch(`http://52.66.252.155:8000/api/network/port-usage?dataset=${selectedDataset}`);
                 if (res.ok) {
                     const data = await res.json();
                     setPortData(data.map((item: any) => ({ label: item.name, value: item.count })));
@@ -238,19 +238,19 @@ export default function DashboardCinematicPage() {
         };
         const fetchSummary = async () => {
             try {
-                const res = await fetch(`http://localhost:8000/api/network/summary?dataset=${selectedDataset}`);
+                const res = await fetch(`http://52.66.252.155:8000/api/network/summary?dataset=${selectedDataset}`);
                 if (res.ok) setSummaryData(await res.json());
             } catch (err) {}
         };
         const fetchDashboardStats = async () => {
             try {
-                const res = await fetch(`http://localhost:8000/api/network/dashboard-stats?dataset=${selectedDataset}`);
+                const res = await fetch(`http://52.66.252.155:8000/api/network/dashboard-stats?dataset=${selectedDataset}`);
                 if (res.ok) setDashboardStats(await res.json());
             } catch (err) {}
         };
         const fetchHistoricalFlow = async () => {
             try {
-                const res = await fetch(`http://localhost:8000/api/network/traffic-flow?dataset=${selectedDataset}`);
+                const res = await fetch(`http://52.66.252.155:8000/api/network/traffic-flow?dataset=${selectedDataset}`);
                 if (res.ok) setHistoricalFlowData(await res.json());
             } catch (err) {}
         };

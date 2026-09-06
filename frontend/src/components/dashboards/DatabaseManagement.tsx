@@ -54,7 +54,7 @@ export default function DatabaseManagement() {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/database/status");
+      const res = await fetch("http://52.66.252.155:8000/api/database/status");
       if (res.ok) {
         const data = await res.json();
         // Decorate with mock advanced metrics if backend doesn't provide them yet

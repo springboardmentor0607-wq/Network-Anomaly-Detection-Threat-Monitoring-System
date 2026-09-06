@@ -63,7 +63,7 @@ export default function AttackVisualization({ dataset, dataSource, telemetryData
       }).toString();
 
       // Fetch timeline
-      const timelineRes = await fetch(`http://localhost:8000/api/network/attack-timeline?${queryParams}`);
+      const timelineRes = await fetch(`http://52.66.252.155:8000/api/network/attack-timeline?${queryParams}`);
       if (timelineRes.ok) {
         const data = await timelineRes.json();
         setTimelineData(data.length ? data : [
@@ -73,7 +73,7 @@ export default function AttackVisualization({ dataset, dataSource, telemetryData
       }
       
       // Fetch protocols from dashboard-stats
-      const statsRes = await fetch(`http://localhost:8000/api/network/dashboard-stats?${queryParams}`);
+      const statsRes = await fetch(`http://52.66.252.155:8000/api/network/dashboard-stats?${queryParams}`);
       if (statsRes.ok) {
         const stats = await statsRes.json();
         if (stats.protocols && stats.protocols.length > 0) {

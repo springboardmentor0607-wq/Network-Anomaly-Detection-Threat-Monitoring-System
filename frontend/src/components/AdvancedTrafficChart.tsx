@@ -76,8 +76,8 @@ export default function AdvancedTrafficChart({ dataset }: { dataset?: string }) 
       try {
         const query = dataset ? `?dataset=${encodeURIComponent(dataset)}` : "";
         const [flowRes, summaryRes] = await Promise.all([
-          fetch(`http://localhost:8000/api/network/traffic-flow${query}`),
-          fetch(`http://localhost:8000/api/network/summary${query}`)
+          fetch(`http://52.66.252.155:8000/api/network/traffic-flow${query}`),
+          fetch(`http://52.66.252.155:8000/api/network/summary${query}`)
         ]);
         
         if (flowRes.ok) {

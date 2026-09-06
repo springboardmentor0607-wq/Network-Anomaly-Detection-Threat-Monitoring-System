@@ -52,7 +52,7 @@ export default function AnomalyDetection({ dataset, dataSource, telemetryData }:
       // Historical Mode
       try {
         const queryParams = new URLSearchParams({ dataset: dataset || "" }).toString();
-        const res = await fetch(`http://localhost:8000/api/network/anomaly-data?${queryParams}`);
+        const res = await fetch(`http://52.66.252.155:8000/api/network/anomaly-data?${queryParams}`);
         if (res.ok) {
           const data = await res.json();
           setPredictions(data.graph?.length ? data.graph : [{ time: "00:00", benign: 0, anomaly: 0 }]);
