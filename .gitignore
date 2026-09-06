@@ -225,3 +225,4 @@ frontend/node_modules/
 # Local environment files
 frontend/.env
 backend/.env
+.env
