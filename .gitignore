@@ -19,13 +19,15 @@ netshield-backend/**/*.pyo
 # Datasets
 # =========================
 
-netshield-backend/datasets/*
-
+netshield-backend/datasets/**
+!netshield-backend/datasets/processed/
+!netshield-backend/datasets/processed/unsw_preprocessor.joblib
 # =========================
 # Trained ML Models
 # =========================
 
-netshield-backend/ml/models/
+netshield-backend/ml/models/*
+!netshield-backend/ml/models/unsw_random_forest_improved.joblib
 
 # =========================
 # Next.js

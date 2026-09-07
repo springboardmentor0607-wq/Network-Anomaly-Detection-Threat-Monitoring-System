@@ -1,0 +1,2 @@
+netshield-backend/ml/models/*.pkl filter=lfs diff=lfs merge=lfs -text
+netshield-backend/ml/models/*.joblib filter=lfs diff=lfs merge=lfs -text
