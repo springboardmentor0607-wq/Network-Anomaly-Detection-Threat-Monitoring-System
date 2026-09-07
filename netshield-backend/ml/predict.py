@@ -9,7 +9,6 @@ import pandas as pd
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# All ML models are inside ml/models
 MODEL_DIR = os.path.join(
     BASE_DIR,
     "models"
@@ -20,25 +19,51 @@ CIC_MODEL_DIR = os.path.join(
     "models"
 )
 
+# New UNSW preprocessing pipeline
+UNSW_PREPROCESSOR_PATH = os.path.join(
+    BASE_DIR,
+    "..",
+    "datasets",
+    "processed",
+    "unsw_preprocessor.joblib"
+)
+
 
 # ============================================================
 # LOAD UNSW MODELS
 # ============================================================
 
+# Improved binary detection model
 model = joblib.load(
     os.path.join(
         MODEL_DIR,
-        "netshield_model.pkl"
+        "unsw_random_forest_improved.joblib"
     )
 )
 
-category_model = joblib.load(
-    os.path.join(
-        MODEL_DIR,
-        "netshield_attack_category_model.pkl"
-    )
+# Preprocessor used to train the improved model
+unsw_preprocessor = joblib.load(
+    UNSW_PREPROCESSOR_PATH
 )
 
+category_model = None
+
+
+def get_category_model():
+    global category_model
+
+    if category_model is None:
+        print("Loading UNSW attack-category model...")
+        category_model = joblib.load(
+            os.path.join(
+                MODEL_DIR,
+                "netshield_attack_category_model.pkl"
+            )
+        )
+
+    return category_model
+
+# Existing preprocessing used by the category model
 encoder = joblib.load(
     os.path.join(
         MODEL_DIR,
@@ -107,72 +132,38 @@ def predict_unsw(data):
     # Convert input into DataFrame
     df = pd.DataFrame([data])
 
-    # --------------------------------------------------------
-    # Encode categorical features
-    # --------------------------------------------------------
-
-    encoded = encoder.transform(
-        df[CATEGORICAL_COLS]
-    )
-
-    encoded_df = pd.DataFrame(
-        encoded,
-        columns=encoder.get_feature_names_out(
-            CATEGORICAL_COLS
-        )
-    )
-
-    # --------------------------------------------------------
-    # Numerical features
-    # --------------------------------------------------------
-
-    numerical_cols = [
-        col
-        for col in df.columns
-        if col not in CATEGORICAL_COLS
-    ]
-
-    numerical_df = df[
-        numerical_cols
-    ].reset_index(drop=True)
-
-    # --------------------------------------------------------
-    # Combine features
-    # --------------------------------------------------------
-
-    final_features = pd.concat(
-        [numerical_df, encoded_df],
-        axis=1
-    )
-
-    # Ensure exact training feature order
-    final_features = final_features[
-        scaler.feature_names_in_
-    ]
-
-    # --------------------------------------------------------
-    # Scale
-    # --------------------------------------------------------
-
-    scaled_features = scaler.transform(
-        final_features
-    )
-
     # ========================================================
     # BINARY PREDICTION
     # ========================================================
 
+    # Use the EXACT preprocessing pipeline used during
+    # training of the improved Random Forest model.
+    processed_features = unsw_preprocessor.transform(df)
+
     prediction = model.predict(
-        scaled_features
+        processed_features
     )[0]
 
     probabilities = model.predict_proba(
-        scaled_features
+        processed_features
     )[0]
 
-    attack_probability = float(
-        probabilities[1]
+    # Find probability belonging to Attack class (1)
+    classes = list(
+        model.classes_
     )
+
+    if 1 in classes:
+
+        attack_index = classes.index(1)
+
+        attack_probability = float(
+            probabilities[attack_index]
+        )
+
+    else:
+
+        attack_probability = 0.0
 
     # ========================================================
     # CATEGORY PREDICTION
@@ -180,13 +171,60 @@ def predict_unsw(data):
 
     if prediction == 1:
 
-        category = category_model.predict(
-            scaled_features
+        # ----------------------------------------------------
+        # Existing category-model preprocessing
+        # ----------------------------------------------------
+
+        encoded = encoder.transform(
+            df[CATEGORICAL_COLS]
+        )
+
+        encoded_df = pd.DataFrame(
+            encoded,
+            columns=encoder.get_feature_names_out(
+                CATEGORICAL_COLS
+            )
+        )
+
+        numerical_cols = [
+            col
+            for col in df.columns
+            if col not in CATEGORICAL_COLS
+        ]
+
+        numerical_df = df[
+            numerical_cols
+        ].reset_index(drop=True)
+
+        final_features = pd.concat(
+            [
+                numerical_df,
+                encoded_df
+            ],
+            axis=1
+        )
+
+        # Ensure exact feature order expected by
+        # the existing category model
+        final_features = final_features[
+            scaler.feature_names_in_
+        ]
+
+        # Scale for category model
+        category_features = scaler.transform(
+            final_features
+        )
+
+        # Predict attack category
+        category_model_instance = get_category_model()
+
+        category = category_model_instance.predict(
+            category_features
         )[0]
 
         category_probabilities = (
-            category_model.predict_proba(
-                scaled_features
+            category_model_instance.predict_proba(
+                category_features
             )[0]
         )
 
@@ -199,7 +237,9 @@ def predict_unsw(data):
         category = "Normal"
 
         category_confidence = float(
-            probabilities[0]
+            probabilities[
+                classes.index(0)
+            ]
         )
 
     # ========================================================
@@ -249,10 +289,14 @@ def predict_cic(data):
     # Replace infinity
     # --------------------------------------------------------
 
-    df = df.replace(
-        [float("inf"), float("-inf")],
-        pd.NA
-    )
+    df = df.copy()
+
+    for col in df.columns:
+        if pd.api.types.is_numeric_dtype(df[col]):
+            df[col] = df[col].replace(
+                [float("inf"), float("-inf")],
+                float("nan")
+            )
 
     # --------------------------------------------------------
     # Imputation
