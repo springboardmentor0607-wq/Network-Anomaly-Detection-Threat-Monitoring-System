@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -14,6 +14,17 @@ API.interceptors.request.use((config) => {
   }
   return config;
 });
+
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('netshield_token');
+      localStorage.removeItem('netshield_user');
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const socAPI = {
   getAlerts: (params) => API.get('/alerts', { params }),

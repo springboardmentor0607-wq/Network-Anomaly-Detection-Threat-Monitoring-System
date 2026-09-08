@@ -19,8 +19,9 @@ from ..database.models import (
 from ..schemas.schemas import (
     IncidentCreateRequest, IncidentStateTransitionRequest, IncidentNoteRequest
 )
+from ..utils.security import get_current_user
 
-router = APIRouter(prefix="/api", tags=["Milestone 3 SOC Operations"])
+router = APIRouter(prefix="/api", tags=["Milestone 3 SOC Operations"], dependencies=[Depends(get_current_user)])
 
 STRICT_STATE_TRANSITIONS = {
     "OPEN": ["ACKNOWLEDGED"],

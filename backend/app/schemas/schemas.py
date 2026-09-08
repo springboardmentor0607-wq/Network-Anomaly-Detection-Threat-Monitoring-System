@@ -1,19 +1,19 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 class UserRegister(BaseModel):
-    full_name: str
+    full_name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     phone_number: Optional[str] = None
     department: Optional[str] = "SOC Operations"
     employee_id: Optional[str] = None
     role: str = "Security Analyst"
-    password: str
+    password: str = Field(min_length=8, max_length=128)
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=1, max_length=128)
 
 class TokenResponse(BaseModel):
     access_token: str

@@ -21,8 +21,9 @@ from ..ml.preprocessor import DataPreprocessor, COLUMNS, SELECTED_FEATURES
 from ..ml.train import train_model_pipeline, find_dataset_file
 from ..ml.anomaly import AnomalyDetector
 from ..services.threat_intel_service import ThreatIntelService
+from ..utils.security import get_current_user
 
-router = APIRouter(prefix="/api", tags=["Machine Learning Pipeline & AI Detection"])
+router = APIRouter(prefix="/api", tags=["Machine Learning Pipeline & AI Detection"], dependencies=[Depends(get_current_user)])
 
 REQUIRED_CSV_FEATURES = [
     "duration", "protocol_type", "service", "flag", "src_bytes", "dst_bytes",

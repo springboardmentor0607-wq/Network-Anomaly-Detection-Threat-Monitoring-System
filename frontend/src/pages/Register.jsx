@@ -11,7 +11,6 @@ const Register = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [department, setDepartment] = useState('');
   const [employeeId, setEmployeeId] = useState('');
-  const [role, setRole] = useState('analyst');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,7 +27,6 @@ const Register = () => {
         phone_number: phoneNumber,
         department,
         employee_id: employeeId,
-        role,
         password
       });
 
@@ -170,22 +168,6 @@ const Register = () => {
               />
             </div>
 
-          </div>
-
-          {/* Role */}
-          <div>
-            <label className="text-xs font-semibold text-slate-300">
-              Access Role
-            </label>
-
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full mt-1 bg-[#070b14] border border-[#1b2a4a] px-3 py-2.5 rounded-xl text-sm text-white outline-none"
-            >
-              <option value="analyst">Security Analyst</option>
-              <option value="admin">Security Administrator</option>
-            </select>
           </div>
 
           {/* Password */}

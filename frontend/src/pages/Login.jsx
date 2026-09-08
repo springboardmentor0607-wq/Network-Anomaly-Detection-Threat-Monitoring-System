@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import {
   Shield,
@@ -318,17 +318,12 @@ const Login = () => {
 
             Don't have an account?{' '}
 
-            <button
-              type="button"
-              onClick={() =>
-                setError(
-                  'Please contact your security administrator for account clearance.'
-                )
-              }
+            <Link
+              to="/register"
               className="text-cyan-400 font-semibold"
             >
-              Request clearance
-            </button>
+              Register here
+            </Link>
 
           </div>
 

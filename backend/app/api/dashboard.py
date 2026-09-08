@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from ..database.connection import get_db
 from ..database.models import ThreatRecord, MLModelRecord
+from ..utils.security import get_current_user
 
-router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
+router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"], dependencies=[Depends(get_current_user)])
 
 @router.get("/summary")
 def get_dashboard_summary(db: Session = Depends(get_db)):

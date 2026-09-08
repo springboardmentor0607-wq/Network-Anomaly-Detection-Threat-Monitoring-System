@@ -1,7 +1,8 @@
 import psutil
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from ..utils.security import get_current_user
 
-router = APIRouter(prefix="/api", tags=["Network & System"])
+router = APIRouter(prefix="/api", tags=["Network & System"], dependencies=[Depends(get_current_user)])
 
 @router.get("/network/status")
 def get_network_status():

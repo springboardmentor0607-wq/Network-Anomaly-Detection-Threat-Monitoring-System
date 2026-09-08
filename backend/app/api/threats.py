@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 from ..database.connection import get_db
 from ..database.models import ThreatRecord, AnomalyRecord
+from ..utils.security import get_current_user
 
-router = APIRouter(prefix="/api", tags=["Threat Intelligence"])
+router = APIRouter(prefix="/api", tags=["Threat Intelligence"], dependencies=[Depends(get_current_user)])
 
 @router.get("/threats")
 def get_threats(

@@ -1,9 +1,14 @@
 import os
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./netshield.db")
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    f"sqlite:///{(BACKEND_DIR / 'netshield.db').as_posix()}"
+)
 
 engine = create_engine(
     DATABASE_URL, 
