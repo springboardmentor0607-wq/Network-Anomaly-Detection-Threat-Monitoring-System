@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import API from '../services/api';
+import API, { downloadFile } from '../services/api';
 import { ShieldAlert, Filter, Download, Search } from 'lucide-react';
 
 const ThreatReports = () => {
@@ -11,6 +11,14 @@ const ThreatReports = () => {
     API.get('/threats', {
       params: { severity: severityFilter, search: search }
     }).then(res => setThreats(res.data.items || [])).catch(console.error);
+  };
+
+  const handleExport = async () => {
+    try {
+      await downloadFile('/threats/export', 'netshield-threats.csv');
+    } catch (error) {
+      console.error('Threat export failed', error);
+    }
   };
 
   useEffect(() => {
@@ -26,12 +34,12 @@ const ThreatReports = () => {
           </h1>
           <p className="text-sm text-slate-400">View and analyze detected security threats in the network.</p>
         </div>
-        <a 
-          href="http://localhost:8000/api/threats/export" 
+        <button
+          onClick={handleExport}
           className="flex items-center gap-2 bg-[#00f0ff] hover:bg-cyan-400 text-[#070b14] px-4 py-2 rounded-xl font-bold text-sm transition"
         >
           <Download className="w-4 h-4" /> Export CSV
-        </a>
+        </button>
       </div>
 
       {/* Filter and Search Bar */}

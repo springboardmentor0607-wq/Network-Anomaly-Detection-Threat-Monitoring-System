@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { socAPI } from '../services/api';
+import { downloadFile, socAPI } from '../services/api';
 import { BarChart2, Download, FileText, Printer, Clock, Activity, ShieldCheck } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -10,8 +10,12 @@ export default function SecurityAnalytics() {
     socAPI.getAnalyticsSummary().then(res => setAnalytics(res.data)).catch(console.error);
   }, []);
 
-  const exportReport = (format) => {
-    window.open(`http://localhost:8000/api/reports/${format}`, '_blank');
+  const exportReport = async (format) => {
+    try {
+      await downloadFile(`/reports/${format}`, `netshield-report.${format}`);
+    } catch (error) {
+      console.error('Report export failed', error);
+    }
   };
 
   return (

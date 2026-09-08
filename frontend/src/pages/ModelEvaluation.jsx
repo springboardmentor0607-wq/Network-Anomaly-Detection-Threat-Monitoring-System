@@ -27,7 +27,7 @@ const ModelEvaluation = () => {
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
           <Cpu className="w-6 h-6 text-[#00f0ff]" /> Model Evaluation Results
         </h1>
-        <p className="text-sm text-slate-400">Model Training &gt; {evalData.algorithm} &gt; Quantitative Validation</p>
+        <p className="text-sm text-slate-400">Model Training &gt; {evalData.model.algorithm} &gt; Quantitative Validation</p>
       </div>
 
       {/* Metrics Top Row */}
@@ -37,7 +37,7 @@ const ModelEvaluation = () => {
           { label: "Precision (Macro)", val: `${(metrics.precision * 100).toFixed(2)}%` },
           { label: "Recall (Macro)", val: `${(metrics.recall * 100).toFixed(2)}%` },
           { label: "F1-Score (Macro)", val: `${(metrics.f1_score * 100).toFixed(2)}%` },
-          { label: "ROC-AUC", val: metrics.roc_auc.toFixed(4) }
+          { label: "ROC-AUC", val: metrics.roc_auc == null ? "N/A" : metrics.roc_auc.toFixed(4) }
         ].map((item, idx) => (
           <div key={idx} className="bg-[#0d1527] border border-[#1b2a4a] p-4 rounded-xl text-center">
             <span className="text-xs text-slate-400 font-semibold">{item.label}</span>

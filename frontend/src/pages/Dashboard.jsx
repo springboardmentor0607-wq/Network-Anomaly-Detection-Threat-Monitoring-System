@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import API from '../services/api';
+import API, { downloadFile } from '../services/api';
 import { 
   ShieldAlert, Activity, Cpu, CheckCircle2, 
   Clock, ShieldCheck, Users, HardDrive, Download 
@@ -12,6 +12,14 @@ const Dashboard = () => {
   const [huntLoading, setHuntLoading] = useState(false);
   const [huntError, setHuntError] = useState('');
   const [huntResults, setHuntResults] = useState(null);
+
+  const handleExport = async () => {
+    try {
+      await downloadFile('/threats/export', 'netshield-threats.csv');
+    } catch (error) {
+      setHuntError(error.response?.data?.detail || 'Export failed.');
+    }
+  };
 
   const handleThreatHunt = async () => {
     setHuntLoading(true);
@@ -54,9 +62,9 @@ const Dashboard = () => {
           <button onClick={handleThreatHunt} disabled={huntLoading} className="flex items-center gap-2 bg-[#00f0ff] hover:bg-cyan-400 disabled:opacity-50 text-[#070b14] px-4 py-2.5 rounded-xl font-semibold text-sm transition shadow-lg shadow-cyan-500/20">
             <Activity className="w-4 h-4" /> {huntLoading ? 'Hunting...' : 'Threat Hunt'}
           </button>
-          <a href="http://localhost:8000/api/threats/export" className="flex items-center gap-2 bg-[#131f38] hover:bg-[#1b2a4a] text-slate-200 px-4 py-2.5 rounded-xl font-semibold text-sm transition border border-[#1b2a4a]">
+          <button onClick={handleExport} className="flex items-center gap-2 bg-[#131f38] hover:bg-[#1b2a4a] text-slate-200 px-4 py-2.5 rounded-xl font-semibold text-sm transition border border-[#1b2a4a]">
             <Download className="w-4 h-4" /> Export Report
-          </a>
+          </button>
         </div>
       </div>
 
