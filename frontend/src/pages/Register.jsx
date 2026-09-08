@@ -42,9 +42,11 @@ const Register = () => {
 
       navigate('/');
     } catch (err) {
+      const detail = err.response?.data?.detail;
       setError(
-        err.response?.data?.detail ||
-        'Registration failed'
+        Array.isArray(detail)
+          ? detail.map((item) => item.msg).join(', ')
+          : detail || err.message || 'Registration failed'
       );
     } finally {
       setLoading(false);
@@ -184,7 +186,7 @@ const Register = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 placeholder="Create password"
                 className="bg-transparent text-sm text-white outline-none w-full"
               />
