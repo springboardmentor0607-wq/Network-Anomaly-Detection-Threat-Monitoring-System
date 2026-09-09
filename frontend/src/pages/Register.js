@@ -23,7 +23,7 @@ function Register() {
 
     try {
       const response = await axios.post(
-        "https://network-anomaly-detection-threat-e55c.onrender.com",
+        "https://network-anomaly-detection-threat-e55c.onrender.com/register",
         {
           username: username,
           email: email,
