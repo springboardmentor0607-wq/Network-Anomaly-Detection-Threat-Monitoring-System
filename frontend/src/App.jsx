@@ -26,6 +26,44 @@ import ModelEvaluation from './pages/ModelEvaluation';
 import SystemMonitoring from './pages/SystemMonitoring';
 import Settings from './pages/Settings';
 
+class AppErrorBoundary extends React.Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error) {
+    console.error('NetShield UI error:', error);
+  }
+
+  handleReload = () => {
+    window.location.reload();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#050914] flex items-center justify-center px-4 text-center">
+          <div className="max-w-md rounded-2xl border border-[#1d2a42] bg-[#070d1c] p-8 shadow-2xl">
+            <h1 className="text-2xl font-bold text-white">NetShield AI could not display this view</h1>
+            <p className="mt-3 text-slate-400">The application hit an unexpected UI error. Reload to try again.</p>
+            <button
+              type="button"
+              onClick={this.handleReload}
+              className="mt-6 rounded-xl bg-cyan-400 px-4 py-2.5 font-semibold text-[#04101b] hover:bg-cyan-300"
+            >
+              Reload application
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const ProtectedLayout = ({ children }) => {
   const token = localStorage.getItem('netshield_token');
 
@@ -52,8 +90,9 @@ const ProtectedLayout = ({ children }) => {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <AppErrorBoundary>
+      <BrowserRouter>
+        <Routes>
 
         {/* Authentication */}
         <Route path="/login" element={<Login />} />
@@ -220,7 +259,8 @@ export default function App() {
         {/* Unknown route */}
         <Route path="*" element={<Navigate to="/" replace />} />
 
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </AppErrorBoundary>
   );
 }

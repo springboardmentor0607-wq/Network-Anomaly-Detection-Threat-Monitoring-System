@@ -44,7 +44,7 @@ FastAPI (/api)
 
 ### Frontend
 
-The frontend is under `frontend/` and uses React, React Router, Axios, Tailwind CSS, Recharts, and Vite. `frontend/src/services/api.js` reads `VITE_API_URL` and attaches the stored bearer token to API requests. Report downloads also use Axios so protected endpoints receive the token.
+The frontend is under `frontend/` and uses React, React Router, Axios, Tailwind CSS, Recharts, and Vite. `frontend/src/services/api.js` reads `VITE_API_URL` and attaches the stored bearer token to API requests. Report downloads also use Axios so protected endpoints receive the token. For a separate production backend service, set the frontend build variable `VITE_API_URL` to the backend URL including `/api` (for example, `https://your-backend-service.onrender.com/api`). When it is omitted in production, the frontend uses same-origin `/api`; localhost is only used by the local Vite development server.
 
 ### Backend
 
