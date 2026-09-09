@@ -17,7 +17,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import "./Predictions.css";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://network-anomaly-detection-threat-e55c.onrender.com";
 
 function Predictions() {
   const navigate = useNavigate();

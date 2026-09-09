@@ -14,7 +14,7 @@ function Login() {
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:8000/login",
+        "https://network-anomaly-detection-threat-e55c.onrender.com/login",
         {
           email: email.trim(),
           password: password,

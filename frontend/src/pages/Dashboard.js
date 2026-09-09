@@ -4,7 +4,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://network-anomaly-detection-threat-e55c.onrender.com";
 
 function Dashboard() {
   const navigate = useNavigate();

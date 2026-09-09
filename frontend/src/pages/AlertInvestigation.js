@@ -13,7 +13,7 @@ import "./AlertInvestigation.css";
 
 
 const API_URL =
-  "http://127.0.0.1:8000";
+  "https://network-anomaly-detection-threat-e55c.onrender.com";
 
 
 function AlertInvestigation() {
