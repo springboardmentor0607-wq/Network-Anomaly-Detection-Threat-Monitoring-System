@@ -27,6 +27,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (token) {
         try {
           const userData = await authApi.getMe(token);
+          if (!userData || typeof userData !== 'object' || !('role' in userData)) {
+            throw new Error('Invalid user data received from API');
+          }
           setUser(userData);
         } catch (err) {
           console.error('Failed to restore auth session', err);

@@ -37,7 +37,13 @@ class APIClient {
 
     // Add response interceptor for error handling
     this.client.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        // If the response is a string (HTML) from a static server rewrite, reject it
+        if (typeof response.data === 'string' && response.data.trim().startsWith('<')) {
+          return Promise.reject(new AxiosError('Received HTML instead of JSON. The API endpoint may be incorrect or unavailable.'));
+        }
+        return response;
+      },
       (error: AxiosError) => {
         if (error.response?.status === 401) {
           // Token expired or invalid
