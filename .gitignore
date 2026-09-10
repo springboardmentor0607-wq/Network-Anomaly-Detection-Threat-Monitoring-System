@@ -81,7 +81,6 @@ backend/saved_models/*.json
 
 # NSL-KDD raw datasets (Large files should not be committed to Git)
 backend/dataset/*.txt
-backend/dataset/*.csv
 backend/dataset/*.gz
 backend/dataset/*.zip
 backend/dataset/*.arff
