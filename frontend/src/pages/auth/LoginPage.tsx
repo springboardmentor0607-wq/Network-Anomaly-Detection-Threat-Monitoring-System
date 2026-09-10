@@ -30,7 +30,7 @@ export const LoginPage: React.FC = () => {
   // If already logged in, redirect appropriately
   useEffect(() => {
     if (user) {
-      const dashboardPath = ROLE_DASHBOARD_MAP[user.role.name] || '/';
+      const dashboardPath = ROLE_DASHBOARD_MAP[user.role?.name || ''] || '/';
       navigate(dashboardPath, { replace: true });
     }
   }, [user, navigate]);

@@ -47,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem(TOKEN_KEY, data.access_token);
       setToken(data.access_token);
       setUser(data.user);
-      return { role: data.user.role.name };
+      return { role: data.user?.role?.name || 'VIEWER' };
     } finally {
       setIsLoading(false);
     }
@@ -67,16 +67,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const hasRole = (roles: RoleType[]) => {
-    if (!user) return false;
+    if (!user || !user.role) return false;
     return roles.includes(user.role.name);
   };
 
   const isAdmin = () => {
-    return user?.role.name === 'ADMIN';
+    return user?.role?.name === 'ADMIN';
   };
 
   const isAnalyst = () => {
-    return user?.role.name === 'SECURITY_ANALYST';
+    return user?.role?.name === 'SECURITY_ANALYST';
   };
 
   return (
