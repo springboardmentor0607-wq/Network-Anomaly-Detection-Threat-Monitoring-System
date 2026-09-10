@@ -53,6 +53,14 @@ if settings.CORS_ORIGINS:
 app.include_router(api_v1_router, prefix=settings.API_V1_STR)
 app.include_router(ws_router, prefix=settings.API_V1_STR)
 
+@app.get("/", tags=["Root"])
+def root():
+    return {
+        "message": "Welcome to NetShield AI Backend API",
+        "docs_url": "/docs",
+        "health_check": "/health"
+    }
+
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["Health"])
 def health_check():
     return {

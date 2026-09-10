@@ -36,7 +36,7 @@ services:
     staticPublishPath: "./dist"
     envVars:
       - key: VITE_API_URL
-        value: "https://netshield-backend.onrender.com/api/v1"
+        value: "https://netshield-backend-vb0u.onrender.com/api/v1"
     routes:
       - type: rewrite
         source: /*
