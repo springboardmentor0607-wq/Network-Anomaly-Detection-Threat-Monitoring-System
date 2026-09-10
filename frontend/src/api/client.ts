@@ -93,11 +93,10 @@ class APIClient {
   // ============ Authentication Endpoints ============
 
   async login(email: string, password: string): Promise<any> {
-    const formData = new FormData();
-    formData.append('username', email);
-    formData.append('password', password);
-
-    const response = await this.client.post('/auth/login', formData);
+    const response = await this.client.post('/auth/login', {
+      email,
+      password,
+    });
     if (response.data.access_token) {
       this.setToken(response.data.access_token);
     }
