@@ -35,8 +35,10 @@ services:
     buildCommand: "npm install && npm run build"
     staticPublishPath: "./dist"
     envVars:
-      - key: VITE_API_URL
-        value: "https://netshield-backend-vb0u.onrender.com/api/v1"
+      - key: VITE_API_BASE_URL
+        value: "https://netshield-backend-vb0u.onrender.com"
+      - key: VITE_API_V1_STR
+        value: "/api/v1"
     routes:
       - type: rewrite
         source: /*
