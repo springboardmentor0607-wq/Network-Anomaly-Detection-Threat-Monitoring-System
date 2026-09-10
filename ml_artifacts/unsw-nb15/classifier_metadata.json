@@ -1,0 +1,22 @@
+{
+  "accuracy": 0.0,
+  "precision": 0.0,
+  "recall": 0.0,
+  "f1_score": 0.0,
+  "false_positive_rate": 0.0,
+  "roc_auc": 0.0,
+  "confusion_matrix": {
+    "true_negatives": 0,
+    "false_positives": 0,
+    "false_negatives": 1,
+    "true_positives": 0
+  },
+  "model_name": "Multi-Class Attack Classifier Baseline",
+  "version": "1.0.0",
+  "algorithm": "RandomForest",
+  "dataset": "UNSW-NB15",
+  "attack_classes": [
+    "0",
+    "1"
+  ]
+}

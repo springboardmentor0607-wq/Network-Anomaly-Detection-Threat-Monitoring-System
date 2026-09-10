@@ -1,0 +1,36 @@
+{
+  "model_name": "Isolation Forest Anomaly Detector",
+  "version": "1.0.0",
+  "algorithm": "IsolationForest",
+  "dataset": "CICIDS2017 (Synthetic)",
+  "is_synthetic": true,
+  "trained_at": "2026-09-09T12:16:05.476018",
+  "n_samples_benign_train": 640,
+  "n_samples_test": 319,
+  "feature_names": [
+    "Destination Port",
+    "Flow Duration",
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Total Length of Fwd Packets",
+    "Total Length of Bwd Packets",
+    "Flow Bytes/s",
+    "Flow Packets/s",
+    "Average Packet Size",
+    "proto_DNS",
+    "proto_HTTP",
+    "proto_HTTPS",
+    "proto_ICMP",
+    "proto_SSH",
+    "proto_TCP",
+    "proto_UDP"
+  ],
+  "metrics": {
+    "accuracy": 0.9091,
+    "precision": 0.9392,
+    "recall": 0.8742,
+    "f1_score": 0.9055,
+    "detection_rate": 0.8742,
+    "false_positive_rate": 0.0608
+  }
+}

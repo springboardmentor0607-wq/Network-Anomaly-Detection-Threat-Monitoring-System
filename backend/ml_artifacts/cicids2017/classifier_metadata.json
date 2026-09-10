@@ -1,0 +1,49 @@
+{
+  "model_name": "RandomForest Attack Classifier",
+  "version": "1.0.0",
+  "algorithm": "RandomForestClassifier",
+  "dataset": "CICIDS2017 (Synthetic)",
+  "is_synthetic": true,
+  "trained_at": "2026-09-09T12:16:04.979396",
+  "n_samples_train": 1273,
+  "n_samples_test": 319,
+  "attack_classes": [
+    "BENIGN",
+    "Command Injection",
+    "DDoS",
+    "DNS Tunneling",
+    "DoS SYN Flood",
+    "FTP Brute Force",
+    "Port Scan",
+    "Reconnaissance",
+    "SQL Injection",
+    "SSH Brute Force"
+  ],
+  "feature_names": [
+    "Destination Port",
+    "Flow Duration",
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Total Length of Fwd Packets",
+    "Total Length of Bwd Packets",
+    "Flow Bytes/s",
+    "Flow Packets/s",
+    "Average Packet Size",
+    "proto_DNS",
+    "proto_HTTP",
+    "proto_HTTPS",
+    "proto_ICMP",
+    "proto_SSH",
+    "proto_TCP",
+    "proto_UDP"
+  ],
+  "metrics": {
+    "accuracy": 0.9122,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0,
+    "detection_rate": 1.0,
+    "false_positive_rate": 0.0,
+    "attack_classification_accuracy": 0.9122
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "numeric_features": [
+    "Destination Port",
+    "Flow Duration",
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Total Length of Fwd Packets",
+    "Total Length of Bwd Packets",
+    "Flow Bytes/s",
+    "Flow Packets/s",
+    "Average Packet Size"
+  ],
+  "categorical_features": [
+    "Protocol"
+  ],
+  "proto_categories": [
+    "DNS",
+    "HTTP",
+    "HTTPS",
+    "ICMP",
+    "SSH",
+    "TCP",
+    "UDP"
+  ],
+  "all_feature_cols": [
+    "Destination Port",
+    "Flow Duration",
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Total Length of Fwd Packets",
+    "Total Length of Bwd Packets",
+    "Flow Bytes/s",
+    "Flow Packets/s",
+    "Average Packet Size",
+    "proto_DNS",
+    "proto_HTTP",
+    "proto_HTTPS",
+    "proto_ICMP",
+    "proto_SSH",
+    "proto_TCP",
+    "proto_UDP"
+  ],
+  "attack_classes": [
+    "BENIGN",
+    "Command Injection",
+    "DDoS",
+    "DNS Tunneling",
+    "DoS SYN Flood",
+    "FTP Brute Force",
+    "Port Scan",
+    "Reconnaissance",
+    "SQL Injection",
+    "SSH Brute Force"
+  ]
+}
