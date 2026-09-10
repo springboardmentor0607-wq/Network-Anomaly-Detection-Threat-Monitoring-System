@@ -1,14 +1,13 @@
-services:
-  # 1. PostgreSQL Database
-  - type: psql
-    name: netshield-db
+databases:
+  - name: netshield-db
     plan: free
     region: ohio
 
-  # 2. FastAPI Backend
+services:
+  # 1. FastAPI Backend
   - type: web
     name: netshield-backend
-    env: python
+    runtime: python
     plan: free
     region: ohio
     rootDir: backend
@@ -28,10 +27,10 @@ services:
       - key: CORS_ORIGINS
         value: "https://netshield-frontend.onrender.com,http://localhost:5173,http://localhost"
 
-  # 3. React Frontend
+  # 2. React Frontend
   - type: web
     name: netshield-frontend
-    env: static
+    runtime: static
     plan: free
     region: ohio
     rootDir: frontend
