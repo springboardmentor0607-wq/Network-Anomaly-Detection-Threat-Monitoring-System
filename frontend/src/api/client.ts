@@ -5,7 +5,7 @@
 
 import axios, { AxiosInstance, AxiosError, AxiosResponse } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://netshield-backend-vb0u.onrender.com';
 const API_V1_STR = import.meta.env.VITE_API_V1_STR || '/api/v1';
 
 class APIClient {

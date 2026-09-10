@@ -20,9 +20,9 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: Union[str, List[str]] = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
+        "https://netshield-frontend.onrender.com",
+        "https://netshield-frontend-pwre.onrender.com",
+        "https://netshield-frontend.vercel.app",
     ]
 
     @field_validator("CORS_ORIGINS", mode="before")

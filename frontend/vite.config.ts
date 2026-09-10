@@ -14,9 +14,12 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'https://netshield-backend-vb0u.onrender.com',
         changeOrigin: true,
       },
     },
+  },
+  build: {
+    sourcemap: true,
   },
 });
