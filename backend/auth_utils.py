@@ -15,9 +15,8 @@ def hash_password(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
-
-# JWT setup 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+# --- UNIFIED JWT SETUP ---
+SECRET_KEY = "netshield_super_secret_key_2026"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 

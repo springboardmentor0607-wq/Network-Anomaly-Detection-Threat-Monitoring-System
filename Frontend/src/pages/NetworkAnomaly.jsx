@@ -4,6 +4,7 @@ import { TrafficContext } from '../context/TrafficContext';
 import toast from 'react-hot-toast';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement } from 'chart.js';
 import { Doughnut, Line } from 'react-chartjs-2';
+import { motion } from 'framer-motion'; // Added Framer Motion for the custom toast
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement);
 
@@ -89,16 +90,40 @@ const NetworkAnomaly = () => {
 
         setAnomalies(prev => [newManualThreat, ...prev].slice(0, 50));
         
-        toast.error(
+        // UPGRADED CUSTOM TOAST PAYLOAD
+        toast.custom(
           (t) => (
-            <div className="cursor-pointer flex flex-col gap-1 w-full" onClick={() => { navigate('/dashboard/threats'); toast.dismiss(t.id); }}>
-              <span className={`font-bold text-[13px] tracking-wide uppercase ${dynamicSeverity === 'Critical' ? 'text-red-500' : 'text-orange-500'}`}>
-                {dynamicSeverity} Threat Detected
-              </span>
-              <span className={`text-[12px] ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{threatType} ({data.confidence})</span>
-            </div>
-          ), 
-          { duration: 6000, position: 'top-right', style: { cursor: 'pointer', minWidth: '250px' } }
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className={`cursor-pointer flex flex-col w-[320px] p-4 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-2xl transition-transform active:scale-95 ${
+                theme === 'dark' ? 'bg-[rgba(20,20,22,0.85)] border border-red-500/30 text-[#F2F2F0]' : 'bg-[rgba(255,255,255,0.85)] border border-red-500/30 text-[#1D1D1F]'
+              }`}
+              onClick={() => { 
+                navigate('/dashboard/threats'); 
+                toast.dismiss(t.id);           
+              }}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="flex h-2.5 w-2.5 relative">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${dynamicSeverity === 'Critical' ? 'bg-red-400' : 'bg-orange-400'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${dynamicSeverity === 'Critical' ? 'bg-red-500' : 'bg-orange-500'}`}></span>
+                </span>
+                <span className={`font-bold text-[12px] tracking-tight uppercase ${dynamicSeverity === 'Critical' ? 'text-red-500' : 'text-orange-500'}`}>
+                  {dynamicSeverity} Threat Detected
+                </span>
+              </div>
+              
+              <p className="text-[13px] font-medium leading-snug">
+                {threatType} <span className="opacity-75">({data.confidence})</span>
+              </p>
+              
+              <span className="text-[11px] opacity-60 mt-2 font-medium">Click to investigate incident &rarr;</span>
+            </motion.div>
+          ),
+          { id: `manual-alert-${Date.now()}` }
         );
       }
     } catch (err) {

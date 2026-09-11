@@ -6,6 +6,8 @@ import math
 import joblib
 import json
 from mongodb import log_packet_to_db 
+import warnings
+warnings.filterwarnings("ignore", message="X does not have valid feature names")
 
 router = APIRouter()
 

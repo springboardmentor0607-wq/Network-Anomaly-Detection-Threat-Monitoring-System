@@ -16,92 +16,90 @@ const Sidebar = () => {
   const { user } = useAuth();
   const location = useLocation();
 
-  // Fallback to 'analyst' if user is missing
-  // Roles supported: 'analyst', 'soc', 'administrator'
-  const userRole = user?.role || 'analyst';
+  const rawRole = user?.role?.toLowerCase() || 'analyst';
+  const isAdmin = rawRole.includes('admin');
 
-  // Helper function to dynamically style the active tab
+  let displayRole = 'Analyst';
+  if (isAdmin) {
+    displayRole = rawRole.includes('lead') ? 'Admin (Lead)' : 'Admin';
+  }
+
   const isActive = (path) => location.pathname === path;
+  
   const navItemClass = (path) => 
-    `flex items-center gap-3 p-2.5 rounded-lg transition-all text-sm font-medium ${
+    `flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-all text-[13px] font-medium ${
       isActive(path)
-        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-        : 'text-slate-300 hover:bg-white/10 hover:text-white border border-transparent'
+        ? 'bg-white/10 text-white shadow-sm'
+        : 'text-[#9A9A97] hover:bg-white/[0.04] hover:text-[#F2F2F0]'
     }`;
 
   return (
-    <div className="w-64 bg-[#0A0A0B] border-r border-slate-800/80 h-screen p-4 flex flex-col font-sans">
+    <div className="w-64 bg-[#0A0A0B]/95 backdrop-blur-xl border-r border-white/[0.07] h-screen p-3 flex flex-col font-sans">
       
-      {/* Brand Header */}
-      <div className="mb-8 font-bold text-xl text-white flex items-center gap-2">
-        <ShieldAlert className="text-emerald-500" size={24} />
+      <div className="mb-6 mt-2 px-3 font-semibold text-[15px] tracking-tight text-[#F2F2F0] flex items-center gap-2.5">
+        <ShieldAlert className="text-white" size={20} />
         NetShield AI
       </div>
 
-      {/* STANDARD MODULES */}
-      <div className="text-xs text-slate-500 font-bold mb-3 uppercase tracking-wider">
+      <div className="text-[11px] text-[#6B6B66] font-semibold mb-2 mt-4 px-3 uppercase tracking-wider">
         Core Modules
       </div>
-      <nav className="flex flex-col gap-1.5 mb-8">
+      <nav className="flex flex-col gap-0.5 mb-4">
         <Link to="/dashboard" className={navItemClass('/dashboard')}>
-          <LayoutDashboard size={18} />
+          <LayoutDashboard size={16} strokeWidth={2.5} />
           <span>Overview</span>
         </Link>
         <Link to="/dashboard/traffic" className={navItemClass('/dashboard/traffic')}>
-          <Network size={18} />
+          <Network size={16} strokeWidth={2.5} />
           <span>Network Traffic</span>
         </Link>
         
-        {/* NEW: Model Performance Metric Page (Section 8) */}
         <Link to="/performance" className={navItemClass('/performance')}>
-          <Gauge size={18} />
+          <Gauge size={16} strokeWidth={2.5} />
           <span>Model Performance</span>
         </Link>
       </nav>
 
-      {/* SOC & INCIDENT MANAGEMENT */}
-      <div className="text-xs text-slate-500 font-bold mb-3 uppercase tracking-wider">
+      <div className="text-[11px] text-[#6B6B66] font-semibold mb-2 mt-4 px-3 uppercase tracking-wider">
         Security Ops
       </div>
-      <nav className="flex flex-col gap-1.5 mb-8">
+      <nav className="flex flex-col gap-0.5 mb-4">
         <Link to="/dashboard/alerts" className={navItemClass('/dashboard/alerts')}>
-          <AlertTriangle size={18} />
+          <AlertTriangle size={16} strokeWidth={2.5} />
           <span>Incident Alerts</span>
         </Link>
       </nav>
 
-      {/* ADMINISTRATION MODULES (Visible ONLY to Administrators) */}
-      {userRole === 'administrator' && (
+      {isAdmin && (
         <>
-          <div className="text-xs text-slate-500 font-bold mb-3 uppercase tracking-wider">
+          <div className="text-[11px] text-[#6B6B66] font-semibold mb-2 mt-4 px-3 uppercase tracking-wider">
             Administration
           </div>
-          <nav className="flex flex-col gap-1.5">
+          <nav className="flex flex-col gap-0.5">
             <Link to="/dashboard/team" className={navItemClass('/dashboard/team')}>
-              <Users size={18} />
+              <Users size={16} strokeWidth={2.5} />
               <span>Team Management</span>
             </Link>
             <Link to="/dashboard/devices" className={navItemClass('/dashboard/devices')}>
-              <Monitor size={18} />
+              <Monitor size={16} strokeWidth={2.5} />
               <span>Devices Monitor</span>
             </Link>
             <Link to="/dashboard/settings" className={navItemClass('/dashboard/settings')}>
-              <Settings size={18} />
+              <Settings size={16} strokeWidth={2.5} />
               <span>System Settings</span>
             </Link>
           </nav>
         </>
       )}
 
-      {/* User Profile / Logout Anchor at Bottom */}
-      <div className="mt-auto pt-4 border-t border-slate-800">
-        <div className="flex items-center gap-3 px-2">
-          <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-sm font-bold text-emerald-500 uppercase">
+      <div className="mt-auto pt-3 pb-1 border-t border-white/[0.07]">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-white/[0.04] transition-colors cursor-pointer">
+          <div className="w-7 h-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-[11px] font-bold text-white uppercase">
             {user?.username?.charAt(0) || 'U'}
           </div>
-          <div>
-            <div className="text-sm font-bold text-white capitalize">{user?.username || 'Analyst'}</div>
-            <div className="text-xs text-slate-500 capitalize">{userRole}</div>
+          <div className="flex-1 overflow-hidden">
+            <div className="text-[13px] font-medium text-white truncate capitalize">{user?.username || 'Analyst'}</div>
+            <div className="text-[11px] text-[#9A9A97] truncate">{displayRole}</div>
           </div>
         </div>
       </div>

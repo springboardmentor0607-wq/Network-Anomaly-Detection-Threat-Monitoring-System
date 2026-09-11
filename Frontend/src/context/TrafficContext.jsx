@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast'; 
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 export const TrafficContext = createContext();
 
@@ -38,8 +39,6 @@ export const TrafficProvider = ({ children }) => {
     }
   };
 
-  // Royal Upgrade: Independent Global Hydration
-  // Fetches authoritative MongoDB baseline exactly ONCE when the app boots or refreshes
   useEffect(() => {
     const fetchGlobalBaseline = async () => {
       try {
@@ -56,7 +55,7 @@ export const TrafficProvider = ({ children }) => {
 
     fetchGlobalBaseline();
     fetchBackendStats();
-  }, []); // Empty array ensures this survives dataset toggles and only fires on hard refresh
+  }, []);
 
   // WebSocket & Live Stream Engine
   useEffect(() => {
@@ -85,24 +84,41 @@ export const TrafficProvider = ({ children }) => {
         const threatName = packet.ai_classification || 'Unknown Threat';
         const sourceIp = packet['Source IP'] || 'Mac Interface';
 
-        toast.error(
-          (t) => (
-            <div 
-              className="cursor-pointer flex flex-col gap-1 w-full" 
-              onClick={() => { 
-                navigate('/dashboard/threats'); 
-                toast.dismiss(t.id);           
-              }}
-            >
-              <span className="font-bold text-[13px] tracking-wide uppercase text-red-400">
-                CRITICAL THREAT DETECTED
+        toast.custom((t) => (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="cursor-pointer flex flex-col w-[320px] p-4 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-2xl transition-transform active:scale-95"
+            // We use inline styles here to easily read the CSS variables dictated by your light/dark mode switch
+            style={{
+              background: 'var(--toast-bg, rgba(20, 20, 22, 0.75))',
+              border: '1px solid var(--toast-border, rgba(239, 68, 68, 0.3))', // Red border for alerts
+              color: 'var(--toast-text, #F2F2F0)',
+            }}
+            onClick={() => { 
+              navigate('/dashboard/threats'); 
+              toast.dismiss(t.id);           
+            }}
+          >
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
               </span>
-              <span className="text-[12px] text-white">[{threatName}] originating from {sourceIp}</span>
-              <span className="text-[10px] text-red-400/80 mt-1 italic">Click here to investigate incident &rarr;</span>
+              <span className="font-bold text-[12px] tracking-tight uppercase text-red-500">
+                Critical Threat Detected
+              </span>
             </div>
-          ),
-          { duration: 6000, position: 'top-right', style: { cursor: 'pointer', minWidth: '280px', background: '#0A0A0B', border: '1px solid #ef4444' } }
-        );
+            
+            <p className="text-[13px] font-medium leading-snug">
+              {threatName} originating from <span className="font-mono text-red-500">{sourceIp}</span>
+            </p>
+            
+            <span className="text-[11px] opacity-60 mt-2 font-medium">Click to investigate incident &rarr;</span>
+          </motion.div>
+        ), { id: `alert-${Date.now()}` }); // Unique ID ensures they stack properly
 
         const newAnomaly = {
           id: `anm_${Math.floor(Math.random() * 10000)}`,

@@ -29,18 +29,20 @@ import ModelPerformance from './pages/ModelPerformance';
 function App() {
   return (
     <>
-      {/* Global Toast Notifications synced with CSS variables for glassmorphism */}
       <Toaster 
         position="top-right" 
+        containerStyle={{ top: 70 }}
         reverseOrder={false} 
         toastOptions={{
-          duration: 4000,
+          // Apple default response time
+          duration: 5000, 
+          // We set background transparent because our custom toast payload will handle the glass material
           style: {
-            background: 'var(--toast-bg, rgba(255, 255, 255, 0.7))',
-            color: 'var(--toast-text, #1D1D1F)',
-            border: '1px solid var(--toast-border, rgba(0, 0, 0, 0.05))',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
+            background: 'transparent',
+            boxShadow: 'none',
+            padding: 0,
+            border: 'none',
+            margin: '0',
           },
         }}
       />
@@ -56,7 +58,7 @@ function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="traffic" element={<NetworkTraffic />} />
             <Route path="anomaly" element={<NetworkAnomaly />} />
-            <Route path="/dashboard/performance" element={<ModelPerformance />} />
+            <Route path="performance" element={<ModelPerformance />} />
             <Route path="threats" element={<ThreatDetection />} />
             <Route path="alerts" element={<Alerts />} />
             <Route path="logs" element={<Logs />} />
@@ -64,10 +66,9 @@ function App() {
             <Route path="analytics" element={<Analytics />} />
             <Route path="security" element={<SecurityAnalytics />} />
             
-            <Route element={<ProtectedRoute allowedRoles={['administrator']} />}>
-              <Route path="team" element={<TeamManagement />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
+            {/* Flat Protected Admin Routes */}
+            <Route path="team" element={<ProtectedRoute allowedRoles={['administrator', 'admin', 'admin (lead)']}><TeamManagement /></ProtectedRoute>} />
+            <Route path="settings" element={<ProtectedRoute allowedRoles={['administrator', 'admin', 'admin (lead)']}><Settings /></ProtectedRoute>} />
           </Route>
         </Route>
       </Routes>

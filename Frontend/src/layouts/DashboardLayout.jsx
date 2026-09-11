@@ -16,7 +16,15 @@ const DashboardLayout = () => {
   
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
-  const userRole = user?.role || 'analyst';
+
+  // --- ROLE NORMALIZATION & ADMIN CHECK ---
+  const rawRole = user?.role?.toLowerCase() || 'analyst';
+  const isAdmin = rawRole.includes('admin') || rawRole.includes('administrator');
+  
+  let displayRole = 'Analyst';
+  if (isAdmin) {
+    displayRole = rawRole.includes('lead') ? 'Admin (Lead)' : 'Admin';
+  }
 
   useEffect(() => {
     const root = document.documentElement;
@@ -94,7 +102,8 @@ const DashboardLayout = () => {
             );
           })}
 
-          {userRole === 'administrator' && (
+          {/* THE FIX: Replaced userRole === 'administrator' with isAdmin */}
+          {isAdmin && (
             <>
               <div className="px-3 mt-8 mb-2 text-[11px] font-semibold text-[#86868B] dark:text-[#9A9A97] uppercase tracking-wider">Administration</div>
               {adminModules.map((item) => {
@@ -161,17 +170,21 @@ const DashboardLayout = () => {
                     <h3 className="text-[13px] font-medium text-[#1D1D1F] dark:text-[#F2F2F0]">Notifications ({anomalies.length})</h3>
                   </div>
                   
-                  <div className="max-h-[300px] overflow-y-auto divide-y divide-gray-100 dark:divide-white/[0.03]">
+                  <div className="flex flex-col max-h-[300px] overflow-y-auto divide-y divide-gray-100 dark:divide-white/[0.03]">
                     {anomalies.length === 0 ? (
                       <div className="px-4 py-8 text-center text-[12px] text-[#86868B] dark:text-[#9A9A97]">Network is secure.</div>
                     ) : (
-                      anomalies.slice(0, 5).map((notif) => (
-                        <div key={notif.id} onClick={() => { setIsNotificationOpen(false); navigate('/dashboard/threats'); }} className="px-4 py-3 transition-colors cursor-pointer border-l-2 border-transparent hover:border-red-500 hover:bg-black/[0.04] dark:hover:bg-white/[0.04]">
-                          <div className="flex justify-between items-start mb-1">
+                      anomalies.slice(0, 5).map((notif, idx) => (
+                        <div 
+                          key={`${notif.id}-${idx}`} 
+                          onClick={() => { setIsNotificationOpen(false); navigate('/dashboard/threats'); }} 
+                          className="flex flex-col w-full px-4 py-3 transition-colors cursor-pointer border-l-2 border-transparent hover:border-red-500 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] shrink-0"
+                        >
+                          <div className="flex justify-between items-start mb-1 w-full">
                             <span className="text-[13px] font-semibold text-red-500">{notif.type}</span>
-                            <span className="text-[10px] text-[#86868B] dark:text-[#9A9A97]">{notif.time}</span>
+                            <span className="text-[10px] text-[#86868B] dark:text-[#9A9A97] whitespace-nowrap ml-2">{notif.time}</span>
                           </div>
-                          <p className="text-[11px] text-[#1D1D1F] dark:text-[#D6D6D3] leading-relaxed mb-0.5">Source: {notif.source}</p>
+                          <p className="text-[11px] text-[#1D1D1F] dark:text-[#D6D6D3] leading-relaxed mb-0.5 break-all">Source: {notif.source}</p>
                         </div>
                       ))
                     )}
@@ -190,7 +203,8 @@ const DashboardLayout = () => {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[12px] font-medium leading-tight text-[#1D1D1F] dark:text-[#F2F2F0]">{user?.full_name || 'Loading...'}</span>
-                  <span className="text-[10px] leading-tight capitalize text-[#86868B] dark:text-[#9A9A97]">{userRole}</span>
+                  {/* THE FIX: Show Normalized displayRole instead of raw DB string */}
+                  <span className="text-[10px] leading-tight text-[#86868B] dark:text-[#9A9A97]">{displayRole}</span>
                 </div>
                 <svg className={`w-3.5 h-3.5 ml-1 transition-transform text-[#86868B] dark:text-[#9A9A97] ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -223,11 +237,13 @@ const DashboardLayout = () => {
           </div>
         </header>
 
-        <div className="flex-1 p-8">
-          <Outlet context={{ theme }} />
+        <div className="flex-1 p-8 flex flex-col min-h-[calc(100vh-4rem)]">
+          <div className="flex-1 flex flex-col">
+            <Outlet context={{ theme }} />
+          </div>
         </div>
       </main>
-    </div>
+    </div>  
   );
 };
 

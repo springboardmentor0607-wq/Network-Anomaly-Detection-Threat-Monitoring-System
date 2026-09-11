@@ -1,12 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 
-// Shared network-node background. Static by default — only moves when the
-// user scrolls (same direction, with momentum that eases out), plus mouse repulsion.
-const NetworkField = () => {
+// Shared network-node background. Moves on scroll with momentum + mouse repulsion.
+// Now accepts `isDark` to dynamically transition colors without breaking the animation loop.
+const NetworkField = ({ isDark }) => {
   const canvasRef = useRef(null);
   const mouseRef = useRef({ x: -9999, y: -9999 });
   const lastScrollRef = useRef(typeof window !== 'undefined' ? window.scrollY : 0);
   const scrollVelocityRef = useRef(0);
+
+  // Use a ref for the theme so the animation loop can read it continuously
+  const themeRef = useRef(isDark);
+  useEffect(() => {
+    themeRef.current = isDark;
+  }, [isDark]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -38,13 +44,16 @@ const NetworkField = () => {
     const draw = () => {
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
       const mouse = mouseRef.current;
+      
+      // Dynamic color based on theme
+      const rgb = themeRef.current ? '255, 255, 255' : '10, 10, 11';
 
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const a = nodes[i], b = nodes[j];
           const dist = Math.hypot(a.x - b.x, a.y - b.y);
           if (dist < 130) {
-            ctx.strokeStyle = `rgba(255, 255, 255, ${0.06 * (1 - dist / 130)})`;
+            ctx.strokeStyle = `rgba(${rgb}, ${0.08 * (1 - dist / 130)})`;
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
@@ -62,6 +71,7 @@ const NetworkField = () => {
         const dy = n.y - mouse.y;
         const distToMouse = Math.hypot(dx, dy);
         let glow = 1.2 + Math.sin(n.pulse) * 0.5;
+        
         if (distToMouse < 120) {
           const force = (120 - distToMouse) / 120;
           n.x += (dx / distToMouse) * force * 1.5;
@@ -76,7 +86,7 @@ const NetworkField = () => {
 
         ctx.beginPath();
         ctx.arc(n.x, n.y, glow, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.fillStyle = `rgba(${rgb}, 0.6)`;
         ctx.fill();
       });
 
@@ -115,7 +125,7 @@ const NetworkField = () => {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 pointer-events-none"
+      className="fixed inset-0 pointer-events-none transition-opacity duration-500"
       style={{ zIndex: 0 }}
     />
   );
