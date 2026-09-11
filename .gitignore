@@ -49,3 +49,4 @@ Thumbs.db
 
 # Runtime uploads
 netshield-backend/uploads/
+netshield-backend/dataset/

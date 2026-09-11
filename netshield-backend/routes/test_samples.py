@@ -9,6 +9,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
 DATASET_DIRS = [
+    "/app/dataset",
     os.path.join(PROJECT_ROOT, "dataset"),
     os.path.join(BASE_DIR, "dataset"),
     os.path.join(os.getcwd(), "dataset"),
@@ -292,6 +293,7 @@ def load_manual_test_sample():
             "sample_id": int(row.get("sample_id", sample_idx + 1)),
             "sample_name": sample_name,
             "expected_attack": expected_attack,
+            "actual_class": expected_attack,
             "source_ip": source_ip,
             "dest_ip": dest_ip,
             "protocol": str(row.get("proto", "tcp")).lower(),

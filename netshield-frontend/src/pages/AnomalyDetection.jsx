@@ -150,6 +150,7 @@ function AnomalyDetection() {
 
   const handleInputChange = (field, value) => {
     setTestForm((prev) => ({ ...prev, [field]: value }));
+    setSingleResult(null);
     if (validationErrors[field]) {
       setValidationErrors((prev) => ({ ...prev, [field]: null }));
     }
@@ -181,11 +182,11 @@ function AnomalyDetection() {
         };
 
         setTestForm(fullForm);
-        setActualClass(data.actual_class);
+        setActualClass(data.actual_class || data.expected_attack);
         setSampleInfo({
           type: "manual_test_samples.csv",
           category: category || "Sample",
-          actualClass: data.actual_class
+          actualClass: data.actual_class || data.expected_attack
         });
         setSuccessNotice(`Loaded predefined test sample (${category || "Sample"}). Network features are displayed below. Click [ ANALYZE TRAFFIC ] to evaluate model prediction.`);
       } else {
@@ -245,18 +246,17 @@ function AnomalyDetection() {
 
   // MANUAL / TEST SAMPLE PREDICTION SUBMIT (POST /predict)
   const handleManualSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setValidationErrors({});
     setErrorMessage("");
+    setSingleResult(null);
+    setLoading(true);
 
     const payload = {
       ...testForm,
       expected_attack: actualClass || undefined,
       actual_class: actualClass || undefined
     };
-
-    setLoading(true);
-    setSingleResult(null);
 
     try {
       const response = await fetch(`${API_BASE_URL}/predict`, {
@@ -619,6 +619,15 @@ function AnomalyDetection() {
               </div>
             </form>
 
+            {/* EVALUATING / LOADING INDICATOR CARD */}
+            {loading && (
+              <div className="soc-card" style={{ marginTop: "24px", background: "rgba(0, 242, 254, 0.05)", borderColor: "#00f2fe", textAlign: "center", padding: "28px" }}>
+                <FaSpinner className="spin-icon" style={{ fontSize: "2rem", color: "#00f2fe", marginBottom: "12px" }} />
+                <h4 style={{ color: "#f8fafc", margin: 0, fontSize: "1.1rem" }}>Evaluating Network Traffic...</h4>
+                <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginTop: "6px", marginBottom: 0 }}>Processing network-flow features through Random Forest Classifier engine.</p>
+              </div>
+            )}
+
             {/* AI PREDICTION RESULT & GROUND TRUTH EVALUATION CARDS */}
             {singleResult && (
               <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -685,31 +694,38 @@ function AnomalyDetection() {
                     </div>
                   )}
 
-                  <div className="soc-grid-4" style={{ marginBottom: "16px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "16px", marginBottom: "16px" }}>
                     <div className="soc-card" style={{ background: "#0f172a" }}>
-                      <span className="model-info-label">Prediction</span>
-                      <span className="model-info-value" style={{ color: singleResult.is_anomaly ? "#fca5a5" : "#6ee7b7", fontSize: "1.05rem" }}>
-                        {singleResult.prediction}
+                      <span className="model-info-label">Anomaly Status</span>
+                      <span className="model-info-value" style={{ color: singleResult.is_anomaly ? "#ef4444" : "#10b981", fontSize: "1.1rem", fontWeight: "700" }}>
+                        {singleResult.is_anomaly ? "ATTACK" : "NORMAL"}
                       </span>
                     </div>
 
                     <div className="soc-card" style={{ background: "#0f172a" }}>
-                      <span className="model-info-label">Predicted Attack Type</span>
-                      <span className="model-info-value" style={{ color: singleResult.is_anomaly ? "#fca5a5" : "#6ee7b7", fontSize: "1.05rem" }}>
-                        {singleResult.attack_type}
+                      <span className="model-info-label">Attack Type</span>
+                      <span className="model-info-value" style={{ color: singleResult.is_anomaly ? "#fca5a5" : "#6ee7b7", fontSize: "1.05rem", fontWeight: "700" }}>
+                        {singleResult.attack_type || "Normal"}
                       </span>
                     </div>
 
                     <div className="soc-card" style={{ background: "#0f172a" }}>
-                      <span className="model-info-label">Confidence (predict_proba)</span>
-                      <span className="model-info-value" style={{ color: "#c084fc", fontSize: "1.1rem", fontFamily: "var(--font-mono)" }}>
+                      <span className="model-info-label">Threat Level</span>
+                      <span className="model-info-value" style={{ color: (singleResult.threat_level === "CRITICAL" || singleResult.threat_level === "HIGH") ? "#ef4444" : singleResult.threat_level === "MEDIUM" ? "#f97316" : "#34d399", fontSize: "1.05rem", fontWeight: "700" }}>
+                        {singleResult.threat_level || "LOW"}
+                      </span>
+                    </div>
+
+                    <div className="soc-card" style={{ background: "#0f172a" }}>
+                      <span className="model-info-label">AI Confidence</span>
+                      <span className="model-info-value" style={{ color: "#c084fc", fontSize: "1.1rem", fontFamily: "var(--font-mono)", fontWeight: "700" }}>
                         {singleResult.confidence}
                       </span>
                     </div>
 
                     <div className="soc-card" style={{ background: "#0f172a" }}>
                       <span className="model-info-label">Risk Score</span>
-                      <span className="model-info-value" style={{ color: singleResult.risk_score > 70 ? "#ef4444" : singleResult.risk_score > 40 ? "#f97316" : "#34d399", fontSize: "1.1rem", fontFamily: "var(--font-mono)" }}>
+                      <span className="model-info-value" style={{ color: singleResult.risk_score > 70 ? "#ef4444" : singleResult.risk_score > 40 ? "#f97316" : "#34d399", fontSize: "1.1rem", fontFamily: "var(--font-mono)", fontWeight: "700" }}>
                         {singleResult.risk_score} / 100
                       </span>
                     </div>
