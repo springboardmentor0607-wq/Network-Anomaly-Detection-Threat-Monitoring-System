@@ -1,0 +1,2 @@
+backend/app/models/model_cic.pkl filter=lfs diff=lfs merge=lfs -text
+backend/app/models/model_unsw.pkl filter=lfs diff=lfs merge=lfs -text

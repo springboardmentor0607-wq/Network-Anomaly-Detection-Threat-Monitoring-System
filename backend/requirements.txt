@@ -1,0 +1,13 @@
+﻿fastapi
+uvicorn[standard]
+python-multipart
+pandas
+numpy
+scikit-learn
+joblib
+pymongo
+python-dotenv
+bcrypt
+scapy
+reportlab
+email-validator
