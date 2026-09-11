@@ -1,0 +1,497 @@
+/* =========================================
+   PCAP ANALYTICS PAGE
+========================================= */
+
+.pcap-analytics-page {
+  min-height: 100vh;
+  padding: 30px;
+  background: #f5f7fb;
+  color: #172033;
+  box-sizing: border-box;
+}
+
+/* =========================================
+   PAGE HEADER
+========================================= */
+
+.pcap-analytics-page .page-header {
+  margin-bottom: 25px;
+}
+
+.pcap-analytics-page .page-header h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 700;
+  color: #172033;
+}
+
+.pcap-analytics-page .page-header p {
+  margin: 0;
+  color: #667085;
+  font-size: 15px;
+}
+
+/* =========================================
+   COMMON SECTION TITLE
+========================================= */
+
+.pcap-analytics-page .section-title {
+  margin-bottom: 20px;
+}
+
+.pcap-analytics-page .section-title h2 {
+  margin: 0 0 6px;
+  font-size: 21px;
+  font-weight: 700;
+  color: #172033;
+}
+
+.pcap-analytics-page .section-title p {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+/* =========================================
+   UPLOAD CARD
+========================================= */
+
+.pcap-upload-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 25px;
+  margin-bottom: 25px;
+  border: 1px solid #e4e7ec;
+  box-shadow: 0 4px 15px rgba(16, 24, 40, 0.06);
+}
+
+.upload-area {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 25px;
+  background: #f8fafc;
+}
+
+.upload-area input[type="file"] {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #ffffff;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.selected-file {
+  margin-top: 15px;
+  padding: 12px 15px;
+  border-radius: 8px;
+  background: #eef4ff;
+  color: #344054;
+  font-size: 14px;
+}
+
+.selected-file strong {
+  color: #1d4ed8;
+}
+
+/* =========================================
+   BUTTON
+========================================= */
+
+.upload-btn {
+  width: 100%;
+  margin-top: 18px;
+  padding: 13px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.upload-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.upload-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   MESSAGES
+========================================= */
+
+.pcap-message {
+  margin-top: 18px;
+  padding: 13px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.success-message {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+/* =========================================
+   AI RESULTS SECTION
+========================================= */
+
+.ai-results-section,
+.analysis-details-card,
+.previous-analyses-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 25px;
+  margin-bottom: 25px;
+  border: 1px solid #e4e7ec;
+  box-shadow: 0 4px 15px rgba(16, 24, 40, 0.06);
+}
+
+/* =========================================
+   THREAT STATUS
+========================================= */
+
+.threat-status {
+  padding: 14px 18px;
+  border-radius: 9px;
+  margin-bottom: 20px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.status-safe {
+  background: #ecfdf3;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+}
+
+.status-threat {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.status-none {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+/* =========================================
+   METRIC CARDS
+========================================= */
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.metric-card {
+  background: #f8fafc;
+  border: 1px solid #e4e7ec;
+  border-radius: 11px;
+  padding: 20px;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.metric-label {
+  display: block;
+  margin-bottom: 9px;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.metric-value {
+  display: block;
+  font-size: 25px;
+  font-weight: 700;
+  color: #172033;
+}
+
+.threat-value {
+  color: #dc2626;
+}
+
+.severity-critical {
+  color: #dc2626;
+}
+
+.severity-high {
+  color: #ea580c;
+}
+
+.severity-medium {
+  color: #ca8a04;
+}
+
+.severity-low {
+  color: #2563eb;
+}
+
+.severity-none {
+  color: #64748b;
+}
+
+/* =========================================
+   AI DETAILS
+========================================= */
+
+.ai-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 25px;
+}
+
+.detail-card {
+  border: 1px solid #e4e7ec;
+  border-radius: 11px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.detail-card h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: #475467;
+}
+
+.detail-card p {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #172033;
+}
+
+.detail-card span {
+  color: #667085;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+/* =========================================
+   DISTRIBUTION
+========================================= */
+
+.distribution-card {
+  border: 1px solid #e4e7ec;
+  border-radius: 11px;
+  padding: 22px;
+  background: #ffffff;
+}
+
+.distribution-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.distribution-row {
+  width: 100%;
+}
+
+.distribution-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 8px;
+}
+
+.distribution-info strong {
+  color: #172033;
+  font-size: 14px;
+}
+
+.distribution-info span {
+  color: #667085;
+  font-size: 13px;
+}
+
+.distribution-bar {
+  width: 100%;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.distribution-fill {
+  height: 100%;
+  background: #2563eb;
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+/* =========================================
+   PCAP TRAFFIC ANALYSIS
+========================================= */
+
+.analysis-details-card {
+  margin-bottom: 25px;
+}
+
+.protocol-section {
+  margin-top: 10px;
+  border-top: 1px solid #e4e7ec;
+  padding-top: 20px;
+}
+
+.protocol-section h3 {
+  margin: 0 0 15px;
+  font-size: 17px;
+  color: #172033;
+}
+
+.protocol-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.protocol-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  background: #f8fafc;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+}
+
+.protocol-row span {
+  color: #475467;
+  font-weight: 500;
+}
+
+.protocol-row strong {
+  color: #172033;
+}
+
+/* =========================================
+   PREVIOUS ANALYSES TABLE
+========================================= */
+
+.previous-analyses-card {
+  overflow: hidden;
+}
+
+.analysis-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.analysis-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 750px;
+}
+
+.analysis-table thead {
+  background: #172033;
+}
+
+.analysis-table th {
+  padding: 14px 15px;
+  text-align: left;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.analysis-table td {
+  padding: 15px;
+  border-bottom: 1px solid #e4e7ec;
+  color: #475467;
+  font-size: 14px;
+}
+
+.analysis-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.analysis-table td:first-child {
+  font-weight: 500;
+  color: #172033;
+  word-break: break-all;
+}
+
+/* =========================================
+   VIEW BUTTON
+========================================= */
+
+.view-btn {
+  border: none;
+  border-radius: 7px;
+  padding: 8px 17px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.view-btn:hover {
+  background: #1d4ed8;
+}
+
+/* =========================================
+   RESPONSIVE DESIGN
+========================================= */
+
+@media (max-width: 1000px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ai-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .pcap-analytics-page {
+    padding: 18px;
+  }
+
+  .pcap-analytics-page .page-header h1 {
+    font-size: 26px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-area {
+    padding: 18px;
+  }
+
+  .distribution-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+}

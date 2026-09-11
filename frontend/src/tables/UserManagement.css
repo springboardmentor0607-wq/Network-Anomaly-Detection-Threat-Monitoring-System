@@ -1,0 +1,76 @@
+.user-container{
+    margin-top:35px;
+    background:white;
+    padding:25px;
+    border-radius:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+}
+
+.user-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.search-box{
+    width:300px;
+    padding:10px;
+    margin-bottom:20px;
+    border:1px solid #ccc;
+    border-radius:8px;
+}
+
+.add-btn{
+    background:#2563EB;
+    color:white;
+    border:none;
+    padding:10px 18px;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.add-btn:hover{
+    background:#1D4ED8;
+}
+
+.active-status{
+    background:#16A34A;
+    color:white;
+    padding:6px 12px;
+    border-radius:20px;
+}
+
+.inactive-status{
+    background:#DC2626;
+    color:white;
+    padding:6px 12px;
+    border-radius:20px;
+}
+
+.edit-btn{
+    background:#F59E0B;
+    color:white;
+    border:none;
+    padding:8px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    margin-right:8px;
+}
+
+.delete-btn{
+    background:#DC2626;
+    color:white;
+    border:none;
+    padding:8px 14px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.edit-btn:hover{
+    background:#D97706;
+}
+
+.delete-btn:hover{
+    background:#B91C1C;
+}

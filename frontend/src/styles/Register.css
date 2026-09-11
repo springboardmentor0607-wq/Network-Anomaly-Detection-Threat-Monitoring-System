@@ -1,0 +1,172 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Segoe UI,sans-serif;
+}
+
+body{
+    background:#0F172A;
+}
+
+.register-page{
+
+    min-height:100vh;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    background:linear-gradient(
+    135deg,
+    #0F172A,
+    #1E293B,
+    #111827);
+
+    padding:40px;
+}
+
+.left-panel{
+
+    width:45%;
+
+    color:white;
+
+    padding:60px;
+}
+
+.left-panel h1{
+
+    font-size:48px;
+
+    margin-bottom:20px;
+}
+
+.left-panel p{
+
+    font-size:20px;
+
+    color:#CBD5E1;
+
+    line-height:35px;
+}
+
+.left-panel img{
+
+    width:300px;
+
+    margin-top:50px;
+}
+
+.register-card{
+
+    width:450px;
+
+    background:rgba(255,255,255,.08);
+
+    backdrop-filter:blur(18px);
+
+    border-radius:20px;
+
+    padding:40px;
+
+    box-shadow:0 0 30px rgba(0,0,0,.4);
+}
+
+.register-card h2{
+
+    text-align:center;
+
+    color:white;
+
+    margin-bottom:10px;
+}
+
+.register-card p{
+
+    text-align:center;
+
+    color:#D1D5DB;
+
+    margin-bottom:20px;
+}
+
+.register-card input,
+
+.register-card select{
+
+    width:100%;
+
+    padding:14px;
+
+    margin-bottom:18px;
+
+    border:none;
+
+    border-radius:8px;
+
+    background:#1F2937;
+
+    color:white;
+
+    font-size:15px;
+}
+
+.register-card input::placeholder{
+
+    color:#9CA3AF;
+}
+
+.register-card select{
+
+    cursor:pointer;
+}
+
+.register-card button{
+
+    width:100%;
+
+    padding:14px;
+
+    border:none;
+
+    border-radius:8px;
+
+    background:#2563EB;
+
+    color:white;
+
+    font-size:18px;
+
+    cursor:pointer;
+
+    transition:.3s;
+}
+
+.register-card button:hover{
+
+    background:#1D4ED8;
+}
+
+.login-link{
+
+    text-align:center;
+
+    margin-top:20px;
+}
+
+.login-link a{
+
+    color:#60A5FA;
+
+    text-decoration:none;
+
+    font-weight:bold;
+}
+
+.login-link a:hover{
+
+    text-decoration:underline;
+}
