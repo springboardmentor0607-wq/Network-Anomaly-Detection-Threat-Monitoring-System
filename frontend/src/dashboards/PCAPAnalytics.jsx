@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./PCAPAnalytics.css";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "https://network-anomaly-detection-threat-5ihm.onrender.com";
 
 const PCAPAnalytics = () => {
   const [file, setFile] = useState(null);

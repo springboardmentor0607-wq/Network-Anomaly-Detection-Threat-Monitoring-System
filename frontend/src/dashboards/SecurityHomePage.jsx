@@ -15,7 +15,7 @@ import {
   Legend,
 } from "recharts";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "https://network-anomaly-detection-threat-5ihm.onrender.com";
 
 const SecurityHomePage = () => {
   // ============================================================

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import "./AdminDashboard.css";
 
-const API = "http://127.0.0.1:8000";
+const API = "https://network-anomaly-detection-threat-5ihm.onrender.com";
 
 function ReportsPage() {
   const [reportData, setReportData] = useState(null);

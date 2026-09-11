@@ -31,7 +31,7 @@ function Login() {
     try {
 
       const response = await axios.post(
-        "http://127.0.0.1:8000/auth/login",
+        "https://network-anomaly-detection-threat-5ihm.onrender.com/auth/login",
         {
           email: loginData.email,
           password: loginData.password,

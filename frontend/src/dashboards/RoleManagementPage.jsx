@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import "./AdminDashboard.css";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://network-anomaly-detection-threat-5ihm.onrender.com";
 
 function RoleManagementPage() {
   const [roles, setRoles] = useState([]);
