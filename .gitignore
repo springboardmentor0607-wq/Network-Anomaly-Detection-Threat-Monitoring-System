@@ -29,7 +29,7 @@ netshield-backend/models/saved_model/
 netshield-backend/models/saved_model_backup/
 netshield-backend/models/saved_model_backup_*/
 netshield-backend/models/backups/
-models/
+/models/
 
 # Temporary experiments / scratch
 netshield-backend/scratch/
@@ -46,4 +46,6 @@ netshield-backend/models/final_*.py
 .idea/
 .DS_Store
 Thumbs.db
+
+# Runtime uploads
 netshield-backend/uploads/
