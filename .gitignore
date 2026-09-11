@@ -2,49 +2,48 @@
 __pycache__/
 *.py[cod]
 *.pyo
+.venv/
 venv/
 env/
-.venv/
 
 # Environment / secrets
 .env
-.env.*
+*.env
 !.env.example
 
 # Node
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Build files
 dist/
 build/
 
-# IDE
+# Large datasets
+dataset/*.csv
+dataset/*.zip
+dataset/**/*.csv
+dataset/**/*.zip
+
+# ML model binaries and backups
+*.pkl
+*.joblib
+netshield-backend/models/saved_model/
+netshield-backend/models/saved_model_backup/
+netshield-backend/models/saved_model_backup_*/
+netshield-backend/models/backups/
+models/
+
+# Temporary experiments / scratch
+netshield-backend/scratch/
+netshield-backend/test_*.py
+netshield-backend/models/*optimization*.py
+netshield-backend/models/run_*.py
+netshield-backend/models/train_*.py
+netshield-backend/models/fast_*.py
+netshield-backend/models/targeted_*.py
+netshield-backend/models/final_*.py
+
+# OS/editor
 .vscode/
 .idea/
-
-# OS
 .DS_Store
 Thumbs.db
-
-# Python generated files
-*.log
-
-# Database backups
-*.sql
-
-# Temporary files
-*.tmp
-*.temp
-# Large dataset files - kept locally
-dataset/Monday-WorkingHours.pcap_ISCX.csv
-dataset/Tuesday-WorkingHours.pcap_ISCX.csv
-dataset/Wednesday-workingHours.pcap_ISCX.csv
-
-# Large uploaded dataset copies
-netshield-backend/uploads/*.csv
-
-# Large trained model files
-netshield-backend/models/saved_model/*.pkl
+netshield-backend/uploads/

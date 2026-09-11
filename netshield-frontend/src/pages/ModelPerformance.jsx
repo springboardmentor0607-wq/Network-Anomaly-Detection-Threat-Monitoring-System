@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import PieChart from "../components/PieChart";
 import ThreatCategoryBarChart from "../components/ThreatCategoryBarChart";
+import { API_BASE_URL } from "../config";
 import {
   FaBrain,
   FaChartLine,
@@ -16,6 +17,7 @@ import {
   FaDatabase
 } from "react-icons/fa";
 import "../styles/Dashboard.css";
+
 
 function ModelPerformance({ role: propRole }) {
   const storedUser = JSON.parse(localStorage.getItem("netshield_user") || "{}");
@@ -78,7 +80,7 @@ function ModelPerformance({ role: propRole }) {
   });
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/model-info")
+    fetch(`${API_BASE_URL}/model-info`)
       .then((res) => res.json())
       .then((data) => {
         if (data && (data.training_accuracy || data.testing_accuracy)) {
@@ -193,16 +195,21 @@ function ModelPerformance({ role: propRole }) {
               <span className="model-info-value">{modelData.total_predictions.toLocaleString()}</span>
             </div>
 
+            <div className="model-info-card">
+              <span className="model-info-label">Evaluation Dataset</span>
+              <span className="model-info-value" style={{ color: "#38bdf8" }}>UNSW-NB15</span>
+            </div>
+
+            <div className="model-info-card">
+              <span className="model-info-label">Evaluation Type</span>
+              <span className="model-info-value" style={{ color: "#34d399" }}>Final Unseen Test</span>
+            </div>
+
             {isAdmin ? (
               <>
                 <div className="model-info-card">
                   <span className="model-info-label">Primary Dataset</span>
                   <span className="model-info-value" style={{ color: "#38bdf8" }}>{modelData.primary_dataset}</span>
-                </div>
-
-                <div className="model-info-card">
-                  <span className="model-info-label">Secondary Dataset</span>
-                  <span className="model-info-value" style={{ color: "#38bdf8" }}>{modelData.secondary_dataset}</span>
                 </div>
 
                 <div className="model-info-card">
@@ -213,18 +220,15 @@ function ModelPerformance({ role: propRole }) {
             ) : (
               <>
                 <div className="model-info-card">
-                  <span className="model-info-label">Average Confidence</span>
-                  <span className="model-info-value" style={{ color: "#34d399" }}>{modelData.avg_confidence}%</span>
-                </div>
-
-                <div className="model-info-card">
                   <span className="model-info-label">Class Taxonomy</span>
-                  <span className="model-info-value" style={{ color: "#c084fc" }}>9 Attack Classes + Normal</span>
+                  <span className="model-info-value" style={{ color: "#c084fc" }}>
+                    {modelData.num_classes === 2 ? "Binary (Normal vs Attack)" : "Normal vs Attack"}
+                  </span>
                 </div>
 
                 <div className="model-info-card">
                   <span className="model-info-label">Feature Columns</span>
-                  <span className="model-info-value">{modelData.num_features || 44} Features</span>
+                  <span className="model-info-value">{modelData.num_features || 42} Features</span>
                 </div>
               </>
             )}
@@ -241,30 +245,30 @@ function ModelPerformance({ role: propRole }) {
               </h3>
             </div>
             <div style={{ overflowX: "auto", marginTop: "12px" }}>
-              <table style={{ width: "100%", fontSize: "0.72rem", borderCollapse: "collapse", color: "#f8fafc" }}>
+              <table style={{ width: "100%", fontSize: "0.85rem", borderCollapse: "collapse", color: "#f8fafc" }}>
                 <thead>
                   <tr style={{ background: "#0f172a" }}>
-                    <th style={{ padding: "6px", border: "1px solid #334155" }}>True / Pred</th>
-                    {modelData.classes && modelData.classes.slice(0, 6).map((cls, i) => (
-                      <th key={i} style={{ padding: "6px", border: "1px solid #334155", color: "#38bdf8" }}>
-                        {cls.substring(0, 4)}
+                    <th style={{ padding: "8px", border: "1px solid #334155" }}>True / Pred</th>
+                    {(modelData.classes || ["Normal", "Attack"]).map((cls, i) => (
+                      <th key={i} style={{ padding: "8px", border: "1px solid #334155", color: "#38bdf8", textAlign: "center" }}>
+                        {cls}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {modelData.confusion_matrix && modelData.confusion_matrix.slice(0, 6).map((row, rIdx) => (
+                  {(modelData.confusion_matrix || []).map((row, rIdx) => (
                     <tr key={rIdx}>
-                      <td style={{ padding: "6px", border: "1px solid #334155", fontWeight: "700", color: "#c084fc", background: "#0f172a" }}>
-                        {modelData.classes[rIdx] ? modelData.classes[rIdx].substring(0, 4) : rIdx}
+                      <td style={{ padding: "8px", border: "1px solid #334155", fontWeight: "700", color: "#c084fc", background: "#0f172a" }}>
+                        {(modelData.classes || ["Normal", "Attack"])[rIdx] || rIdx}
                       </td>
-                      {row.slice(0, 6).map((val, cIdx) => {
+                      {row.map((val, cIdx) => {
                         const isDiagonal = rIdx === cIdx;
-                        const bg = isDiagonal ? "rgba(16, 185, 129, 0.25)" : val > 50 ? "rgba(239, 68, 68, 0.25)" : "transparent";
-                        const textColor = isDiagonal ? "#34d399" : val > 50 ? "#fca5a5" : "#94a3b8";
+                        const bg = isDiagonal ? "rgba(16, 185, 129, 0.25)" : val > 0 ? "rgba(239, 68, 68, 0.25)" : "transparent";
+                        const textColor = isDiagonal ? "#34d399" : val > 0 ? "#fca5a5" : "#94a3b8";
                         return (
-                          <td key={cIdx} style={{ padding: "6px", border: "1px solid #334155", textAlign: "center", background: bg, color: textColor, fontWeight: isDiagonal ? "700" : "normal" }}>
-                            {val}
+                          <td key={cIdx} style={{ padding: "8px", border: "1px solid #334155", textAlign: "center", background: bg, color: textColor, fontWeight: isDiagonal ? "700" : "normal" }}>
+                            {val.toLocaleString()}
                           </td>
                         );
                       })}

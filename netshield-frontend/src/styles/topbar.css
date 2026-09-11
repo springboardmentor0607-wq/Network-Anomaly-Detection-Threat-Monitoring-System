@@ -82,3 +82,40 @@
   border-radius: 10px;
   font-weight: 600;
 }
+
+@keyframes bell-ring {
+  0% { transform: rotate(0); }
+  10% { transform: rotate(15deg); }
+  20% { transform: rotate(-15deg); }
+  30% { transform: rotate(10deg); }
+  40% { transform: rotate(-10deg); }
+  50% { transform: rotate(0); }
+  100% { transform: rotate(0); }
+}
+
+.notification-bell-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.notification-bell-btn:hover {
+  border-color: #00f2fe !important;
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.25) !important;
+}
+
+@media (max-width: 1024px) {
+  .topbar {
+    left: 0;
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar-left h2 {
+    font-size: 0.95rem;
+  }
+  .system-status-badge {
+    display: none;
+  }
+}

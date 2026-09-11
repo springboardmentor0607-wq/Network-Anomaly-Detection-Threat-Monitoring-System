@@ -11,7 +11,9 @@ import {
   FaDesktop,
   FaCog,
   FaBrain,
-  FaNetworkWired
+  FaNetworkWired,
+  FaClipboardList,
+  FaChartBar
 } from "react-icons/fa";
 import "../styles/sidebar.css";
 
@@ -83,8 +85,18 @@ function Sidebar({ role: overrideRole }) {
                 </Link>
               </li>
               <li>
+                <Link to="/admin/attack-visualization" className={isCurrent(["/admin/attack-visualization", "/attack-visualization"]) ? "active" : ""}>
+                  <FaChartBar /> Attack Visualization
+                </Link>
+              </li>
+              <li>
                 <Link to="/admin/reports" className={isCurrent(["/admin/reports", "/admin/threat-reports"]) ? "active" : ""}>
                   <FaFileAlt /> Threat Reports
+                </Link>
+              </li>
+              <li>
+                <Link to="/admin/incidents" className={isCurrent(["/admin/incidents", "/incidents"]) ? "active" : ""}>
+                  <FaClipboardList /> Incident Management
                 </Link>
               </li>
               <li>
@@ -126,8 +138,18 @@ function Sidebar({ role: overrideRole }) {
                 </Link>
               </li>
               <li>
+                <Link to="/analyst/attack-visualization" className={isCurrent(["/analyst/attack-visualization", "/attack-visualization"]) ? "active" : ""}>
+                  <FaChartBar /> Attack Visualization
+                </Link>
+              </li>
+              <li>
                 <Link to="/analyst/prediction-reports" className={isCurrent(["/analyst/prediction-reports", "/reports", "/analyst/reports"]) ? "active" : ""}>
                   <FaFileAlt /> Prediction Reports
+                </Link>
+              </li>
+              <li>
+                <Link to="/analyst/incidents" className={isCurrent(["/analyst/incidents", "/incidents"]) ? "active" : ""}>
+                  <FaClipboardList /> Incident Management
                 </Link>
               </li>
               <li>

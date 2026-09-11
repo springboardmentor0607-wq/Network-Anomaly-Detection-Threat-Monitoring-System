@@ -4,6 +4,8 @@ import Topbar from "../components/Topbar";
 import PieChart from "../components/PieChart";
 import AlertsTable from "../components/AlertsTable";
 import AIDetectionPanel from "../components/AIDetectionPanel";
+import AttackVisualizationSection from "../components/AttackVisualizationSection";
+import { API_BASE_URL } from "../config";
 import {
   FaPlay,
   FaUpload,
@@ -14,7 +16,10 @@ import {
   FaShieldAlt,
   FaTable,
   FaSlidersH,
-  FaListAlt
+  FaListAlt,
+  FaBell,
+  FaChartBar
+
 } from "react-icons/fa";
 import "../styles/Dashboard.css";
 
@@ -54,7 +59,7 @@ function AnalystDashboard() {
 
   const fetchAlerts = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:5000/alerts");
+      const res = await fetch(`${API_BASE_URL}/alerts`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setDbAlerts(data);
@@ -67,15 +72,16 @@ function AnalystDashboard() {
   useEffect(() => {
     fetchAlerts();
 
-    fetch("http://127.0.0.1:5000/model-info")
+    fetch(`${API_BASE_URL}/model-info`)
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.testing_accuracy) {
+        if (data && (data.testing_accuracy || data.test_accuracy)) {
           setAiMetrics((prev) => ({
             ...prev,
-            modelAccuracy: `${data.testing_accuracy}%`,
+            modelAccuracy: `${data.testing_accuracy || data.test_accuracy}%`,
             featureImportance: data.feature_importances ? data.feature_importances.slice(0, 5).map(f => ({ name: f.feature, score: f.importance })) : prev.featureImportance,
-            confusionMatrix: data.confusion_matrix && data.confusion_matrix.length > 0 ? data.confusion_matrix.slice(0, 5).map(r => r.slice(0, 5)) : prev.confusionMatrix
+            confusionMatrix: data.confusion_matrix || prev.confusionMatrix,
+            classes: data.classes || ["Normal", "Attack"]
           }));
         }
       })
@@ -85,10 +91,11 @@ function AnalystDashboard() {
   const analyzeNetwork = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://127.0.0.1:5000/analyze");
+      const response = await fetch(`${API_BASE_URL}/analyze`);
       const data = await response.json();
       alert(`Network analysis completed using Random Forest Classifier. Processed ${data.total_records} packets.`);
       fetchAlerts();
+      window.dispatchEvent(new Event("netshield_notification_updated"));
     } catch (error) {
       console.error(error);
       alert("Unable to analyze network. Ensure Flask backend is running.");
@@ -109,7 +116,7 @@ function AnalystDashboard() {
 
     setUploading(true);
     try {
-      const response = await fetch("http://127.0.0.1:5000/upload", {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
         body: formData,
       });
@@ -119,6 +126,7 @@ function AnalystDashboard() {
         setUploadResult(data);
         alert(`Random Forest Batch Prediction Completed! Processed ${data.total_records} records.`);
         fetchAlerts();
+        window.dispatchEvent(new Event("netshield_notification_updated"));
       } else {
         alert(data.message || "Upload Failed!");
       }
@@ -148,6 +156,18 @@ function AnalystDashboard() {
           </div>
 
           <div className="action-bar">
+            <button
+              onClick={() => {
+                const btn = document.getElementById("notification-bell-btn");
+                if (btn) btn.click();
+              }}
+              className="soc-btn-secondary"
+              title="Security Alerts & Notifications Center"
+              style={{ borderColor: "rgba(0, 242, 254, 0.4)", color: "#00f2fe" }}
+            >
+              <FaBell style={{ color: "#00f2fe" }} /> Notifications Center
+            </button>
+
             <button
               onClick={() => setShowBatchUpload(!showBatchUpload)}
               className="soc-btn-secondary"
@@ -281,31 +301,31 @@ function AnalystDashboard() {
           <div className="soc-card">
             <div className="soc-card-header-title">
               <h3 className="section-title">
-                <FaTable style={{ color: "#c084fc" }} /> Confusion Matrix (Random Forest)
+                <FaTable style={{ color: "#c084fc" }} /> Anomaly Detection Confusion Matrix
               </h3>
-              <span className="live-status-tag">Multi-Class Confusion</span>
+              <span className="live-status-tag">Binary Classification (Normal vs Attack)</span>
             </div>
             <div style={{ overflowX: "auto", marginTop: "12px" }}>
-              <table style={{ width: "100%", fontSize: "0.8rem", borderCollapse: "collapse", color: "#f8fafc" }}>
+              <table style={{ width: "100%", fontSize: "0.85rem", borderCollapse: "collapse", color: "#f8fafc" }}>
                 <thead>
                   <tr style={{ background: "#0f172a" }}>
-                    <th style={{ padding: "6px", border: "1px solid #334155" }}>True / Pred</th>
-                    <th style={{ padding: "6px", border: "1px solid #334155", color: "#38bdf8" }}>Norm</th>
-                    <th style={{ padding: "6px", border: "1px solid #334155", color: "#38bdf8" }}>Expl</th>
-                    <th style={{ padding: "6px", border: "1px solid #334155", color: "#38bdf8" }}>DoS</th>
-                    <th style={{ padding: "6px", border: "1px solid #334155", color: "#38bdf8" }}>Fuzz</th>
-                    <th style={{ padding: "6px", border: "1px solid #334155", color: "#38bdf8" }}>Reco</th>
+                    <th style={{ padding: "8px", border: "1px solid #334155" }}>True / Pred</th>
+                    {(aiMetrics.classes || ["Normal", "Attack"]).map((cls, i) => (
+                      <th key={i} style={{ padding: "8px", border: "1px solid #334155", color: "#38bdf8", textAlign: "center" }}>
+                        {cls}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {aiMetrics.confusionMatrix.map((row, rIdx) => (
+                  {(aiMetrics.confusionMatrix || []).map((row, rIdx) => (
                     <tr key={rIdx}>
-                      <td style={{ padding: "6px", border: "1px solid #334155", fontWeight: "700", color: "#c084fc", background: "#0f172a" }}>
-                        {["Norm", "Expl", "DoS", "Fuzz", "Reco"][rIdx] || rIdx}
+                      <td style={{ padding: "8px", border: "1px solid #334155", fontWeight: "700", color: "#c084fc", background: "#0f172a" }}>
+                        {(aiMetrics.classes || ["Normal", "Attack"])[rIdx] || rIdx}
                       </td>
                       {row.map((val, cIdx) => (
-                        <td key={cIdx} style={{ padding: "6px", border: "1px solid #334155", textAlign: "center", background: rIdx === cIdx ? "rgba(16, 185, 129, 0.2)" : "transparent", color: rIdx === cIdx ? "#34d399" : "#94a3b8" }}>
-                          {val}
+                        <td key={cIdx} style={{ padding: "8px", border: "1px solid #334155", textAlign: "center", background: rIdx === cIdx ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)", color: rIdx === cIdx ? "#34d399" : "#fca5a5" }}>
+                          {val.toLocaleString()}
                         </td>
                       ))}
                     </tr>
@@ -374,6 +394,25 @@ function AnalystDashboard() {
             </div>
             <PieChart height={220} />
           </div>
+        </div>
+
+        {/* Dedicated Attack Visualization Hub Banner Card */}
+        <div className="soc-card" style={{ marginTop: "24px", background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9))", borderColor: "rgba(0, 242, 254, 0.4)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", padding: "20px 24px" }}>
+          <div>
+            <h3 style={{ fontSize: "1.2rem", margin: "0 0 6px 0", color: "#00f2fe", display: "flex", alignItems: "center", gap: "10px" }}>
+              <FaChartBar /> Dedicated Attack Visualization & Threat Analytics
+            </h3>
+            <p style={{ fontSize: "0.88rem", color: "#cbd5e1", margin: 0 }}>
+              Access multi-week attack trend monitoring, attack type counts, threat severity distribution, and network anomaly telemetry.
+            </p>
+          </div>
+          <button
+            onClick={() => window.location.href = "/analyst/attack-visualization"}
+            className="soc-btn-primary"
+            style={{ padding: "10px 18px", fontSize: "0.9rem" }}
+          >
+            <FaChartBar /> View Attack Visualization Dashboard
+          </button>
         </div>
 
         {/* Recent Threat Predictions Table */}

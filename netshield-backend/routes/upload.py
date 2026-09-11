@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 
 from models.predict import predict_attack
 from models.alert_service import create_security_alert
+from models.incident_service import create_incident_from_alert
+from models.notification_service import create_notification_from_alert_incident
 from db import get_db_connection
 
 upload_bp = Blueprint("upload", __name__)
@@ -128,7 +130,10 @@ def upload_file():
                     conn.commit()
 
                     if res["is_anomaly"]:
-                        create_security_alert(res, src_ip, dst_ip, protocol, pred_id)
+                        alert_info = create_security_alert(res, src_ip, dst_ip, protocol, pred_id)
+                        if alert_info:
+                            incident_info = create_incident_from_alert(alert_info)
+                            create_notification_from_alert_incident(alert_info, incident_info)
                 except Exception as insert_err:
                     if conn:
                         conn.rollback()

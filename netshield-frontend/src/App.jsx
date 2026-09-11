@@ -18,6 +18,8 @@ import AnomalyDetection from "./pages/AnomalyDetection";
 import ThreatDetection from "./pages/ThreatDetection";
 import AnalystReports from "./pages/AnalystReports";
 import Profile from "./pages/Profile";
+import IncidentManagement from "./pages/IncidentManagement";
+import AttackVisualization from "./pages/AttackVisualization";
 
 function App() {
   return (
@@ -94,10 +96,34 @@ function App() {
           }
         />
         <Route
+          path="/analyst/attack-visualization"
+          element={
+            <ProtectedRoute allowedRole="Security Analyst">
+              <AttackVisualization />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/analyst/prediction-reports"
           element={
             <ProtectedRoute allowedRole="Security Analyst">
               <AnalystReports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analyst/incidents"
+          element={
+            <ProtectedRoute allowedRole="Security Analyst">
+              <IncidentManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/incidents"
+          element={
+            <ProtectedRoute allowedRoles={["Security Administrator", "Security Analyst"]}>
+              <IncidentManagement />
             </ProtectedRoute>
           }
         />
@@ -192,10 +218,26 @@ function App() {
           }
         />
         <Route
+          path="/admin/attack-visualization"
+          element={
+            <ProtectedRoute allowedRole="Security Administrator">
+              <AttackVisualization />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/reports"
           element={
             <ProtectedRoute allowedRole="Security Administrator">
               <ThreatReports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/incidents"
+          element={
+            <ProtectedRoute allowedRole="Security Administrator">
+              <IncidentManagement />
             </ProtectedRoute>
           }
         />
@@ -225,6 +267,14 @@ function App() {
         />
 
         {/* Shared Protected Routes (Accessible to both Admin & Analyst) */}
+        <Route
+          path="/attack-visualization"
+          element={
+            <ProtectedRoute allowedRoles={["Security Administrator", "Security Analyst"]}>
+              <AttackVisualization />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/model-performance"
           element={

@@ -74,18 +74,20 @@ body {
 
 /* Common SOC Dashboard Utility Classes */
 .soc-layout {
-  display: flex;
+  position: relative;
+  width: 100%;
   min-height: 100vh;
   background-color: var(--bg-primary);
 }
 
 .soc-main-content {
-  flex: 1;
+  width: calc(100% - 260px);
   margin-left: 260px;
   margin-top: 65px;
   padding: 24px 32px;
   min-height: calc(100vh - 65px);
   background-color: var(--bg-primary);
+  box-sizing: border-box;
 }
 
 .soc-grid-4 {

@@ -8,6 +8,8 @@ from routes.analyze import analyze_bp
 from routes.reports import reports_bp
 from routes.model_info import model_info_bp
 from routes.test_samples import test_samples_bp
+from routes.incidents import incidents_bp
+from routes.notifications import notifications_bp
 from db import init_db_tables
 
 app = Flask(__name__)
@@ -27,6 +29,8 @@ app.register_blueprint(analyze_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(model_info_bp)
 app.register_blueprint(test_samples_bp)
+app.register_blueprint(incidents_bp)
+app.register_blueprint(notifications_bp)
 
 @app.route("/")
 def home():
@@ -38,4 +42,8 @@ def home():
     }
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    import os
+    host = os.getenv("FLASK_HOST", "0.0.0.0")
+    port = int(os.getenv("FLASK_PORT", 5000))
+    debug = os.getenv("FLASK_DEBUG", "False").lower() in ("true", "1", "t")
+    app.run(host=host, port=port, debug=debug)

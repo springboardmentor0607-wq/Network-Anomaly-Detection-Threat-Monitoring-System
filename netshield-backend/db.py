@@ -1,31 +1,45 @@
 import psycopg2
 import traceback
+import os
+import time
 
 conn = None
 
-def get_db_connection():
+def get_db_connection(max_retries=5, retry_delay=2):
     global conn
     if conn and not conn.closed:
         return conn
 
-    try:
-        conn = psycopg2.connect(
-            host="localhost",
-            database="netshield_ai",
-            user="postgres",
-            password="password",
-            port="5432"
-        )
-        conn.autocommit = False
-        print("[OK] PostgreSQL Connected Successfully!")
-        return conn
-    except Exception as e:
-        print("[WARNING] Database Connection Failed (PostgreSQL offline or credential mismatch)")
-        print(e)
-        return None
+    host = os.getenv("POSTGRES_HOST", "localhost")
+    database = os.getenv("POSTGRES_DB", "netshield_ai")
+    user = os.getenv("POSTGRES_USER", "postgres")
+    password = os.getenv("POSTGRES_PASSWORD", "password")
+    port = os.getenv("POSTGRES_PORT", "5432")
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            conn = psycopg2.connect(
+                host=host,
+                database=database,
+                user=user,
+                password=password,
+                port=port
+            )
+            conn.autocommit = False
+            print(f"[OK] PostgreSQL Connected Successfully! (host={host}, db={database})")
+            return conn
+        except Exception as e:
+            if attempt < max_retries:
+                print(f"[WARNING] DB Connection Attempt {attempt}/{max_retries} failed ({e}). Retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+            else:
+                print("[WARNING] Database Connection Failed (PostgreSQL offline or credential mismatch)")
+                print(e)
+                return None
 
 # Attempt initial connection
-conn = get_db_connection()
+conn = get_db_connection(max_retries=1)
+
 
 def init_db_tables():
     """
@@ -152,6 +166,67 @@ def init_db_tables():
                 password VARCHAR(255) NOT NULL,
                 role VARCHAR(50) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        db_conn.commit()
+
+        # 5. Table for Incidents (Milestone-3 Step 2)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS incidents (
+                id SERIAL PRIMARY KEY,
+                incident_id VARCHAR(50) UNIQUE NOT NULL,
+                alert_id VARCHAR(50),
+                prediction_id INT,
+                attack_type VARCHAR(100),
+                threat_severity VARCHAR(20),
+                risk_score INT,
+                confidence NUMERIC(5, 2),
+                source_ip VARCHAR(50),
+                dest_ip VARCHAR(50),
+                protocol VARCHAR(20) DEFAULT 'TCP',
+                detection_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                status VARCHAR(30) DEFAULT 'New',
+                investigation_details TEXT,
+                action_taken TEXT,
+                resolution_details TEXT,
+                resolution_timestamp TIMESTAMP,
+                responsible_user VARCHAR(100) DEFAULT 'Security Analyst',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        db_conn.commit()
+
+        # 6. Table for Incident History / Audit Timeline (Milestone-3 Step 2)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS incident_history (
+                id SERIAL PRIMARY KEY,
+                incident_id VARCHAR(50) NOT NULL,
+                action_type VARCHAR(50) NOT NULL,
+                status VARCHAR(30),
+                notes TEXT,
+                performed_by VARCHAR(100) DEFAULT 'Security Analyst',
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        db_conn.commit()
+
+        # 7. Table for Notifications (Milestone-3 Step 3)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                notification_id VARCHAR(50) UNIQUE NOT NULL,
+                alert_id VARCHAR(50),
+                incident_id VARCHAR(50),
+                attack_type VARCHAR(100),
+                severity VARCHAR(20),
+                risk_score INT,
+                confidence NUMERIC(5, 2),
+                source_ip VARCHAR(50),
+                dest_ip VARCHAR(50),
+                message TEXT,
+                status VARCHAR(20) DEFAULT 'Unread',
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
         db_conn.commit()

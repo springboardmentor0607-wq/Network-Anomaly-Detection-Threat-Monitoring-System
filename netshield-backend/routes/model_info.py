@@ -30,7 +30,7 @@ def get_model_info():
             print("Error loading metrics.pkl:", e)
             metrics = {}
 
-    classes = metrics.get("classes") or metrics.get("class_names") or ["Normal", "Analysis", "Backdoor", "DoS", "Exploits", "Fuzzers", "Generic", "Reconnaissance", "Shellcode", "Worms"]
+    classes = metrics.get("classes") or metrics.get("class_names") or ["Normal", "Attack"]
 
     roc_curve_data = metrics.get("roc_curve", {
         "fpr": [0.0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0],

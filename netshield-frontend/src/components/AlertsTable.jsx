@@ -1,7 +1,11 @@
 import { useState } from "react";
-import { FaSearch, FaExclamationTriangle, FaShieldAlt, FaCheck, FaInfoCircle } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import { FaSearch, FaExclamationTriangle, FaShieldAlt, FaCheck, FaInfoCircle, FaClipboardList } from "react-icons/fa";
+import { API_BASE_URL } from "../config";
+
 
 function AlertsTable({ alerts = [], onAcknowledge, showSearch = true, limit }) {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [severityFilter, setSeverityFilter] = useState("All");
   const [selectedAlertModal, setSelectedAlertModal] = useState(null);
@@ -69,7 +73,7 @@ function AlertsTable({ alerts = [], onAcknowledge, showSearch = true, limit }) {
       onAcknowledge(targetId);
     } else {
       try {
-        await fetch(`http://127.0.0.1:5000/alerts/${targetId}`, {
+        await fetch(`${API_BASE_URL}/alerts/${targetId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ acknowledged: true, status: "Acknowledged" })
@@ -256,6 +260,27 @@ function AlertsTable({ alerts = [], onAcknowledge, showSearch = true, limit }) {
                           }}
                         >
                           <FaInfoCircle /> Details
+                        </button>
+                        <button
+                          onClick={() => {
+                            const incId = alert.incident_id ? (typeof alert.incident_id === 'number' ? `INC-${alert.incident_id.toString().padStart(4, '0')}` : alert.incident_id) : "";
+                            navigate(`/analyst/incidents${incId ? `?id=${incId}` : ''}`);
+                          }}
+                          title="Investigate Linked Incident"
+                          style={{
+                            padding: "4px 8px",
+                            background: "rgba(0, 242, 254, 0.15)",
+                            border: "1px solid #00f2fe",
+                            color: "#00f2fe",
+                            borderRadius: "6px",
+                            fontSize: "0.78rem",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px"
+                          }}
+                        >
+                          <FaClipboardList /> Incident
                         </button>
                       </div>
                     </td>

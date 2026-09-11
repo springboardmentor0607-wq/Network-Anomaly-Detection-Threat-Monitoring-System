@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config";
 import {
   FaShieldAlt,
   FaUser,
@@ -18,6 +19,7 @@ function Register() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -119,7 +121,7 @@ function Register() {
     setSuccessMsg("");
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/register", {
+      const response = await fetch(`${API_BASE_URL}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

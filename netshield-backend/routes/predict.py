@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from models.predict import predict_attack
 from models.alert_service import create_security_alert
+from models.incident_service import create_incident_from_alert
+from models.notification_service import create_notification_from_alert_incident
 from db import get_db_connection
 
 predict_bp = Blueprint("predict", __name__)
@@ -52,8 +54,14 @@ def predict():
                 print("Anomaly prediction DB insert error:", db_err)
 
         alert_info = None
+        incident_info = None
+        notification_info = None
+
         if res["is_anomaly"]:
             alert_info = create_security_alert(res, source_ip, dest_ip, protocol, prediction_id)
+            if alert_info:
+                incident_info = create_incident_from_alert(alert_info)
+                notification_info = create_notification_from_alert_incident(alert_info, incident_info)
 
         actual_class = data.get("actual_class") or data.get("expected_attack") or data.get("attack_cat") or None
 
@@ -77,6 +85,13 @@ def predict():
             response_payload["alert_id"] = alert_info["alert_id"]
             response_payload["alert_status"] = alert_info["status"]
             response_payload["alert_details"] = alert_info
+            if incident_info:
+                response_payload["incident_id"] = incident_info["incident_id"]
+                response_payload["incident_status"] = incident_info["status"]
+                response_payload["incident_details"] = incident_info
+            if notification_info:
+                response_payload["notification_id"] = notification_info["notification_id"]
+                response_payload["notification_details"] = notification_info
 
         return jsonify(response_payload), 200
 
@@ -85,4 +100,4 @@ def predict():
         traceback.print_exc()
         return jsonify({
             "message": str(e)
-        }), 400
+        }), 400

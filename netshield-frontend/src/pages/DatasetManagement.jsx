@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
+import { API_BASE_URL } from "../config";
 import {
   FaDatabase,
   FaUpload,
@@ -14,6 +15,7 @@ import {
   FaExclamationTriangle
 } from "react-icons/fa";
 import "../styles/Dashboard.css";
+
 
 const datasetList = [
   { id: 1, name: "UNSW_NB15_training-set.csv", type: "Primary Training Dataset", size: "32.3 MB", records: "175,341", schema: "UNSW-NB15", status: "Active / Loaded" },
@@ -39,7 +41,7 @@ function DatasetManagement() {
     formData.append("file", selectedFile);
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/upload", {
+      const res = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
         body: formData
       });

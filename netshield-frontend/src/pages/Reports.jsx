@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
+import { API_BASE_URL } from "../config";
 import {
   FaFileDownload,
   FaSearch,
@@ -25,7 +26,8 @@ function Reports() {
   const [reportsList, setReportsList] = useState(defaultReports);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/reports")
+    fetch(`${API_BASE_URL}/reports`)
+
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {

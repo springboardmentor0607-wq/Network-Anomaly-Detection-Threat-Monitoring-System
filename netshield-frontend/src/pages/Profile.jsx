@@ -73,7 +73,7 @@ function Profile() {
           </button>
         </div>
 
-        <div className="soc-grid-2">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px", width: "100%", alignItems: "start" }}>
           {/* Profile Badge Card */}
           <div className="soc-card" style={{ textAlign: "center", padding: "36px 20px" }}>
             <div style={{ position: "relative", display: "inline-block", marginBottom: "16px" }}>

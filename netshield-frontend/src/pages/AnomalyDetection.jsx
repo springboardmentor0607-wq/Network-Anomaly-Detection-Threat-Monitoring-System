@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
+import { API_BASE_URL } from "../config";
 import {
   FaRobot,
   FaUpload,
@@ -23,6 +24,7 @@ import {
   FaSlidersH,
   FaListAlt,
   FaExclamationCircle,
+
   FaTimesCircle,
   FaDownload,
   FaRandom
@@ -133,7 +135,7 @@ function AnomalyDetection() {
 
   // Fetch model info on mount
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/model-info")
+    fetch(`${API_BASE_URL}/model-info`)
       .then((res) => res.json())
       .then((data) => {
         if (data && data.testing_accuracy) {
@@ -162,8 +164,8 @@ function AnomalyDetection() {
 
     try {
       const url = category
-        ? `http://127.0.0.1:5000/manual-test-sample/${encodeURIComponent(category)}`
-        : `http://127.0.0.1:5000/manual-test-sample/load`;
+        ? `${API_BASE_URL}/manual-test-sample/${encodeURIComponent(category)}`
+        : `${API_BASE_URL}/manual-test-sample/load`;
 
       const response = await fetch(url);
       const data = await response.json();
@@ -179,20 +181,19 @@ function AnomalyDetection() {
         };
 
         setTestForm(fullForm);
-        setActualClass(data.expected_attack);
+        setActualClass(data.actual_class);
         setSampleInfo({
           type: "manual_test_samples.csv",
-          sampleId: data.sample_id,
-          sampleName: data.sample_name,
-          expectedAttack: data.expected_attack
+          category: category || "Sample",
+          actualClass: data.actual_class
         });
-        setSuccessNotice(`Loaded predefined test sample "${data.sample_name}" from manual_test_samples.csv. Click [ ANALYZE TRAFFIC ] to evaluate model prediction.`);
+        setSuccessNotice(`Loaded predefined test sample (${category || "Sample"}). Network features are displayed below. Click [ ANALYZE TRAFFIC ] to evaluate model prediction.`);
       } else {
-        setErrorMessage(data.message || "Failed to load sample from manual_test_samples.csv.");
+        setErrorMessage(data.message || "Sample not found.");
       }
     } catch (err) {
-      console.error("Fetch manual test sample error:", err);
-      setErrorMessage("Backend connection error. Please ensure Flask backend is running on port 5000.");
+      console.error("Fetch test sample error:", err);
+      setErrorMessage("Backend connection error. Please ensure Flask backend is running.");
     } finally {
       setSampleLoading(false);
     }
@@ -207,8 +208,8 @@ function AnomalyDetection() {
 
     try {
       const url = className === "random"
-        ? "http://127.0.0.1:5000/test-sample/random"
-        : `http://127.0.0.1:5000/test-sample/${encodeURIComponent(className)}`;
+        ? `${API_BASE_URL}/test-sample/random`
+        : `${API_BASE_URL}/test-sample/${encodeURIComponent(className)}`;
 
       const response = await fetch(url);
       const data = await response.json();
@@ -236,7 +237,7 @@ function AnomalyDetection() {
       }
     } catch (err) {
       console.error("Fetch test sample error:", err);
-      setErrorMessage("Backend connection error. Please ensure Flask backend is running on port 5000.");
+      setErrorMessage("Backend connection error. Please ensure Flask backend is running.");
     } finally {
       setSampleLoading(false);
     }
@@ -258,7 +259,7 @@ function AnomalyDetection() {
     setSingleResult(null);
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/predict", {
+      const response = await fetch(`${API_BASE_URL}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -268,6 +269,9 @@ function AnomalyDetection() {
 
       if (response.ok) {
         setSingleResult(data);
+        if (data.is_anomaly) {
+          window.dispatchEvent(new Event("netshield_notification_updated"));
+        }
 
         const newEntry = {
           id: Date.now(),
@@ -290,7 +294,7 @@ function AnomalyDetection() {
       }
     } catch (err) {
       console.error("Predict API error:", err);
-      setErrorMessage("Backend connection error! Check python app.py on http://127.0.0.1:5000.");
+      setErrorMessage("Backend connection error! Check Flask server status.");
     } finally {
       setLoading(false);
     }
@@ -317,7 +321,7 @@ function AnomalyDetection() {
     formData.append("file", selectedFile);
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/upload", {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
         body: formData
       });
@@ -344,6 +348,7 @@ function AnomalyDetection() {
         if (data.confidence_distribution) setConfDist(data.confidence_distribution);
         if (data.predictions && data.predictions.length > 0) setTableData(data.predictions);
 
+        window.dispatchEvent(new Event("netshield_notification_updated"));
         setSuccessNotice(`Dataset Analysis Completed! Analyzed ${data.evaluated_records || data.total_records} records with saved Random Forest Classifier.`);
       } else {
         setErrorMessage(data.message || "Failed to analyze dataset.");
@@ -632,14 +637,46 @@ function AnomalyDetection() {
                     </span>
                   </div>
 
-                  {/* ALERT GENERATION INDICATOR BANNER */}
+                  {/* ALERT & NOTIFICATION GENERATION INDICATOR BANNER */}
                   {singleResult.alert_generated ? (
-                    <div style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", borderRadius: "8px", padding: "10px 16px", marginBottom: "16px", color: "#fca5a5", fontSize: "0.9rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <FaExclamationTriangle style={{ color: "#ef4444" }} />
-                        <strong>Security Alert Generated:</strong> <code style={{ color: "#f8fafc", fontFamily: "var(--font-mono)" }}>{singleResult.alert_id}</code> (Status: <span style={{ color: "#38bdf8", fontWeight: "700" }}>{singleResult.alert_status || "New"}</span>)
+                    <div style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid #ef4444", borderRadius: "8px", padding: "12px 16px", marginBottom: "16px", color: "#fca5a5", fontSize: "0.88rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                        <FaExclamationTriangle style={{ color: "#ef4444", fontSize: "1rem" }} />
+                        <div>
+                          <strong>Security Alert Generated:</strong> <code style={{ color: "#00f2fe", fontFamily: "var(--font-mono)", fontWeight: "bold" }}>{singleResult.alert_id}</code>
+                          {singleResult.incident_id && (
+                            <span style={{ marginLeft: "10px" }}>
+                              | <strong>Incident:</strong> <code style={{ color: "#38bdf8", fontFamily: "var(--font-mono)", fontWeight: "bold" }}>{singleResult.incident_id}</code>
+                            </span>
+                          )}
+                          {singleResult.notification_id && (
+                            <span style={{ marginLeft: "10px" }}>
+                              | <strong>Notification:</strong> <code style={{ color: "#a78bfa", fontFamily: "var(--font-mono)", fontWeight: "bold" }}>{singleResult.notification_id}</code>
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Persisted in Security Alert Database</span>
+
+                      {singleResult.incident_id && (
+                        <button
+                          onClick={() => navigate(`/analyst/incidents?id=${singleResult.incident_id}`)}
+                          style={{
+                            padding: "4px 10px",
+                            background: "rgba(0, 242, 254, 0.2)",
+                            border: "1px solid #00f2fe",
+                            color: "#00f2fe",
+                            borderRadius: "4px",
+                            fontSize: "0.78rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px"
+                          }}
+                        >
+                          Investigate Incident →
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid #10b981", borderRadius: "8px", padding: "10px 16px", marginBottom: "16px", color: "#6ee7b7", fontSize: "0.88rem", display: "flex", alignItems: "center", gap: "8px" }}>

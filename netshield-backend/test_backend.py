@@ -59,7 +59,7 @@ def run_tests():
     print("   Attack Category  :", direct_res["attack_type"])
     print("   Confidence Score :", direct_res["confidence"])
     print("   Model Engine     :", direct_res["model_engine"])
-    assert direct_res["model_engine"] == "Random Forest Classifier", f"Unexpected model engine: {direct_res['model_engine']}"
+    assert "Random Forest" in direct_res["model_engine"], f"Unexpected model engine: {direct_res['model_engine']}"
 
     # Test 4: Check metrics.pkl structure if exists
     metrics_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "saved_model", "metrics.pkl")

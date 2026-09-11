@@ -3,8 +3,10 @@ import os
 import pandas as pd
 from datetime import datetime, timedelta
 
-from models.predict import predict_attack
+from models.predict import predict_attack, predict_attack_batch
 from models.alert_service import create_security_alert
+from models.incident_service import create_incident_from_alert
+from models.notification_service import create_notification_from_alert_incident
 from db import get_db_connection
 
 analyze_bp = Blueprint("analyze", __name__)
@@ -32,7 +34,11 @@ def analyze():
         df = pd.read_csv(dataset_path)
 
         total_file_records = len(df)
-        sample_df = df.sample(n=min(100, len(df)), random_state=42)
+        sample_df = df.sample(n=min(100, len(df)), random_state=42).reset_index(drop=True)
+        total_evaluated = len(sample_df)
+
+        # High-performance batch vector prediction over all 100 flows at once
+        batch_results = predict_attack_batch(sample_df)
 
         normal = 0
         attacks = 0
@@ -49,65 +55,62 @@ def analyze():
         cursor = conn.cursor() if conn else None
         base_time = datetime.now()
 
-        for idx, (_, row) in enumerate(sample_df.iterrows()):
-            data = row.to_dict()
-            res = predict_attack(data)
+        if cursor:
+            try:
+                for idx, res in enumerate(batch_results):
+                    c_score = res["confidence_score"]
+                    r_score = res["risk_score"]
+                    t_level = res["threat_level"]
+                    a_cat = res["attack_type"]
 
-            c_score = res["confidence_score"]
-            r_score = res["risk_score"]
-            t_level = res["threat_level"]
-            a_cat = res["attack_type"]
+                    conf_scores.append(c_score)
+                    risk_scores.append(r_score)
 
-            conf_scores.append(c_score)
-            risk_scores.append(r_score)
+                    if not res["is_anomaly"]:
+                        normal += 1
+                    else:
+                        attacks += 1
 
-            if not res["is_anomaly"]:
-                normal += 1
-            else:
-                attacks += 1
+                    severity_dist[t_level] = severity_dist.get(t_level, 0) + 1
 
-            severity_dist[t_level] = severity_dist.get(t_level, 0) + 1
+                    if r_score <= 25: risk_dist["0-25"] += 1
+                    elif r_score <= 50: risk_dist["26-50"] += 1
+                    elif r_score <= 75: risk_dist["51-75"] += 1
+                    else: risk_dist["76-100"] += 1
 
-            if r_score <= 25: risk_dist["0-25"] += 1
-            elif r_score <= 50: risk_dist["26-50"] += 1
-            elif r_score <= 75: risk_dist["51-75"] += 1
-            else: risk_dist["76-100"] += 1
+                    if c_score < 50: conf_dist["<50%"] += 1
+                    elif c_score < 75: conf_dist["50-75%"] += 1
+                    elif c_score < 90: conf_dist["75-90%"] += 1
+                    else: conf_dist["90-100%"] += 1
 
-            if c_score < 50: conf_dist["<50%"] += 1
-            elif c_score < 75: conf_dist["50-75%"] += 1
-            elif c_score < 90: conf_dist["75-90%"] += 1
-            else: conf_dist["90-100%"] += 1
+                    if a_cat not in attack_stats:
+                        attack_stats[a_cat] = {"count": 0, "conf_sum": 0.0, "risk_sum": 0, "threat_level": t_level}
+                    attack_stats[a_cat]["count"] += 1
+                    attack_stats[a_cat]["conf_sum"] += c_score
+                    attack_stats[a_cat]["risk_sum"] += r_score
 
-            if a_cat not in attack_stats:
-                attack_stats[a_cat] = {"count": 0, "conf_sum": 0.0, "risk_sum": 0, "threat_level": t_level}
-            attack_stats[a_cat]["count"] += 1
-            attack_stats[a_cat]["conf_sum"] += c_score
-            attack_stats[a_cat]["risk_sum"] += r_score
+                    src_ip = f"192.168.1.{100 + (idx % 120)}"
+                    dst_ip = f"10.0.{(idx % 4)}.{1 + (idx % 25)}"
+                    protocol = "TCP" if idx % 2 == 0 else "UDP"
+                    ts_str = (base_time - timedelta(seconds=idx * 5)).strftime("%Y-%m-%d %H:%M:%S")
 
-            src_ip = f"192.168.1.{100 + (idx % 120)}"
-            dst_ip = f"10.0.{(idx % 4)}.{1 + (idx % 25)}"
-            protocol = "TCP" if idx % 2 == 0 else "UDP"
-            ts_str = (base_time - timedelta(seconds=idx * 5)).strftime("%Y-%m-%d %H:%M:%S")
+                    item = {
+                        "id": idx + 1,
+                        "timestamp": ts_str,
+                        "sourceIp": src_ip,
+                        "destIp": dst_ip,
+                        "protocol": protocol,
+                        "prediction": res["prediction"],
+                        "attackType": a_cat,
+                        "confidence": res["confidence"],
+                        "confidence_score": c_score,
+                        "threat_level": t_level,
+                        "risk_score": r_score,
+                        "model_engine": "Random Forest Classifier",
+                        "status": "Blocked" if res["is_anomaly"] else "Normal Flow"
+                    }
+                    prediction_list.append(item)
 
-            item = {
-                "id": idx + 1,
-                "timestamp": ts_str,
-                "sourceIp": src_ip,
-                "destIp": dst_ip,
-                "protocol": protocol,
-                "prediction": res["prediction"],
-                "attackType": a_cat,
-                "confidence": res["confidence"],
-                "confidence_score": c_score,
-                "threat_level": t_level,
-                "risk_score": r_score,
-                "model_engine": "Random Forest Classifier",
-                "status": "Blocked" if res["is_anomaly"] else "Normal Flow"
-            }
-            prediction_list.append(item)
-
-            if cursor:
-                try:
                     cursor.execute("""
                         INSERT INTO anomaly_predictions
                         (source_ip, dest_ip, protocol, prediction, attack_type, confidence, threat_level, risk_score, model_name, status)
@@ -127,19 +130,21 @@ def analyze():
                     ))
                     pred_row = cursor.fetchone()
                     pred_id = pred_row[0] if pred_row else None
-                    conn.commit()
 
                     if res["is_anomaly"]:
-                        create_security_alert(res, src_ip, dst_ip, protocol, pred_id)
-                except Exception as insert_err:
-                    if conn:
-                        conn.rollback()
-                    print("Analyze DB insert error:", insert_err)
+                        alert_info = create_security_alert(res, src_ip, dst_ip, protocol, pred_id)
+                        if alert_info:
+                            incident_info = create_incident_from_alert(alert_info)
+                            create_notification_from_alert_incident(alert_info, incident_info)
 
-        if cursor:
-            cursor.close()
+                # Commit batch transaction ONCE
+                conn.commit()
+                cursor.close()
+            except Exception as batch_err:
+                if conn:
+                    conn.rollback()
+                print("Analyze DB batch processing error:", batch_err)
 
-        total_evaluated = len(sample_df)
         avg_conf = round(sum(conf_scores) / total_evaluated, 2) if total_evaluated > 0 else 0.0
         avg_risk = round(sum(risk_scores) / total_evaluated, 1) if total_evaluated > 0 else 0.0
 
