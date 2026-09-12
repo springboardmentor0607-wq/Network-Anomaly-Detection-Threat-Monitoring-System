@@ -26,9 +26,10 @@ model = None
 preprocessor = None
 target_encoder = None
 feature_names = []
+label_encoders = None
 
 def load_model_artifacts():
-    global pipeline_obj, model, preprocessor, target_encoder, feature_names
+    global pipeline_obj, model, preprocessor, target_encoder, feature_names, label_encoders
     try:
         rf_pipeline_pkl = os.path.join(MODEL_DIR, "netshield_rf_pipeline.pkl")
         two_model_pkl = os.path.join(MODEL_DIR, "netshield_two_model_pipeline.pkl")
@@ -49,14 +50,23 @@ def load_model_artifacts():
             model = joblib.load(two_model_pkl)
             if hasattr(model, "target_encoder"):
                 target_encoder = model.target_encoder
-        else:
-            if os.path.exists(model_path):
-                print("Loading Standalone RF Model from:", model_path)
-                model = joblib.load(model_path)
-            if os.path.exists(target_encoder_path):
-                target_encoder = joblib.load(target_encoder_path)
-            if os.path.exists(feature_names_path):
-                feature_names = joblib.load(feature_names_path)
+
+        if model is None and os.path.exists(model_path):
+            print("Loading Standalone RF Model from:", model_path)
+            model = joblib.load(model_path)
+
+        lbl_enc_path = os.path.join(MODEL_DIR, "label_encoder.pkl")
+        lbl_encoders_path = os.path.join(MODEL_DIR, "label_encoders.pkl")
+        if os.path.exists(lbl_enc_path):
+            label_encoders = joblib.load(lbl_enc_path)
+        elif os.path.exists(lbl_encoders_path):
+            label_encoders = joblib.load(lbl_encoders_path)
+
+        if target_encoder is None and os.path.exists(target_encoder_path):
+            target_encoder = joblib.load(target_encoder_path)
+
+        if not feature_names and os.path.exists(feature_names_path):
+            feature_names = joblib.load(feature_names_path)
     except Exception as e:
         print("Error loading Random Forest model artifacts:", e)
 
@@ -104,22 +114,13 @@ def compute_engineered_features_single(df):
     df_out["destination_bytes_per_second"] = dbytes / (dur + eps)
     return df_out
 
-def predict_attack(input_data):
-    """
-    Accepts a dictionary of flow attributes or a single pandas row,
-    preprocesses, and returns comprehensive Random Forest AI prediction details.
-    """
-    global pipeline_obj, model, preprocessor, target_encoder, feature_names
+def transform_features_df(df_input):
+    global preprocessor, model, feature_names, label_encoders
 
-    if (model is None) and (os.path.exists(pipeline_path) or os.path.exists(model_path)):
-        load_model_artifacts()
-
-    if isinstance(input_data, pd.Series):
-        input_data = input_data.to_dict()
-    elif not isinstance(input_data, dict):
-        input_data = {}
-
-    df = pd.DataFrame([input_data])
+    if not isinstance(df_input, pd.DataFrame):
+        df = pd.DataFrame([df_input]) if isinstance(df_input, dict) else pd.DataFrame(df_input)
+    else:
+        df = df_input.copy()
 
     # Alias mapping
     if "protocol" in df.columns and "proto" not in df.columns:
@@ -135,50 +136,95 @@ def predict_attack(input_data):
 
     # Compute engineered features
     df_fe = compute_engineered_features_single(df)
-
-    # String cleaning for categoricals vs numeric coercion
     cat_cols = ["proto", "service", "state"]
-    for c in df_fe.columns:
-        if c in cat_cols:
-            df_fe[c] = df_fe[c].astype(str).str.strip().str.lower()
-        else:
-            df_fe[c] = pd.to_numeric(df_fe[c], errors="coerce").fillna(0.0)
 
     if preprocessor is not None:
-        try:
-            if hasattr(preprocessor, "feature_names_in_"):
-                expected_cols = list(preprocessor.feature_names_in_)
-                for col in expected_cols:
-                    if col not in df_fe.columns:
-                        if col in cat_cols:
-                            df_fe[col] = "-"
-                        else:
-                            df_fe[col] = 0.0
-                df_fe = df_fe[expected_cols]
-                # Re-enforce dtypes
-                for c in expected_cols:
-                    if c in cat_cols:
-                        df_fe[c] = df_fe[c].astype(str)
-                    else:
-                        df_fe[c] = df_fe[c].astype(float)
-            X_input = preprocessor.transform(df_fe)
-        except Exception as prep_err:
-            print("Preprocessor transform warning:", prep_err)
-            for c in cat_cols:
-                if c not in df_fe.columns:
-                    df_fe[c] = "-"
-            X_input = preprocessor.transform(df_fe)
-    else:
-        if feature_names:
-            for feature in feature_names:
-                if feature not in df_fe.columns:
-                    df_fe[feature] = 0
-            X_input = df_fe[feature_names].copy()
-        else:
-            X_input = df_fe.copy()
-        X_input = X_input.fillna(0)
+        for c in df_fe.columns:
+            if c in cat_cols:
+                df_fe[c] = df_fe[c].astype(str).str.strip().str.lower()
+            else:
+                df_fe[c] = pd.to_numeric(df_fe[c], errors="coerce").fillna(0.0)
 
-    # Perform Prediction
+        if hasattr(preprocessor, "feature_names_in_"):
+            expected_cols = list(preprocessor.feature_names_in_)
+            for col in expected_cols:
+                if col not in df_fe.columns:
+                    if col in cat_cols:
+                        df_fe[col] = "-"
+                    else:
+                        df_fe[col] = 0.0
+            df_fe = df_fe[expected_cols]
+            for c in expected_cols:
+                if c in cat_cols:
+                    df_fe[c] = df_fe[c].astype(str)
+                else:
+                    df_fe[c] = df_fe[c].astype(float)
+        X_input = preprocessor.transform(df_fe)
+    else:
+        for col in cat_cols:
+            if col in df_fe.columns:
+                vals = df_fe[col].astype(str).str.strip().str.lower()
+                if isinstance(label_encoders, dict) and col in label_encoders:
+                    le = label_encoders[col]
+                    classes_lower = [str(c).strip().lower() for c in le.classes_]
+                    encoded_series = []
+                    for v in vals:
+                        if v in classes_lower:
+                            idx = classes_lower.index(v)
+                            encoded_series.append(le.transform([le.classes_[idx]])[0])
+                        else:
+                            encoded_series.append(-1)
+                    df_fe[col] = encoded_series
+                elif hasattr(label_encoders, "transform"):
+                    try:
+                        df_fe[col] = label_encoders.transform(df_fe[[col]])
+                    except Exception:
+                        df_fe[col] = 0
+                else:
+                    df_fe[col] = 0
+
+        for c in df_fe.columns:
+            if c not in cat_cols:
+                df_fe[c] = pd.to_numeric(df_fe[c], errors="coerce").fillna(0.0)
+
+        if hasattr(model, "feature_names_in_"):
+            expected_cols = list(model.feature_names_in_)
+        elif feature_names:
+            expected_cols = list(feature_names)
+        else:
+            expected_cols = [c for c in df_fe.columns if c not in ["source_ip", "dest_ip", "expected_attack", "actual_class"]]
+
+        for col in expected_cols:
+            if col not in df_fe.columns:
+                df_fe[col] = 0.0
+
+        X_input = df_fe[expected_cols].copy()
+
+    # Defensive check: Assert no string or object columns remain before sending to Random Forest
+    if isinstance(X_input, pd.DataFrame):
+        string_cols = X_input.select_dtypes(include=['object', 'string', 'category']).columns.tolist()
+        if len(string_cols) > 0:
+            raise ValueError(f"Categorical encoding mismatch: String/object columns remaining before Random Forest model: {string_cols}")
+
+    return X_input
+
+def predict_attack(input_data):
+    """
+    Accepts a dictionary of flow attributes or a single pandas row,
+    preprocesses, and returns comprehensive Random Forest AI prediction details.
+    """
+    global pipeline_obj, model, preprocessor, target_encoder, feature_names
+
+    if (model is None) and (os.path.exists(pipeline_path) or os.path.exists(model_path)):
+        load_model_artifacts()
+
+    if isinstance(input_data, pd.Series):
+        input_data = input_data.to_dict()
+    elif not isinstance(input_data, dict):
+        input_data = {}
+
+    X_input = transform_features_df(input_data)
+
     if model is None:
         raise RuntimeError("Random Forest model is unavailable. Please verify netshield_model.pkl and preprocessing artifacts.")
 
@@ -263,55 +309,7 @@ def predict_attack_batch(df_input):
     if not isinstance(df_input, pd.DataFrame):
         df_input = pd.DataFrame(df_input)
 
-    df = df_input.copy()
-
-    # Alias mapping
-    if "protocol" in df.columns and "proto" not in df.columns:
-        df["proto"] = df["protocol"]
-    if "swin" in df.columns and "swnd" not in df.columns:
-        df["swnd"] = df["swin"]
-    if "swnd" in df.columns and "swin" not in df.columns:
-        df["swin"] = df["swnd"]
-    if "dwin" in df.columns and "dwnd" not in df.columns:
-        df["dwnd"] = df["dwin"]
-    if "dwnd" in df.columns and "dwin" not in df.columns:
-        df["dwin"] = df["dwnd"]
-
-    # Compute engineered features vectorially
-    df_fe = compute_engineered_features_single(df)
-
-    cat_cols = ["proto", "service", "state"]
-    for c in df_fe.columns:
-        if c in cat_cols:
-            df_fe[c] = df_fe[c].astype(str).str.strip().str.lower()
-        else:
-            df_fe[c] = pd.to_numeric(df_fe[c], errors="coerce").fillna(0.0)
-
-    if preprocessor is not None:
-        if hasattr(preprocessor, "feature_names_in_"):
-            expected_cols = list(preprocessor.feature_names_in_)
-            for col in expected_cols:
-                if col not in df_fe.columns:
-                    if col in cat_cols:
-                        df_fe[col] = "-"
-                    else:
-                        df_fe[col] = 0.0
-            df_fe = df_fe[expected_cols]
-            for c in expected_cols:
-                if c in cat_cols:
-                    df_fe[c] = df_fe[c].astype(str)
-                else:
-                    df_fe[c] = df_fe[c].astype(float)
-        X_input = preprocessor.transform(df_fe)
-    else:
-        if feature_names:
-            for feature in feature_names:
-                if feature not in df_fe.columns:
-                    df_fe[feature] = 0
-            X_input = df_fe[feature_names].copy()
-        else:
-            X_input = df_fe.copy()
-        X_input = X_input.fillna(0)
+    X_input = transform_features_df(df_input)
 
     if model is None:
         raise RuntimeError("Random Forest model is unavailable.")
@@ -363,4 +361,3 @@ if __name__ == "__main__":
     test_sample = {"proto": "tcp", "service": "http", "state": "FIN", "dur": 0.12, "spkts": 10, "dpkts": 8}
     res = predict_attack(test_sample)
     print("Test Random Forest Prediction Output:", res)
-
