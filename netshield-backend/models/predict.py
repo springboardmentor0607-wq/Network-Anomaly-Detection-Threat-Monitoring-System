@@ -9,12 +9,10 @@ from models.model_classes import TwoStageRandomForest, NetShieldTwoModelPipeline
 
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saved_model")
 
-pipeline_path = os.path.join(MODEL_DIR, "netshield_rf_pipeline.pkl")
-if not os.path.exists(pipeline_path):
-    pipeline_path = os.path.join(MODEL_DIR, "netshield_two_model_pipeline.pkl")
-model_path = os.path.join(MODEL_DIR, "netshield_model.pkl")
-if not os.path.exists(model_path):
-    model_path = os.path.join(MODEL_DIR, "trained_model.pkl")
+binary_detector_path = os.path.join(MODEL_DIR, "binary_detector.pkl")
+attack_classifier_path = os.path.join(MODEL_DIR, "attack_classifier.pkl")
+preprocessor_path = os.path.join(MODEL_DIR, "attack_preprocessor.pkl")
+target_encoder_path = os.path.join(MODEL_DIR, "target_encoder.pkl")
 
 scaler_path = os.path.join(MODEL_DIR, "scaler.pkl")
 target_encoder_path = os.path.join(MODEL_DIR, "target_encoder.pkl")
@@ -29,47 +27,71 @@ feature_names = []
 label_encoders = None
 
 def load_model_artifacts():
-    global pipeline_obj, model, preprocessor, target_encoder, feature_names, label_encoders
+    global model, preprocessor, target_encoder, feature_names, label_encoders
+
     try:
-        rf_pipeline_pkl = os.path.join(MODEL_DIR, "netshield_rf_pipeline.pkl")
-        two_model_pkl = os.path.join(MODEL_DIR, "netshield_two_model_pipeline.pkl")
-        
-        if os.path.exists(rf_pipeline_pkl):
-            print("Loading Unified RF Pipeline from:", rf_pipeline_pkl)
-            loaded = joblib.load(rf_pipeline_pkl)
-            if isinstance(loaded, dict):
-                pipeline_obj = loaded
-                preprocessor = pipeline_obj.get("preprocessor")
-                model = pipeline_obj.get("model")
-                target_encoder = pipeline_obj.get("target_encoder")
-                feature_names = pipeline_obj.get("all_feature_names", [])
-            else:
-                model = loaded
-        elif os.path.exists(two_model_pkl):
-            print("Loading Two Model Pipeline from:", two_model_pkl)
-            model = joblib.load(two_model_pkl)
-            if hasattr(model, "target_encoder"):
-                target_encoder = model.target_encoder
+        print("Loading separate NetShield AI model artifacts...")
 
-        if model is None and os.path.exists(model_path):
-            print("Loading Standalone RF Model from:", model_path)
-            model = joblib.load(model_path)
+        # Load preprocessing
+        if os.path.exists(preprocessor_path):
+            print("Loading attack preprocessor...")
+            preprocessor = joblib.load(preprocessor_path)
 
-        lbl_enc_path = os.path.join(MODEL_DIR, "label_encoder.pkl")
-        lbl_encoders_path = os.path.join(MODEL_DIR, "label_encoders.pkl")
-        if os.path.exists(lbl_enc_path):
-            label_encoders = joblib.load(lbl_enc_path)
-        elif os.path.exists(lbl_encoders_path):
-            label_encoders = joblib.load(lbl_encoders_path)
+        # Load binary anomaly detector
+        if os.path.exists(binary_detector_path):
+            print("Loading binary detector...")
+            binary_model = joblib.load(binary_detector_path)
+        else:
+            raise FileNotFoundError(
+                f"Missing binary detector: {binary_detector_path}"
+            )
 
-        if target_encoder is None and os.path.exists(target_encoder_path):
+        # Load attack classifier
+        if os.path.exists(attack_classifier_path):
+            print("Loading attack classifier...")
+            attack_model = joblib.load(attack_classifier_path)
+        else:
+            raise FileNotFoundError(
+                f"Missing attack classifier: {attack_classifier_path}"
+            )
+
+        # Load target encoder
+        if os.path.exists(target_encoder_path):
+            print("Loading target encoder...")
             target_encoder = joblib.load(target_encoder_path)
 
-        if not feature_names and os.path.exists(feature_names_path):
-            feature_names = joblib.load(feature_names_path)
-    except Exception as e:
-        print("Error loading Random Forest model artifacts:", e)
+        # Create lightweight two-model container
+        model = NetShieldTwoModelPipeline(
+            model1_params={},
+            model2_params={}
+        )
 
+        # Replace the empty estimators with the trained models
+        model.model1 = binary_model
+        model.model2 = attack_model
+        model.target_encoder = target_encoder
+
+        if target_encoder is not None and hasattr(target_encoder, "classes_"):
+            model.classes_ = target_encoder.classes_
+
+        # Use the trained model's threshold if available
+        model.decision_threshold = 0.50
+
+        # Load feature names if available
+        if os.path.exists(feature_names_path):
+            feature_names = joblib.load(feature_names_path)
+
+        print("Separate model artifacts loaded successfully.")
+        print("Binary detector:", type(binary_model))
+        print("Attack classifier:", type(attack_model))
+        print("Preprocessor:", type(preprocessor))
+        print("Target encoder:", type(target_encoder))
+
+    except Exception as e:
+        print("Error loading separate Random Forest model artifacts:", e)
+        import traceback
+        traceback.print_exc()
+        model = None
 # Initial load on module import
 load_model_artifacts()
 
@@ -215,7 +237,7 @@ def predict_attack(input_data):
     """
     global pipeline_obj, model, preprocessor, target_encoder, feature_names
 
-    if (model is None) and (os.path.exists(pipeline_path) or os.path.exists(model_path)):
+    if model is None:
         load_model_artifacts()
 
     if isinstance(input_data, pd.Series):
@@ -303,7 +325,7 @@ def predict_attack_batch(df_input):
     """
     global pipeline_obj, model, preprocessor, target_encoder, feature_names
 
-    if (model is None) and (os.path.exists(pipeline_path) or os.path.exists(model_path)):
+    if model is None:
         load_model_artifacts()
 
     if not isinstance(df_input, pd.DataFrame):
