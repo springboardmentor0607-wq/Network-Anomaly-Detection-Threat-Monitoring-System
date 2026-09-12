@@ -21,6 +21,8 @@ feature_names_path = os.path.join(MODEL_DIR, "feature_names.pkl")
 # Global model artifact references
 pipeline_obj = None
 model = None
+binary_model = None
+attack_model = None
 preprocessor = None
 target_encoder = None
 feature_names = []
@@ -30,68 +32,66 @@ def load_model_artifacts():
     global model, preprocessor, target_encoder, feature_names, label_encoders
 
     try:
-        print("Loading separate NetShield AI model artifacts...")
+        print("Loading lightweight NetShield AI artifacts...")
 
-        # Load preprocessing
+        # Load preprocessing only
         if os.path.exists(preprocessor_path):
             print("Loading attack preprocessor...")
             preprocessor = joblib.load(preprocessor_path)
 
-        # Load binary anomaly detector
-        if os.path.exists(binary_detector_path):
-            print("Loading binary detector...")
-            binary_model = joblib.load(binary_detector_path)
-        else:
-            raise FileNotFoundError(
-                f"Missing binary detector: {binary_detector_path}"
-            )
-
-        # Load attack classifier
-        if os.path.exists(attack_classifier_path):
-            print("Loading attack classifier...")
-            attack_model = joblib.load(attack_classifier_path)
-        else:
-            raise FileNotFoundError(
-                f"Missing attack classifier: {attack_classifier_path}"
-            )
-
-        # Load target encoder
+        # Load target encoder only
         if os.path.exists(target_encoder_path):
             print("Loading target encoder...")
             target_encoder = joblib.load(target_encoder_path)
 
-        # Create lightweight two-model container
+        # Load feature names only
+        if os.path.exists(feature_names_path):
+            feature_names = joblib.load(feature_names_path)
+
+        # Do NOT load the large Random Forest models here.
+        # They are loaded on demand by load_binary_model()
+        # and load_attack_model().
+
         model = NetShieldTwoModelPipeline(
             model1_params={},
             model2_params={}
         )
 
-        # Replace the empty estimators with the trained models
-        model.model1 = binary_model
-        model.model2 = attack_model
+        model.model1 = None
+        model.model2 = None
         model.target_encoder = target_encoder
+        model.decision_threshold = 0.50
 
         if target_encoder is not None and hasattr(target_encoder, "classes_"):
             model.classes_ = target_encoder.classes_
 
-        # Use the trained model's threshold if available
-        model.decision_threshold = 0.50
-
-        # Load feature names if available
-        if os.path.exists(feature_names_path):
-            feature_names = joblib.load(feature_names_path)
-
-        print("Separate model artifacts loaded successfully.")
-        print("Binary detector:", type(binary_model))
-        print("Attack classifier:", type(attack_model))
+        print("Lightweight artifacts loaded successfully.")
         print("Preprocessor:", type(preprocessor))
         print("Target encoder:", type(target_encoder))
 
     except Exception as e:
-        print("Error loading separate Random Forest model artifacts:", e)
+        print("Error loading model artifacts:", e)
         import traceback
         traceback.print_exc()
         model = None
+def load_binary_model():
+    global binary_model
+
+    if binary_model is None:
+        print("Loading binary detector on demand...")
+        binary_model = joblib.load(binary_detector_path)
+
+    return binary_model
+
+
+def load_attack_model():
+    global attack_model
+
+    if attack_model is None:
+        print("Loading attack classifier on demand...")
+        attack_model = joblib.load(attack_classifier_path)
+
+    return attack_model
 # Initial load on module import
 load_model_artifacts()
 
@@ -252,22 +252,53 @@ def predict_attack(input_data):
 
     try:
         if isinstance(model, NetShieldTwoModelPipeline):
-            m1_proba = model.model1.predict_proba(X_input)[0]
+            # Load binary detector only when needed
+            binary = load_binary_model()
+
+            m1_proba = binary.predict_proba(X_input)[0]
             prob_attack = float(m1_proba[1]) if len(m1_proba) > 1 else float(m1_proba[0])
+
             thresh = getattr(model, "decision_threshold", 0.50)
             is_anomaly = bool(prob_attack >= thresh)
 
             if not is_anomaly:
                 attack_category = "Normal"
                 max_prob = float(m1_proba[0]) if len(m1_proba) > 1 else (1.0 - prob_attack)
+
+                # Release binary detector
+                import gc
+                del binary
+                globals()["binary_model"] = None
+                gc.collect()
+
             else:
-                m2_preds = model.model2.predict(X_input)
+                # Release binary detector before loading attack classifier
+                import gc
+                del binary
+                globals()["binary_model"] = None
+                gc.collect()
+
+                # Load attack classifier only after binary detector is released
+                attack = load_attack_model()
+
+                m2_preds = attack.predict(X_input)
                 m2_code = int(m2_preds[0])
-                if target_encoder is not None and hasattr(target_encoder, "classes_") and m2_code < len(target_encoder.classes_):
+
+                if (
+                    target_encoder is not None
+                    and hasattr(target_encoder, "classes_")
+                    and m2_code < len(target_encoder.classes_)
+                ):
                     attack_category = str(target_encoder.classes_[m2_code])
                 else:
                     attack_category = "Anomalous Traffic"
+
                 max_prob = prob_attack
+
+                # Release attack classifier after prediction
+                del attack
+                globals()["attack_model"] = None
+                gc.collect()
         elif hasattr(model, "predict_proba"):
             proba = model.predict_proba(X_input)[0]
             pred_idx = int(np.argmax(proba))
@@ -321,9 +352,10 @@ def predict_attack(input_data):
 def predict_attack_batch(df_input):
     """
     Accepts a DataFrame of flow attributes, computes engineered features vectorially,
-    runs batch Random Forest inference, and returns a list of prediction result dictionaries.
+    runs batch Random Forest inference using lazy-loaded models,
+    and returns a list of prediction result dictionaries.
     """
-    global pipeline_obj, model, preprocessor, target_encoder, feature_names
+    global model, preprocessor, target_encoder, feature_names
 
     if model is None:
         load_model_artifacts()
@@ -337,37 +369,90 @@ def predict_attack_batch(df_input):
         raise RuntimeError("Random Forest model is unavailable.")
 
     n_samples = len(X_input)
-    if hasattr(model, "predict_proba"):
-        probas = model.predict_proba(X_input)
-    else:
-        preds = model.predict(X_input)
-        probas = np.zeros((n_samples, 2))
-        for i, p in enumerate(preds):
-            probas[i, int(p)] = 0.90
+
+    # Load binary detector for batch anomaly detection
+    binary = load_binary_model()
+
+    binary_probas = binary.predict_proba(X_input)
+
+    thresh = getattr(model, "decision_threshold", 0.50)
+    attack_probs = binary_probas[:, 1] if binary_probas.shape[1] > 1 else binary_probas[:, 0]
+    anomaly_flags = attack_probs >= thresh
+
+    # Release binary detector before loading attack classifier
+    import gc
+    del binary
+    globals()["binary_model"] = None
+    gc.collect()
+
+    # Load attack classifier only for anomalous samples
+    attack_predictions = np.full(n_samples, -1, dtype=int)
+
+    anomaly_indices = np.where(anomaly_flags)[0]
+
+    if len(anomaly_indices) > 0:
+        attack = load_attack_model()
+
+        X_attack = X_input[anomaly_indices]
+        attack_predictions[anomaly_indices] = attack.predict(X_attack)
+
+        # Release attack classifier
+        del attack
+        globals()["attack_model"] = None
+        gc.collect()
+
+    classes = (
+        list(target_encoder.classes_)
+        if target_encoder is not None and hasattr(target_encoder, "classes_")
+        else []
+    )
 
     results = []
-    classes = list(target_encoder.classes_) if (target_encoder is not None and hasattr(target_encoder, "classes_")) else ["Normal", "Anomalous Traffic"]
 
     for i in range(n_samples):
-        proba_row = probas[i]
-        pred_idx = int(np.argmax(proba_row))
-        max_prob = float(np.max(proba_row))
-        
-        if pred_idx < len(classes):
-            attack_cat = str(classes[pred_idx])
+        is_anomaly = bool(anomaly_flags[i])
+
+        if not is_anomaly:
+            attack_cat = "Normal"
+            max_prob = float(
+                binary_probas[i][0]
+                if binary_probas.shape[1] > 1
+                else (1.0 - attack_probs[i])
+            )
         else:
-            attack_cat = "Normal" if pred_idx == 0 else "Anomalous Traffic"
-            
-        is_anomaly = attack_cat.lower() != "normal"
-        
-        threat_info = THREAT_MAP.get(attack_cat, {"level": "High" if is_anomaly else "Low", "base_risk": 65 if is_anomaly else 10})
+            pred_idx = int(attack_predictions[i])
+
+            if 0 <= pred_idx < len(classes):
+                attack_cat = str(classes[pred_idx])
+            else:
+                attack_cat = "Anomalous Traffic"
+
+            max_prob = float(attack_probs[i])
+
+        threat_info = THREAT_MAP.get(
+            attack_cat,
+            {
+                "level": "High" if is_anomaly else "Low",
+                "base_risk": 65 if is_anomaly else 10
+            }
+        )
+
         threat_level = threat_info["level"]
         base_risk = threat_info["base_risk"]
-        risk_score = min(100, max(5, int(base_risk * (0.8 + 0.4 * max_prob))))
+
+        risk_score = min(
+            100,
+            max(5, int(base_risk * (0.8 + 0.4 * max_prob)))
+        )
+
         confidence_pct = f"{max_prob * 100:.2f}%"
-        
+
         results.append({
-            "prediction": f"Anomalous Traffic ({attack_cat})" if is_anomaly else "Normal Traffic",
+            "prediction": (
+                f"Anomalous Traffic ({attack_cat})"
+                if is_anomaly
+                else "Normal Traffic"
+            ),
             "is_anomaly": is_anomaly,
             "attack_type": attack_cat,
             "confidence": confidence_pct,
