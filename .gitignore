@@ -30,6 +30,10 @@ netshield-backend/ml/models/*
 !netshield-backend/ml/models/unsw_random_forest_improved.joblib
 !netshield-backend/ml/models/netshield_encoder.pkl
 !netshield-backend/ml/models/netshield_scaler.pkl
+!netshield-backend/ml/models/cic_model.pkl
+!netshield-backend/ml/models/cic_scaler.pkl
+!netshield-backend/ml/models/cic_imputer.pkl
+!netshield-backend/ml/models/cic_features.pkl
 
 # =========================
 # Next.js
