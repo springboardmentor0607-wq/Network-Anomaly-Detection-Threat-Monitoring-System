@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from datetime import datetime, timedelta
 
-from models.predict import predict_attack
+from models.predict import predict_attack, predict_attack_batch
 from models.alert_service import create_security_alert
 from models.incident_service import create_incident_from_alert
 from models.notification_service import create_notification_from_alert_incident
