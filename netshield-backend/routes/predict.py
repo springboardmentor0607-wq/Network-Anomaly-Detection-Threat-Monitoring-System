@@ -57,12 +57,7 @@ def predict():
         incident_info = None
         notification_info = None
 
-        if res["is_anomaly"]:
-            alert_info = create_security_alert(res, source_ip, dest_ip, protocol, prediction_id)
-            if alert_info:
-                incident_info = create_incident_from_alert(alert_info)
-                notification_info = create_notification_from_alert_incident(alert_info, incident_info)
-
+       
         actual_class = data.get("actual_class") or data.get("expected_attack") or data.get("attack_cat") or None
 
         response_payload = {
@@ -100,4 +95,4 @@ def predict():
         traceback.print_exc()
         return jsonify({
             "message": str(e)
-        }), 400
+        }), 400

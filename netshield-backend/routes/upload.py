@@ -49,9 +49,11 @@ def upload_file():
         cursor = conn.cursor() if conn else None
         base_time = datetime.now()
 
-        for idx, row in eval_df.iterrows():
-            data = row.to_dict()
-            res = predict_attack(data)
+                # Run all predictions in one batch for much faster dataset analysis
+        batch_results = predict_attack_batch(eval_df)
+
+        for idx, res in enumerate(batch_results):
+            data = eval_df.iloc[idx].to_dict()
 
             c_score = res["confidence_score"]
             r_score = res["risk_score"]
@@ -68,26 +70,57 @@ def upload_file():
 
             severity_dist[t_level] = severity_dist.get(t_level, 0) + 1
 
-            if r_score <= 25: risk_dist["0-25"] += 1
-            elif r_score <= 50: risk_dist["26-50"] += 1
-            elif r_score <= 75: risk_dist["51-75"] += 1
-            else: risk_dist["76-100"] += 1
+            if r_score <= 25:
+                risk_dist["0-25"] += 1
+            elif r_score <= 50:
+                risk_dist["26-50"] += 1
+            elif r_score <= 75:
+                risk_dist["51-75"] += 1
+            else:
+                risk_dist["76-100"] += 1
 
-            if c_score < 50: conf_dist["<50%"] += 1
-            elif c_score < 75: conf_dist["50-75%"] += 1
-            elif c_score < 90: conf_dist["75-90%"] += 1
-            else: conf_dist["90-100%"] += 1
+            if c_score < 50:
+                conf_dist["<50%"] += 1
+            elif c_score < 75:
+                conf_dist["50-75%"] += 1
+            elif c_score < 90:
+                conf_dist["75-90%"] += 1
+            else:
+                conf_dist["90-100%"] += 1
 
             if a_cat not in attack_stats:
-                attack_stats[a_cat] = {"count": 0, "conf_sum": 0.0, "risk_sum": 0, "threat_level": t_level}
+                attack_stats[a_cat] = {
+                    "count": 0,
+                    "conf_sum": 0.0,
+                    "risk_sum": 0,
+                    "threat_level": t_level
+                }
+
             attack_stats[a_cat]["count"] += 1
             attack_stats[a_cat]["conf_sum"] += c_score
             attack_stats[a_cat]["risk_sum"] += r_score
 
-            src_ip = data.get("src_ip") or data.get("source_ip") or f"192.168.1.{100 + (idx % 150)}"
-            dst_ip = data.get("dst_ip") or data.get("dest_ip") or f"10.0.{(idx % 5)}.{1 + (idx % 20)}"
-            protocol = str(data.get("proto") or data.get("protocol") or ("TCP" if idx % 2 == 0 else "UDP")).upper()
-            ts_str = (base_time - timedelta(seconds=idx * 2)).strftime("%Y-%m-%d %H:%M:%S")
+            src_ip = (
+                data.get("src_ip")
+                or data.get("source_ip")
+                or f"192.168.1.{100 + (idx % 150)}"
+            )
+
+            dst_ip = (
+                data.get("dst_ip")
+                or data.get("dest_ip")
+                or f"10.0.{idx % 5}.{1 + (idx % 20)}"
+            )
+
+            protocol = str(
+                data.get("proto")
+                or data.get("protocol")
+                or ("TCP" if idx % 2 == 0 else "UDP")
+            ).upper()
+
+            ts_str = (
+                base_time - timedelta(seconds=idx * 2)
+            ).strftime("%Y-%m-%d %H:%M:%S")
 
             item = {
                 "id": idx + 1,
@@ -104,13 +137,15 @@ def upload_file():
                 "model_engine": "Random Forest Classifier",
                 "status": "Blocked" if res["is_anomaly"] else "Normal Flow"
             }
+
             prediction_list.append(item)
 
             if cursor:
                 try:
                     cursor.execute("""
                         INSERT INTO anomaly_predictions
-                        (source_ip, dest_ip, protocol, prediction, attack_type, confidence, threat_level, risk_score, model_name, status)
+                        (source_ip, dest_ip, protocol, prediction, attack_type,
+                         confidence, threat_level, risk_score, model_name, status)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         RETURNING id;
                     """, (
@@ -125,20 +160,28 @@ def upload_file():
                         "Random Forest Classifier",
                         item["status"]
                     ))
+
                     pred_row = cursor.fetchone()
                     pred_id = pred_row[0] if pred_row else None
-                    conn.commit()
 
                     if res["is_anomaly"]:
-                        alert_info = create_security_alert(res, src_ip, dst_ip, protocol, pred_id)
+                        alert_info = create_security_alert(
+                            res, src_ip, dst_ip, protocol, pred_id
+                        )
+
                         if alert_info:
                             incident_info = create_incident_from_alert(alert_info)
-                            create_notification_from_alert_incident(alert_info, incident_info)
+                            create_notification_from_alert_incident(
+                                alert_info, incident_info
+                            )
+
                 except Exception as insert_err:
                     if conn:
                         conn.rollback()
                     print("Row DB insert error:", insert_err)
 
+        if conn:
+            conn.commit()
         if cursor:
             cursor.close()
 

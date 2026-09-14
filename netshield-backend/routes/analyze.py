@@ -130,13 +130,6 @@ def analyze():
                     ))
                     pred_row = cursor.fetchone()
                     pred_id = pred_row[0] if pred_row else None
-
-                    if res["is_anomaly"]:
-                        alert_info = create_security_alert(res, src_ip, dst_ip, protocol, pred_id)
-                        if alert_info:
-                            incident_info = create_incident_from_alert(alert_info)
-                            create_notification_from_alert_incident(alert_info, incident_info)
-
                 # Commit batch transaction ONCE
                 conn.commit()
                 cursor.close()
