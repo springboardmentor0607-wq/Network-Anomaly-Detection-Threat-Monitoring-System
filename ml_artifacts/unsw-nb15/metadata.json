@@ -1,0 +1,18 @@
+{
+  "accuracy": 1.0,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1_score": 1.0,
+  "false_positive_rate": 0.0,
+  "roc_auc": 0.0,
+  "confusion_matrix": {
+    "true_negatives": 0,
+    "false_positives": 0,
+    "false_negatives": 0,
+    "true_positives": 0
+  },
+  "model_name": "Isolation Forest Anomaly Baseline",
+  "version": "1.0.0",
+  "algorithm": "IsolationForest",
+  "dataset": "UNSW-NB15"
+}

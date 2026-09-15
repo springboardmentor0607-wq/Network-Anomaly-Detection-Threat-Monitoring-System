@@ -1,0 +1,6 @@
+Destination Port, Flow Duration, Total Fwd Packets, Total Backward Packets, Total Length of Fwd Packets, Total Length of Bwd Packets, Protocol, Source IP, Destination IP, Source Port, Timestamp, Label
+80, 142000, 10, 5, 1200, 4500, 6, 192.168.1.45, 10.0.0.12, 52341, 04/08/2026 14:30:00, BENIGN
+443, 85000, 4, 2, 450, 1200, 6, 10.0.0.88, 172.16.0.4, 41230, 04/08/2026 14:31:00, BENIGN
+8080, 5120000, 1420, 0, 980400, 0, 17, 203.0.113.24, 10.0.0.5, 58912, 04/08/2026 14:32:00, DoS SYN Flood
+22, 3840000, 540, 480, 124000, 89000, 6, 198.51.100.88, 10.0.0.2, 33412, 04/08/2026 14:33:00, SSH-Patator
+53, 40000, 2, 2, 148, 250, 17, 192.168.1.110, 8.8.8.8, 53210, 04/08/2026 14:34:00, BENIGN
