@@ -23,22 +23,23 @@ function Sidebar({ role: overrideRole }) {
 
   const storedUser = JSON.parse(localStorage.getItem("netshield_user") || "{}");
   
-  // Determine active role strictly
-  let activeRole = overrideRole;
+  // Determine active role strictly from authenticated session
+  let activeRole = storedUser.role || overrideRole;
   if (!activeRole) {
     if (location.pathname.startsWith("/admin")) {
       activeRole = "Security Administrator";
     } else if (location.pathname.startsWith("/analyst")) {
       activeRole = "Security Analyst";
     } else {
-      activeRole = storedUser.role || "Security Analyst";
+      activeRole = "Security Analyst";
     }
   }
 
   const isAdmin =
     activeRole === "Security Administrator" ||
     activeRole === "Admin" ||
-    activeRole === "admin";
+    activeRole === "admin" ||
+    activeRole === "SOC Lead Administrator";
 
   const handleLogout = (e) => {
     e.preventDefault();
@@ -153,10 +154,16 @@ function Sidebar({ role: overrideRole }) {
                 </Link>
               </li>
               <li>
+                <Link to="/analyst/live-monitoring" className={isCurrent(["/analyst/live-monitoring", "/live-monitoring"]) ? "active" : ""}>
+                  <FaNetworkWired /> Live Network Monitoring
+                </Link>
+              </li>
+              <li>
                 <Link to="/analyst/profile" className={isCurrent(["/analyst/profile", "/profile"]) ? "active" : ""}>
                   <FaUser /> Profile
                 </Link>
               </li>
+
             </>
           )}
         </ul>

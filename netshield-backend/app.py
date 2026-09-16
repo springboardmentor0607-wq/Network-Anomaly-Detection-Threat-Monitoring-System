@@ -10,6 +10,7 @@ from routes.model_info import model_info_bp
 from routes.test_samples import test_samples_bp
 from routes.incidents import incidents_bp
 from routes.notifications import notifications_bp
+from routes.live_monitoring import live_monitoring_bp
 from db import init_db_tables
 
 app = Flask(__name__)
@@ -31,6 +32,8 @@ app.register_blueprint(model_info_bp)
 app.register_blueprint(test_samples_bp)
 app.register_blueprint(incidents_bp)
 app.register_blueprint(notifications_bp)
+app.register_blueprint(live_monitoring_bp)
+
 
 @app.route("/")
 def home():

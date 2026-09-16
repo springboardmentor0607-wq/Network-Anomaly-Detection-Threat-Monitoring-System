@@ -164,7 +164,7 @@ function IncidentManagement() {
 
   return (
     <div className="soc-layout">
-      <Sidebar role="Security Analyst" />
+      <Sidebar />
       <Topbar title="Security Incident Management & Response Workflow" />
 
       <div className="soc-main-content">
@@ -535,104 +535,137 @@ function IncidentManagement() {
                   </div>
 
                   {/* Lifecycle Status Selector */}
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", fontSize: "0.88rem", color: "#cbd5e1", fontWeight: "600", marginBottom: "6px" }}>
-                      Incident Lifecycle Status Transition:
+                  <div style={{ marginBottom: "20px" }}>
+                    <label style={{ display: "block", fontSize: "0.88rem", color: "#cbd5e1", fontWeight: "600", marginBottom: "8px" }}>
+                      Incident Lifecycle Stage Transition:
                     </label>
-                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                      {["New", "Investigating", "Action Required", "Resolved"].map((st) => (
-                        <button
-                          key={st}
-                          type="button"
-                          onClick={() => setCurrentStatus(st)}
-                          style={{
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            fontSize: "0.85rem",
-                            fontWeight: "600",
-                            cursor: "pointer",
-                            border: currentStatus === st ? "2px solid #00f2fe" : "1px solid #334155",
-                            background: currentStatus === st ? "rgba(0, 242, 254, 0.2)" : "#0f172a",
-                            color: currentStatus === st ? "#00f2fe" : "#94a3b8"
-                          }}
-                        >
-                          {st === "New" && "1. New"}
-                          {st === "Investigating" && "2. Investigating"}
-                          {st === "Action Required" && "3. Action Required"}
-                          {st === "Resolved" && "4. Resolved"}
-                        </button>
-                      ))}
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                      {["New", "Investigating", "Action Required", "Resolved"].map((st, index) => {
+                        const isSelected = currentStatus === st;
+                        const labelNumber = index + 1;
+                        return (
+                          <div key={st} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <button
+                              type="button"
+                              onClick={() => setCurrentStatus(st)}
+                              style={{
+                                padding: "8px 16px",
+                                borderRadius: "6px",
+                                fontSize: "0.85rem",
+                                fontWeight: "600",
+                                cursor: "pointer",
+                                border: isSelected ? "2px solid #00f2fe" : "1px solid #334155",
+                                background: isSelected ? "rgba(0, 242, 254, 0.2)" : "#0f172a",
+                                color: isSelected ? "#00f2fe" : "#94a3b8",
+                                boxShadow: isSelected ? "0 0 10px rgba(0, 242, 254, 0.3)" : "none",
+                                transition: "all 0.2s ease"
+                              }}
+                            >
+                              {labelNumber}. {st}
+                            </button>
+                            {index < 3 && <span style={{ color: "#475569", fontWeight: "bold" }}>→</span>}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Investigation Notes */}
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", fontSize: "0.88rem", color: "#cbd5e1", fontWeight: "600", marginBottom: "6px" }}>
-                      Investigation Details & Forensic Notes:
-                    </label>
-                    <textarea
-                      rows="3"
-                      placeholder="Record packet payload findings, IP history, or SOC analyst investigation observations..."
-                      value={investigationNotes}
-                      onChange={(e) => setInvestigationNotes(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        background: "#0f172a",
-                        border: "1px solid #334155",
-                        borderRadius: "8px",
-                        color: "#f8fafc",
-                        fontSize: "0.88rem",
-                        outline: "none"
-                      }}
-                    />
-                  </div>
+                  {/* Stage-based Progressive Sections */}
+                  {(() => {
+                    const stLower = (currentStatus || "New").toLowerCase();
+                    const showInvestigation = ["investigating", "action required", "resolved"].includes(stLower);
+                    const showActionTaken = ["action required", "resolved"].includes(stLower);
+                    const showResolution = stLower === "resolved";
 
-                  {/* Action Taken */}
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", fontSize: "0.88rem", color: "#cbd5e1", fontWeight: "600", marginBottom: "6px" }}>
-                      Action Taken (Mitigation & Firewall Rules):
-                    </label>
-                    <textarea
-                      rows="2"
-                      placeholder="e.g. Blocked source IP at gateway firewall, isolated subnet socket, revoked credential token..."
-                      value={actionTakenText}
-                      onChange={(e) => setActionTakenText(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        background: "#0f172a",
-                        border: "1px solid #334155",
-                        borderRadius: "8px",
-                        color: "#f8fafc",
-                        fontSize: "0.88rem",
-                        outline: "none"
-                      }}
-                    />
-                  </div>
+                    return (
+                      <>
+                        {/* New Status Banner */}
+                        {!showInvestigation && (
+                          <div style={{ background: "rgba(56, 189, 248, 0.1)", border: "1px solid rgba(56, 189, 248, 0.3)", borderRadius: "8px", padding: "14px 16px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px", color: "#38bdf8", fontSize: "0.88rem" }}>
+                            <FaInfoCircle style={{ fontSize: "1.2rem", flexShrink: 0 }} />
+                            <div>
+                              <strong>Stage: New</strong> — Select <strong>2. Investigating</strong> to initiate forensic analysis and log investigation notes.
+                            </div>
+                          </div>
+                        )}
 
-                  {/* Resolution Details */}
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ display: "block", fontSize: "0.88rem", color: "#cbd5e1", fontWeight: "600", marginBottom: "6px" }}>
-                      Resolution Summary & Final Report:
-                    </label>
-                    <textarea
-                      rows="2"
-                      placeholder="Provide post-incident resolution notes upon closing..."
-                      value={resolutionDetailsText}
-                      onChange={(e) => setResolutionDetailsText(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        background: "#0f172a",
-                        border: "1px solid #334155",
-                        borderRadius: "8px",
-                        color: "#f8fafc",
-                        fontSize: "0.88rem",
-                        outline: "none"
-                      }}
-                    />
-                  </div>
+                        {/* Investigation Notes */}
+                        {showInvestigation && (
+                          <div style={{ marginBottom: "16px" }}>
+                            <label style={{ display: "block", fontSize: "0.88rem", color: "#cbd5e1", fontWeight: "600", marginBottom: "6px" }}>
+                              Investigation Details & Forensic Notes:
+                            </label>
+                            <textarea
+                              rows="3"
+                              placeholder="Record packet payload findings, IP history, or SOC analyst investigation observations..."
+                              value={investigationNotes}
+                              onChange={(e) => setInvestigationNotes(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "10px",
+                                background: "#0f172a",
+                                border: "1px solid #334155",
+                                borderRadius: "8px",
+                                color: "#f8fafc",
+                                fontSize: "0.88rem",
+                                outline: "none"
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Action Taken */}
+                        {showActionTaken && (
+                          <div style={{ marginBottom: "16px" }}>
+                            <label style={{ display: "block", fontSize: "0.88rem", color: "#cbd5e1", fontWeight: "600", marginBottom: "6px" }}>
+                              Action Taken (Mitigation & Firewall Rules):
+                            </label>
+                            <textarea
+                              rows="2"
+                              placeholder="e.g. Blocked source IP at gateway firewall, isolated subnet socket, revoked credential token..."
+                              value={actionTakenText}
+                              onChange={(e) => setActionTakenText(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "10px",
+                                background: "#0f172a",
+                                border: "1px solid #334155",
+                                borderRadius: "8px",
+                                color: "#f8fafc",
+                                fontSize: "0.88rem",
+                                outline: "none"
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Resolution Details */}
+                        {showResolution && (
+                          <div style={{ marginBottom: "16px" }}>
+                            <label style={{ display: "block", fontSize: "0.88rem", color: "#cbd5e1", fontWeight: "600", marginBottom: "6px" }}>
+                              Resolution Summary & Final Report:
+                            </label>
+                            <textarea
+                              rows="2"
+                              placeholder="Provide post-incident resolution notes upon closing..."
+                              value={resolutionDetailsText}
+                              onChange={(e) => setResolutionDetailsText(e.target.value)}
+                              style={{
+                                width: "100%",
+                                padding: "10px",
+                                background: "#0f172a",
+                                border: "1px solid #334155",
+                                borderRadius: "8px",
+                                color: "#f8fafc",
+                                fontSize: "0.88rem",
+                                outline: "none"
+                              }}
+                            />
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
 
                   {/* Responsible Analyst */}
                   <div style={{ marginBottom: "20px", display: "flex", gap: "12px", alignItems: "center" }}>

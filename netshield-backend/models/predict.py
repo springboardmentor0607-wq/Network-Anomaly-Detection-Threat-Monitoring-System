@@ -264,23 +264,8 @@ def predict_attack(input_data):
             if not is_anomaly:
                 attack_category = "Normal"
                 max_prob = float(m1_proba[0]) if len(m1_proba) > 1 else (1.0 - prob_attack)
-
-                # Release binary detector
-                import gc
-                del binary
-                globals()["binary_model"] = None
-                gc.collect()
-
             else:
-                # Release binary detector before loading attack classifier
-                import gc
-                del binary
-                globals()["binary_model"] = None
-                gc.collect()
-
-                # Load attack classifier only after binary detector is released
                 attack = load_attack_model()
-
                 m2_preds = attack.predict(X_input)
                 m2_code = int(m2_preds[0])
 
@@ -295,10 +280,6 @@ def predict_attack(input_data):
 
                 max_prob = prob_attack
 
-                # Release attack classifier after prediction
-                del attack
-                globals()["attack_model"] = None
-                gc.collect()
         elif hasattr(model, "predict_proba"):
             proba = model.predict_proba(X_input)[0]
             pred_idx = int(np.argmax(proba))
@@ -378,28 +359,14 @@ def predict_attack_batch(df_input):
     thresh = getattr(model, "decision_threshold", 0.50)
     attack_probs = binary_probas[:, 1] if binary_probas.shape[1] > 1 else binary_probas[:, 0]
     anomaly_flags = attack_probs >= thresh
-
-    # Release binary detector before loading attack classifier
-    import gc
-    del binary
-    globals()["binary_model"] = None
-    gc.collect()
-
-    # Load attack classifier only for anomalous samples
-    attack_predictions = np.full(n_samples, -1, dtype=int)
-
     anomaly_indices = np.where(anomaly_flags)[0]
 
+    attack_predictions = np.zeros(n_samples, dtype=int)
     if len(anomaly_indices) > 0:
         attack = load_attack_model()
-
         X_attack = X_input[anomaly_indices]
         attack_predictions[anomaly_indices] = attack.predict(X_attack)
 
-        # Release attack classifier
-        del attack
-        globals()["attack_model"] = None
-        gc.collect()
 
     classes = (
         list(target_encoder.classes_)

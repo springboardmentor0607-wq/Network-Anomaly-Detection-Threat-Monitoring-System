@@ -20,8 +20,11 @@ import AnalystReports from "./pages/AnalystReports";
 import Profile from "./pages/Profile";
 import IncidentManagement from "./pages/IncidentManagement";
 import AttackVisualization from "./pages/AttackVisualization";
+import LiveNetworkMonitoring from "./pages/LiveNetworkMonitoring";
+import TeamManagement from "./pages/TeamManagement";
 
 function App() {
+
   return (
     <BrowserRouter>
       <Routes>
@@ -152,6 +155,22 @@ function App() {
           }
         />
         <Route
+          path="/analyst/live-monitoring"
+          element={
+            <ProtectedRoute allowedRole="Security Analyst">
+              <LiveNetworkMonitoring />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/live-monitoring"
+          element={
+            <ProtectedRoute allowedRole="Security Analyst">
+              <LiveNetworkMonitoring />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/network"
           element={
             <ProtectedRoute allowedRole="Security Analyst">
@@ -159,6 +178,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
 
         {/* Security Administrator Protected Routes */}
         <Route
@@ -197,7 +217,7 @@ function App() {
           path="/admin/team"
           element={
             <ProtectedRoute allowedRole="Security Administrator">
-              <DatasetManagement />
+              <TeamManagement />
             </ProtectedRoute>
           }
         />
