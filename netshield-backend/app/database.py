@@ -27,7 +27,7 @@ def get_db():
 
 
 # ---------- MongoDB (raw traffic logs) ----------
-MONGO_URL = os.getenv("MONGO_URL", "mongo://localhost:27017")
+MONGO_URL = os.getenv("MONGO_URL", "")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "netshield")
 
 mongo_client = MongoClient(MONGO_URL)
