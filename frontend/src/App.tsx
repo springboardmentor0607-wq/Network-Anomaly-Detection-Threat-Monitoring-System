@@ -9,6 +9,8 @@ import { LandingPage } from './pages/landing/LandingPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { OverviewPage } from './pages/overview/OverviewPage';
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+import { UserDashboardPage } from './pages/user/UserDashboardPage';
 import { MonitoringPage } from './pages/monitoring/MonitoringPage';
 import { TopologyPage } from './pages/topology/TopologyPage';
 import { TrafficPage } from './pages/traffic/TrafficPage';
@@ -38,10 +40,12 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
 
-            {/* Protected SOC Application Shell Routes - Accessible to all registered & authenticated users */}
+            {/* Protected SOC Application Shell Routes */}
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<OverviewPage />} />
+                <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+                <Route path="/user/dashboard" element={<UserDashboardPage />} />
                 <Route path="/monitoring" element={<MonitoringPage />} />
                 <Route path="/topology" element={<TopologyPage />} />
                 <Route path="/traffic" element={<TrafficPage />} />

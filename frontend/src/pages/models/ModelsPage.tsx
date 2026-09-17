@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card } from '../../components/common/Card';
-import { BrainCircuit, CheckCircle, RefreshCw, BarChart2, Award, Zap } from 'lucide-react';
+import { BrainCircuit, CheckCircle, RefreshCw, BarChart2, Award, Zap, ShieldAlert } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ModelItem {
   id: string;
@@ -22,6 +23,9 @@ interface ModelItem {
 }
 
 export const ModelsPage: React.FC = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role?.name === 'ADMIN';
+
   const [models, setModels] = useState<ModelItem[]>([
     {
       id: 'mdl-xgb-01',
@@ -96,6 +100,7 @@ export const ModelsPage: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<ModelItem>(models[0]);
 
   const handleActivate = (id: string) => {
+    if (!isAdmin) return;
     setModels((prev) =>
       prev.map((mdl) => {
         if (mdl.id === id) return { ...mdl, isActive: true, status: 'DEPLOYED IN PRODUCTION' };
@@ -113,7 +118,11 @@ export const ModelsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight">AI Model Registry & Lifecycle</h2>
-          <p className="text-xs text-gray-400">Manage, evaluate, and activate machine-learning inference engines.</p>
+          <p className="text-xs text-gray-400">
+            {isAdmin
+              ? 'Administrator Mode: Manage, evaluate, retrain, and activate machine-learning inference engines.'
+              : 'Analyst Read-Only View: Inspect active AI model accuracy, confusion matrix, and evaluation metrics.'}
+          </p>
         </div>
       </div>
 
@@ -156,15 +165,22 @@ export const ModelsPage: React.FC = () => {
               </div>
 
               {!mdl.isActive && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleActivate(mdl.id);
-                  }}
-                  className="w-full py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs rounded-xl shadow transition"
-                >
-                  Activate Model
-                </button>
+                isAdmin ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleActivate(mdl.id);
+                    }}
+                    className="w-full py-2 bg-red-500 hover:bg-red-400 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center space-x-1"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 inline mr-1" />
+                    <span>Admin Activate Model</span>
+                  </button>
+                ) : (
+                  <div className="p-2 bg-[#131C2E] border border-[#1F2937] rounded-xl text-[11px] text-gray-400 text-center">
+                    🔒 Standby • Admin Activation Required
+                  </div>
+                )
               )}
             </div>
           </Card>
